@@ -157,7 +157,7 @@ system, accessibilité) en découle.
 - `back-office/` — **composants maison du back-office** (les plus importants) :
   `PageHeader`, `DataTable`, `DefinitionList`, `FormCard` (+ `ToggleRow`),
   `StatCards`, `StatCard`s, `StatusBadge`, `PageHeader`, `SettingsTabs`,
-  `DashboardKpiCards`, `RevenueChart`, `PopularServices`
+  `DashboardKpiCards`, `TodayAppointments`, `RevenueChart`, `PopularServices`
 - `ui/` — primitives du template : `alert/`, `avatar/`, `badge/`, `button/`,
   `dropdown/`, `images/`, `modal/`, `table/`, `video/`
 - `form/` — contrôles de formulaire : `input/`, `switch/`, `group-input/`,

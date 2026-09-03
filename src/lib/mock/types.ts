@@ -10,8 +10,8 @@ export type Kpi = {
   key: string;
   label: string;
   value: string;
-  delta: number; // percentage vs previous period
-  direction: "up" | "down";
+  delta?: number; // percentage vs previous period; omit for a value with no comparison
+  direction: "up" | "down" | "flat"; // "flat" = no meaningful change to signal
   hint?: string;
 };
 

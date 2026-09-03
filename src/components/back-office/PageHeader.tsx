@@ -15,18 +15,16 @@ export default function PageHeader({ title, description, backHref, backLabel, ac
       {backHref && (
         <Link
           href={backHref}
-          className="mb-3 inline-flex items-center gap-1.5 text-theme-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+          className="mb-3 inline-flex items-center gap-1.5 text-theme-sm text-gray-500 hover:text-gray-700"
         >
-          ← {backLabel ?? "Back"}
+          ← {backLabel ?? "Retour"}
         </Link>
       )}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">{title}</h1>
+          <h1 className="text-2xl font-semibold text-gray-800">{title}</h1>
           {description && (
-            <p className="mt-1 max-w-2xl text-theme-sm text-gray-500 dark:text-gray-400">
-              {description}
-            </p>
+            <p className="mt-1 max-w-2xl text-theme-sm text-gray-500">{description}</p>
           )}
         </div>
         {action && (
