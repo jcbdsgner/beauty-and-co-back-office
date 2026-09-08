@@ -4,7 +4,7 @@
 
 @theme {
   --font-*: initial;
-  --font-outfit: Outfit, sans-serif;
+  --font-poppins: Poppins, sans-serif;
 
   --breakpoint-*: initial;
   --breakpoint-2xsm: 375px;
@@ -16,40 +16,71 @@
   --breakpoint-xl: 1280px;
   --breakpoint-2xl: 1536px;
 
-  --text-title-2xl: 72px;
-  --text-title-2xl--line-height: 90px;
-  --text-title-xl: 60px;
-  --text-title-xl--line-height: 72px;
-  --text-title-lg: 48px;
-  --text-title-lg--line-height: 60px;
-  --text-title-md: 36px;
-  --text-title-md--line-height: 44px;
-  --text-title-sm: 30px;
-  --text-title-sm--line-height: 38px;
-  --text-theme-xl: 20px;
-  --text-theme-xl--line-height: 30px;
-  --text-theme-sm: 14px;
-  --text-theme-sm--line-height: 20px;
-  --text-theme-xs: 12px;
-  --text-theme-xs--line-height: 18px;
+  --text-title-2xl: 74px;
+  --text-title-2xl--line-height: 92px;
+  --text-title-xl: 62px;
+  --text-title-xl--line-height: 74px;
+  --text-title-lg: 50px;
+  --text-title-lg--line-height: 62px;
+  --text-title-md: 38px;
+  --text-title-md--line-height: 46px;
+  --text-title-sm: 32px;
+  --text-title-sm--line-height: 40px;
+  --text-theme-xl: 22px;
+  --text-theme-xl--line-height: 32px;
+  --text-theme-sm: 16px;
+  --text-theme-sm--line-height: 22px;
+  --text-theme-xs: 14px;
+  --text-theme-xs--line-height: 20px;
+
+  /*
+    Écriture agrandie de +2px sur toute l'échelle Tailwind par défaut
+    (text-xs → text-3xl) : les libellés/valeurs du back-office étaient jugés
+    trop petits à l'usage. Vérifié sans débordement dans les tableaux, badges
+    et cartes denses (DataTable, StatCards, Journal, Planning…).
+  */
+  --text-xs: 14px;
+  --text-xs--line-height: 18px;
+  --text-sm: 16px;
+  --text-sm--line-height: 22px;
+  --text-base: 18px;
+  --text-base--line-height: 26px;
+  --text-lg: 20px;
+  --text-lg--line-height: 30px;
+  --text-xl: 22px;
+  --text-xl--line-height: 30px;
+  --text-2xl: 26px;
+  --text-2xl--line-height: 34px;
+  --text-3xl: 32px;
+  --text-3xl--line-height: 38px;
 
   --color-current: currentColor;
   --color-transparent: transparent;
   --color-white: #ffffff;
   --color-black: #101828;
 
-  --color-brand-25: #f2f7ff;
-  --color-brand-50: #ecf3ff;
-  --color-brand-100: #dde9ff;
-  --color-brand-200: #c2d6ff;
-  --color-brand-300: #9cb9ff;
-  --color-brand-400: #7592ff;
-  --color-brand-500: #465fff;
-  --color-brand-600: #3641f5;
-  --color-brand-700: #2a31d8;
-  --color-brand-800: #252dae;
-  --color-brand-900: #262e89;
-  --color-brand-950: #161950;
+  /*
+    Marque Homonyme — deux couleurs principales :
+    - #886666 (brand-500) : mauve-brun, couleur d'action / interactive.
+      Contraste 5.07:1 sur blanc → AA texte + AA composants ; le blanc dessus
+      passe aussi AA (boutons pleins).
+    - #FDCFCB (brand-100) : rose pâle, teinte d'accent pour les fonds discrets
+      (état actif, puces, sélection). Le texte posé dessus doit être foncé
+      (brand-700 / gray-800) — brand-500 dessus ne fait que 3.6:1.
+    Échelle dérivée sur la même teinte rouge (~2-5°) pour rester cohérente.
+  */
+  --color-brand-25: #fdf7f6;
+  --color-brand-50: #fbeeec;
+  --color-brand-100: #fdcfcb;
+  --color-brand-200: #f2b3ac;
+  --color-brand-300: #d99f97;
+  --color-brand-400: #b98a82;
+  --color-brand-500: #886666;
+  --color-brand-600: #74534f;
+  --color-brand-700: #5b4340;
+  --color-brand-800: #433230;
+  --color-brand-900: #382b29;
+  --color-brand-950: #241b1a;
 
   --color-blue-light-25: #f5fbff;
   --color-blue-light-50: #f0f9ff;
@@ -148,7 +179,7 @@
     0px 20px 24px -4px rgba(16, 24, 40, 0.08),
     0px 8px 8px -4px rgba(16, 24, 40, 0.03);
   --shadow-datepicker: -5px 0 0 #262d3c, 5px 0 0 #262d3c;
-  --shadow-focus-ring: 0px 0px 0px 4px rgba(70, 95, 255, 0.12);
+  --shadow-focus-ring: 0px 0px 0px 4px rgba(136, 102, 102, 0.12);
   --shadow-slider-navigation:
     0px 1px 2px 0px rgba(16, 24, 40, 0.1), 0px 1px 3px 0px rgba(16, 24, 40, 0.1);
   --shadow-tooltip:
@@ -188,7 +219,7 @@
     cursor: pointer;
   }
   body {
-    @apply relative font-normal font-outfit z-1 bg-gray-50;
+    @apply relative font-normal font-poppins z-1 bg-gray-50;
   }
 }
 
@@ -197,7 +228,7 @@
 }
 
 @utility menu-item-active {
-  @apply bg-brand-50 text-brand-500 dark:bg-brand-500/[0.12] dark:text-brand-400;
+  @apply bg-brand-50 text-brand-700 dark:bg-brand-500/[0.12] dark:text-brand-400;
 }
 
 @utility menu-item-inactive {
@@ -209,7 +240,7 @@
 }
 
 @utility menu-item-icon-active {
-  @apply text-brand-500 dark:text-brand-400;
+  @apply text-brand-600 dark:text-brand-400;
 }
 
 @utility menu-item-icon-inactive {
@@ -221,7 +252,7 @@
 }
 
 @utility menu-item-arrow-active {
-  @apply rotate-180 text-brand-500 dark:text-brand-400;
+  @apply rotate-180 text-brand-600 dark:text-brand-400;
 }
 
 @utility menu-item-arrow-inactive {
@@ -233,7 +264,7 @@
 }
 
 @utility menu-dropdown-item-active {
-  @apply bg-brand-50 text-brand-500 dark:bg-brand-500/[0.12] dark:text-brand-400;
+  @apply bg-brand-50 text-brand-700 dark:bg-brand-500/[0.12] dark:text-brand-400;
 }
 
 @utility menu-dropdown-item-inactive {
@@ -241,7 +272,7 @@
 }
 
 @utility menu-dropdown-badge {
-  @apply block rounded-full px-2.5 py-0.5 text-xs font-medium uppercase text-brand-500 dark:text-brand-400;
+  @apply block rounded-full px-2.5 py-0.5 text-xs font-medium uppercase text-brand-700 dark:text-brand-400;
 }
 
 @utility menu-dropdown-badge-active {
@@ -315,7 +346,7 @@
   @apply !p-0;
 }
 .apexcharts-tooltip-title {
-  @apply !mb-0 !border-b-0 !bg-transparent !p-0 !text-[10px] !leading-4 !text-gray-800 dark:!text-white/90;
+  @apply !mb-0 !border-b-0 !bg-transparent !p-0 !text-[12px] !leading-5 !text-gray-800 dark:!text-white/90;
 }
 .apexcharts-tooltip-text {
   @apply !text-theme-xs !text-gray-700 dark:!text-white/90;
@@ -467,13 +498,13 @@ span.flatpickr-weekday,
 .flatpickr-day.selected.nextMonthDay,
 .flatpickr-day.startRange.nextMonthDay,
 .flatpickr-day.endRange.nextMonthDay {
-  background: #465fff;
+  background: #886666;
   @apply !border-brand-500 !bg-brand-500 hover:!border-brand-50 hover:!bg-brand-500;
 }
 .flatpickr-day.selected.startRange + .endRange:not(:nth-child(7n + 1)),
 .flatpickr-day.startRange.startRange + .endRange:not(:nth-child(7n + 1)),
 .flatpickr-day.endRange.startRange + .endRange:not(:nth-child(7n + 1)) {
-  box-shadow: -10px 0 0 #465fff;
+  box-shadow: -10px 0 0 #886666;
 }
 
 .flatpickr-months .flatpickr-prev-month svg,

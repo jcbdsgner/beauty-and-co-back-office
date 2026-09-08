@@ -1,21 +1,21 @@
 import type { Metadata } from 'next';
-import { Outfit } from 'next/font/google';
+import { Poppins } from 'next/font/google';
 import './globals.css';
 import "flatpickr/dist/flatpickr.css";
 import { SidebarProvider } from '@/context/SidebarContext';
-import { ThemeProvider } from '@/context/ThemeContext';
 
-const outfit = Outfit({
+const poppins = Poppins({
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
   title: {
-    default: "Homonyme — Back office",
+    default: "Homonyme — Back-office",
     template: "%s | Homonyme",
   },
   description:
-    "Front-end-only admin dashboard. All data is mock data — there is no backend.",
+    "Back-office Beauty & Co — démo front-end, données fictives, aucun backend.",
 };
 
 export default function RootLayout({
@@ -25,10 +25,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr">
-      <body className={`${outfit.className} bg-gray-50`}>
-        <ThemeProvider>
-          <SidebarProvider>{children}</SidebarProvider>
-        </ThemeProvider>
+      <body className={`${poppins.className} bg-gray-50`}>
+        <SidebarProvider>{children}</SidebarProvider>
       </body>
     </html>
   );
