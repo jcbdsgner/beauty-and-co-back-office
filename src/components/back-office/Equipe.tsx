@@ -1,0 +1,244 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import PageHeader from "@/components/back-office/PageHeader";
+import SegmentedControl, {
+  type SegmentedOption,
+} from "@/components/ui/segmented/SegmentedControl";
+import { PlusIcon } from "@/icons";
+import { useLocation } from "@/context/LocationContext";
+import { salons, type SalonScope } from "@/lib/mock/beautyandco";
+import {
+  members as memberSeeds,
+  type Member,
+  type StaffRole,
+} from "@/lib/mock/staff";
+import { rdvCountByStaffDay } from "@/lib/mock/rendezvous";
+import { staffRequests as requestSeeds, type StaffRequest } from "@/lib/mock/rh";
+import {
+  applyCapability,
+  defaultAutorisations,
+  type Autorisations,
+  type Capability,
+} from "@/lib/mock/autorisations";
+import EquipeList from "./equipe/EquipeList";
+import MemberDetail from "./equipe/MemberDetail";
+import AddMemberFlow from "./equipe/AddMemberFlow";
+import RolePermissions from "./equipe/RolePermissions";
+import { BackButton } from "./equipe/ui";
+
+// Écran « Équipe » — le domicile des personnes qui font tourner les salons.
+//
+// 1. Où en est la propriétaire ? Plutôt en pilotage sur l'équipe (elle ne fait
+//    pas les gestes à la place des collaboratrices). Elle vient vérifier qui a
+//    un accès à l'appli, ajouter une recrue, corriger un horaire habituel ou
+//    cocher une nouvelle compétence. Registre posé.
+// 2. Ce qui doit sauter aux yeux : la liste de l'équipe avec, pour chacune, son
+//    rôle, ses salons et l'état de son compte (a-t-elle accès à la plateforme ?).
+// 3. Quand ça se passe mal : praticienne sans compétence → elle n'apparaît pas à
+//    la réservation (alerte) ; décocher la dernière personne compétente d'une
+//    prestation → alerte ; recherche sans résultat → message ; désactivation →
+//    confirmation, l'historique est gardé.
+
+const SALON_OPTIONS: SegmentedOption<SalonScope>[] = [
+  { value: "all", label: "Tous les salons" },
+  ...salons.map((s) => ({ value: s.id as SalonScope, label: s.name })),
+];
+
+type Tab = "membres" | "autorisations";
+
+const TAB_OPTIONS: SegmentedOption<Tab>[] = [
+  { value: "membres", label: "Membres" },
+  { value: "autorisations", label: "Autorisations" },
+];
+
+type View = { kind: "list" } | { kind: "detail"; id: string } | { kind: "new" };
+
+export default function Equipe() {
+  const { scope, setScope } = useLocation();
+  const searchParams = useSearchParams();
+
+  // Aucun backend : tout est édité en mémoire de session (comme Services / Fidélité).
+  const [members, setMembers] = useState<Member[]>(memberSeeds);
+  const [requests, setRequests] = useState<StaffRequest[]>(requestSeeds);
+  const [autorisations, setAutorisations] =
+    useState<Autorisations>(defaultAutorisations);
+  const [view, setView] = useState<View>({ kind: "list" });
+  const [tab, setTab] = useState<Tab>("membres");
+
+  // Arrivée depuis une notification « demande en attente » : ?membre=<id> ouvre
+  // directement la fiche — y compris si la propriétaire est déjà sur /equipe et
+  // clique la notif (le param change sans remontage). Ajustement d'état pendant
+  // le rendu, même motif que l'ouverture de `AbsenceDialog` sur une cellule.
+  // Id inconnu → ignoré, on reste sur la liste.
+  const memberParam = searchParams.get("membre");
+  const [lastMemberParam, setLastMemberParam] = useState<string | null>(null);
+  if (memberParam !== lastMemberParam) {
+    setLastMemberParam(memberParam);
+    if (memberParam && memberSeeds.some((m) => m.id === memberParam)) {
+      setView({ kind: "detail", id: memberParam });
+    }
+  }
+
+  const patchMember = (id: string, patch: Partial<Member>) =>
+    setMembers((list) => list.map((m) => (m.id === id ? { ...m, ...patch } : m)));
+
+  const addMember = (member: Member) => setMembers((list) => [...list, member]);
+
+  const removeMember = (id: string) => {
+    setMembers((list) => list.filter((m) => m.id !== id));
+    setView({ kind: "list" });
+  };
+
+  // Décision de la propriétaire sur une demande. `decidedAt` = instant réel :
+  // c'est le seul horodatage que l'on ne fige pas au 2026-09-03 du monde mock.
+  const decideRequest = (id: string, status: "acceptee" | "refusee") =>
+    setRequests((list) =>
+      list.map((r) =>
+        r.id === id ? { ...r, status, decidedAt: new Date().toISOString() } : r,
+      ),
+    );
+
+  // Autorisations par rôle — éditées en mémoire de session. `applyCapability`
+  // propage la cascade des prérequis (cocher un dérivé coche son prérequis,
+  // décocher un prérequis décoche ses dérivés).
+  const setRoleCapability = (role: StaffRole, cap: Capability, value: boolean) =>
+    setAutorisations((current) => ({
+      ...current,
+      [role]: applyCapability(current[role], cap, value),
+    }));
+
+  const resetRole = (role: StaffRole) =>
+    setAutorisations((current) => ({
+      ...current,
+      [role]: { ...defaultAutorisations[role] },
+    }));
+
+  const openPermissions = () => {
+    setTab("autorisations");
+    setView({ kind: "list" });
+  };
+
+  const scoped = useMemo(
+    () => (scope === "all" ? members : members.filter((m) => m.salonIds.includes(scope))),
+    [members, scope],
+  );
+
+  const selected =
+    view.kind === "detail" ? members.find((m) => m.id === view.id) ?? null : null;
+
+  // Rendez-vous non annulés du membre affiché, par jour — alimente l'alerte de
+  // conflit quand la propriétaire s'apprête à accepter un congé. Matching par
+  // prénom, comme l'écran Planning.
+  const rdvDaysForSelected = useMemo(
+    () =>
+      selected
+        ? rdvCountByStaffDay(scope)
+            .filter((d) => d.staffFirstName === selected.firstName)
+            .map(({ date, count }) => ({ date, count }))
+        : [],
+    [selected, scope],
+  );
+
+  if (view.kind === "new") {
+    return (
+      <div className="space-y-6">
+        <div>
+          <BackButton onClick={() => setView({ kind: "list" })} />
+          <PageHeader
+            title="Ajouter un membre"
+            description="Renseignez l'identité, cochez les compétences et posez les horaires habituels."
+          />
+        </div>
+        <div className="max-w-3xl">
+          <AddMemberFlow
+            allMembers={members}
+            onCancel={() => setView({ kind: "list" })}
+            onCreate={addMember}
+            onDone={(id, invite) => {
+              if (invite) patchMember(id, { account: "invited" });
+              setView({ kind: "detail", id });
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (view.kind === "detail" && selected) {
+    return (
+      <MemberDetail
+        member={selected}
+        allMembers={members}
+        requests={requests.filter((r) => r.memberId === selected.id)}
+        rdvDays={rdvDaysForSelected}
+        autorisations={autorisations}
+        onBack={() => setView({ kind: "list" })}
+        onPatch={(patch) => patchMember(selected.id, patch)}
+        onDecideRequest={decideRequest}
+        onOpenPermissions={openPermissions}
+        onDelete={() => removeMember(selected.id)}
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <PageHeader
+          title="Équipe"
+          description={
+            tab === "membres"
+              ? "Les personnes qui font tourner les salons : rôles, accès à la plateforme, compétences et horaires habituels."
+              : "Ce que chaque rôle a le droit de faire sur la plateforme, pour les comptes que vous invitez."
+          }
+        />
+        <SegmentedControl
+          options={TAB_OPTIONS}
+          value={tab}
+          onChange={setTab}
+          aria-label="Membres ou autorisations"
+        />
+      </div>
+
+      {tab === "membres" ? (
+        <>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-theme-xs font-medium uppercase tracking-wide text-gray-400">
+                Salon
+              </span>
+              <SegmentedControl
+                options={SALON_OPTIONS}
+                value={scope}
+                onChange={setScope}
+                aria-label="Filtrer par salon"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => setView({ kind: "new" })}
+              className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-theme-sm font-medium text-white transition hover:bg-brand-600"
+            >
+              <PlusIcon className="size-4" />
+              Ajouter un membre
+            </button>
+          </div>
+
+          <EquipeList
+            members={scoped}
+            requests={requests}
+            onOpen={(id) => setView({ kind: "detail", id })}
+          />
+        </>
+      ) : (
+        <RolePermissions
+          autorisations={autorisations}
+          onChange={setRoleCapability}
+          onReset={resetRole}
+        />
+      )}
+    </div>
+  );
+}

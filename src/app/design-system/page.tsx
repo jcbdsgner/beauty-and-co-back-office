@@ -25,7 +25,25 @@ import DefinitionList from "@/components/back-office/DefinitionList";
 import { FormCard, ToggleRow } from "@/components/back-office/FormCard";
 
 import { PlusIcon } from "@/icons";
-import { dashboardKpis, orders, currency, dateTime, type Order } from "@/lib/mock";
+import { dashboardKpis, fcfa, frShortDate } from "@/lib/mock/beautyandco";
+
+/* Petit jeu de démo local pour illustrer DataTable / DefinitionList (le produit
+   n'a pas de « commandes » — fixtures propres à la vitrine). */
+type DemoRow = {
+  id: string;
+  number: string;
+  customer: string;
+  date: string;
+  total: number;
+  status: string;
+};
+const demoRows: DemoRow[] = [
+  { id: "d1", number: "RDV-1042", customer: "Awa Diop", date: "2026-09-01", total: 25000, status: "Paid" },
+  { id: "d2", number: "RDV-1043", customer: "Fatou Ndiaye", date: "2026-09-02", total: 45000, status: "Pending" },
+  { id: "d3", number: "RDV-1044", customer: "Marième Sow", date: "2026-09-02", total: 12000, status: "Paid" },
+  { id: "d4", number: "RDV-1045", customer: "Aïcha Ba", date: "2026-09-03", total: 30000, status: "Cancelled" },
+  { id: "d5", number: "RDV-1046", customer: "Khady Guèye", date: "2026-09-03", total: 18000, status: "Paid" },
+];
 
 /* ------------------------------------------------------------------ helpers */
 
@@ -81,11 +99,11 @@ export default function DesignSystemPage() {
   const [checked, setChecked] = useState(true);
   const [radio, setRadio] = useState("standard");
 
-  const orderColumns: Column<Order>[] = [
+  const orderColumns: Column<DemoRow>[] = [
     { key: "number", header: "Order" },
     { key: "customer", header: "Customer" },
-    { key: "date", header: "Date", render: (o) => dateTime(o.date) },
-    { key: "total", header: "Total", align: "right", render: (o) => currency(o.total) },
+    { key: "date", header: "Date", render: (o) => frShortDate(o.date) },
+    { key: "total", header: "Total", align: "right", render: (o) => fcfa(o.total) },
     { key: "status", header: "Status", render: (o) => <StatusBadge value={o.status} /> },
   ];
 
@@ -296,11 +314,11 @@ export default function DesignSystemPage() {
       <Section id="data" title="Data display">
         <Row label="StatCards" />
         <div className="mb-8">
-          <StatCards items={dashboardKpis} />
+          <StatCards items={dashboardKpis("all", "today")} />
         </div>
         <Row label="DataTable" />
         <div className="mb-8">
-          <DataTable columns={orderColumns} rows={orders.slice(0, 5)} rowKey={(o) => o.id} />
+          <DataTable columns={orderColumns} rows={demoRows} rowKey={(o) => o.id} />
         </div>
         <Row label="DefinitionList" />
         <div className="max-w-md">
@@ -309,7 +327,7 @@ export default function DesignSystemPage() {
             items={[
               { label: "Status", value: <StatusBadge value="Paid" /> },
               { label: "Payment method", value: "Card" },
-              { label: "Total", value: currency(2148) },
+              { label: "Total", value: fcfa(21480) },
             ]}
           />
         </div>
@@ -320,9 +338,8 @@ export default function DesignSystemPage() {
         <Row label="PageHeader" />
         <div className="mb-8 rounded-xl border border-dashed border-gray-300 p-4 dark:border-gray-700">
           <PageHeader
-            title="Orders"
-            description="All orders placed through the storefront and admin."
-            action={{ label: "Create order" }}
+            title="Rendez-vous"
+            description="Tous les rendez-vous pris en salon et en ligne."
           />
         </div>
         <Row label="ComponentCard" />

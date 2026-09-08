@@ -1,5 +1,5 @@
 import { ArrowDownIcon, ArrowUpIcon } from "@/icons";
-import type { Kpi } from "@/lib/mock";
+import type { Kpi } from "@/lib/mock/beautyandco";
 
 export default function StatCards({ items }: { items: Kpi[] }) {
   return (
@@ -11,30 +11,46 @@ export default function StatCards({ items }: { items: Kpi[] }) {
         return (
           <div
             key={kpi.key}
-            className="rounded-2xl border border-gray-200 bg-white p-5 md:p-6"
+            className="flex h-full flex-col rounded-2xl border border-gray-200 bg-white p-5 md:p-6"
           >
+            {/* Zone 1 — libellé */}
             <span className="text-theme-sm text-gray-500">{kpi.label}</span>
-            <div className="mt-2 flex items-end justify-between">
-              <h4 className="text-title-sm font-bold text-gray-800">{kpi.value}</h4>
-              {showDelta && (
-                <span
-                  className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-theme-xs font-medium ${
-                    up
-                      ? "bg-success-50 text-success-600"
-                      : down
-                        ? "bg-error-50 text-error-600"
-                        : "bg-gray-100 text-gray-600"
-                  }`}
-                >
-                  {up && <ArrowUpIcon />}
-                  {down && <ArrowDownIcon />}
-                  {Math.abs(kpi.delta as number)}%
-                </span>
+
+            {/* Zone 2 — valeur (toute la largeur) + écart sur sa propre ligne */}
+            <div className="mt-3 flex items-baseline gap-1.5">
+              <span className="text-title-sm font-bold leading-none text-gray-800">
+                {kpi.value}
+              </span>
+              {kpi.unit && (
+                <span className="text-lg font-semibold text-gray-400">{kpi.unit}</span>
               )}
             </div>
-            {kpi.hint && (
-              <span className="mt-1 block text-theme-xs text-gray-400">{kpi.hint}</span>
-            )}
+
+            <div className="mt-2 flex min-h-[1.5rem] items-center gap-2 text-theme-xs">
+              {showDelta && (
+                <>
+                  <span
+                    className={`flex items-center gap-0.5 rounded-full px-2 py-0.5 font-medium ${
+                      up
+                        ? "bg-success-50 text-success-600"
+                        : down
+                          ? "bg-error-50 text-error-600"
+                          : "bg-gray-100 text-gray-600"
+                    }`}
+                  >
+                    {up && <ArrowUpIcon />}
+                    {down && <ArrowDownIcon />}
+                    {Math.abs(kpi.delta as number)} %
+                  </span>
+                  {kpi.deltaLabel && <span className="text-gray-400">{kpi.deltaLabel}</span>}
+                </>
+              )}
+            </div>
+
+            {/* Zone 3 — repère de la période précédente, ancré en bas pour aligner les cartes */}
+            <div className="mt-auto min-h-[2.5rem] pt-3 text-theme-xs text-gray-400">
+              {kpi.hint && <span>{kpi.hint}</span>}
+            </div>
           </div>
         );
       })}

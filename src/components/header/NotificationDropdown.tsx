@@ -3,82 +3,51 @@ import Link from "next/link";
 import React, { useState } from "react";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
+import { useNotifications } from "@/context/NotificationsContext";
+import { CATEGORY_LABELS, TONE_DOT } from "@/lib/mock/notifications";
 
-type Notif = {
-  id: string;
-  title: string;
-  detail: string;
-  meta: string;
-  tone: "info" | "success" | "warning";
-};
+// Repère « aujourd'hui » figé, cohérent avec le reste des fixtures.
+const TODAY = "2026-09-03";
 
-const NOTIFS: Notif[] = [
-  {
-    id: "n1",
-    title: "Nouveau rendez-vous",
-    detail: "Awa Diop — Coupe & Brushing, salon Almadies à 09:00",
-    meta: "il y a 5 min",
-    tone: "info",
-  },
-  {
-    id: "n2",
-    title: "Stock bas",
-    detail: "Teinture Majirel 6.0 : 4 unités restantes (seuil 10)",
-    meta: "il y a 40 min",
-    tone: "warning",
-  },
-  {
-    id: "n3",
-    title: "Paiement encaissé",
-    detail: "Fatou Ndiaye — 25 000 FCFA, salon Sea Plaza",
-    meta: "il y a 1 h",
-    tone: "success",
-  },
-  {
-    id: "n4",
-    title: "Annulation",
-    detail: "Rama Diallo a annulé son RDV de 13:00 (Soin visage)",
-    meta: "il y a 2 h",
-    tone: "warning",
-  },
-  {
-    id: "n5",
-    title: "Nouvel avis client",
-    detail: "Khady Guèye a laissé un avis 5/5 sur le salon Almadies",
-    meta: "hier",
-    tone: "success",
-  },
-];
+// « à l'instant » / « il y a 2 h » / « hier » / « 1 sept. »
+function relative(iso: string): string {
+  const then = new Date(iso).getTime();
+  const now = new Date(`${TODAY}T13:20:00`).getTime();
+  const min = Math.round((now - then) / 60000);
+  if (min < 1) return "à l'instant";
+  if (min < 60) return `il y a ${min} min`;
+  const h = Math.round(min / 60);
+  if (h < 24 && iso.slice(0, 10) === TODAY) return `il y a ${h} h`;
+  if (iso.slice(0, 10) === TODAY) return "aujourd'hui";
+  const diffDays = Math.round((now - then) / 86_400_000);
+  if (diffDays <= 1) return "hier";
+  const MONTHS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
+  const [, m, d] = iso.slice(0, 10).split("-").map(Number);
+  return `${d} ${MONTHS[m - 1]}`;
+}
 
-const DOT: Record<Notif["tone"], string> = {
-  info: "bg-blue-light-500",
-  success: "bg-success-500",
-  warning: "bg-warning-500",
-};
+// Aperçu de la cloche : les plus récentes seulement, la liste complète est sur /notifications.
+const PREVIEW_COUNT = 6;
 
 export default function NotificationDropdown() {
+  const { notifications, unreadCount, markRead, markAllRead } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
-  const [notifying, setNotifying] = useState(true);
 
-  const handleClick = () => {
-    setIsOpen((v) => !v);
-    setNotifying(false);
-  };
+  const preview = notifications.slice(0, PREVIEW_COUNT);
 
   return (
     <div className="relative">
       <button
         className="dropdown-toggle relative flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700"
-        onClick={handleClick}
-        aria-label="Notifications"
+        onClick={() => setIsOpen((v) => !v)}
+        aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} non lues` : "Notifications"}
       >
-        <span
-          className={`absolute right-0 top-0.5 z-10 h-2 w-2 rounded-full bg-orange-400 ${
-            notifying ? "flex" : "hidden"
-          }`}
-        >
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-75" />
-        </span>
+        {unreadCount > 0 && (
+          <span className="absolute -right-1 -top-1 z-10 flex h-5 min-w-5 items-center justify-center rounded-full bg-orange-400 px-1 text-[12px] font-semibold leading-none text-white">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-60" />
+            <span className="relative">{unreadCount > 9 ? "9+" : unreadCount}</span>
+          </span>
+        )}
         <svg className="fill-current" width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
           <path
             fillRule="evenodd"
@@ -95,43 +64,81 @@ export default function NotificationDropdown() {
         className="absolute -right-[200px] mt-[17px] flex max-h-[480px] w-[350px] flex-col rounded-2xl border border-gray-200 bg-white p-3 shadow-theme-lg sm:w-[361px] lg:right-0"
       >
         <div className="mb-3 flex items-center justify-between border-b border-gray-100 pb-3">
-          <h5 className="text-lg font-semibold text-gray-800">Notifications</h5>
-          <button
-            onClick={() => setIsOpen(false)}
-            className="dropdown-toggle text-gray-500 transition hover:text-gray-700"
-            aria-label="Fermer"
-          >
-            <svg className="fill-current" width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path
-                fillRule="evenodd"
-                clipRule="evenodd"
-                d="M6.21967 7.28131C5.92678 6.98841 5.92678 6.51354 6.21967 6.22065C6.51256 5.92775 6.98744 5.92775 7.28033 6.22065L11.999 10.9393L16.7176 6.22078C17.0105 5.92789 17.4854 5.92788 17.7782 6.22078C18.0711 6.51367 18.0711 6.98855 17.7782 7.28144L13.0597 12L17.7782 16.7186C18.0711 17.0115 18.0711 17.4863 17.7782 17.7792C17.4854 18.0721 17.0105 18.0721 16.7176 17.7792L11.999 13.0607L7.28033 17.7794C6.98744 18.0722 6.51256 18.0722 6.21967 17.7794C5.92678 17.4865 5.92678 17.0116 6.21967 16.7187L10.9384 12L6.21967 7.28131Z"
-                fill="currentColor"
-              />
-            </svg>
-          </button>
+          <h5 className="text-lg font-semibold text-gray-800">
+            Notifications
+            {unreadCount > 0 && (
+              <span className="ml-2 text-theme-sm font-medium text-gray-400">{unreadCount} non lues</span>
+            )}
+          </h5>
+          <div className="flex items-center gap-3">
+            {unreadCount > 0 && (
+              <button
+                onClick={markAllRead}
+                className="text-theme-xs font-medium text-brand-700 hover:underline"
+              >
+                Tout marquer lu
+              </button>
+            )}
+            <button
+              onClick={() => setIsOpen(false)}
+              className="dropdown-toggle text-gray-500 transition hover:text-gray-700"
+              aria-label="Fermer"
+            >
+              <svg className="fill-current" width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path
+                  fillRule="evenodd"
+                  clipRule="evenodd"
+                  d="M6.21967 7.28131C5.92678 6.98841 5.92678 6.51354 6.21967 6.22065C6.51256 5.92775 6.98744 5.92775 7.28033 6.22065L11.999 10.9393L16.7176 6.22078C17.0105 5.92789 17.4854 5.92788 17.7782 6.22078C18.0711 6.51367 18.0711 6.98855 17.7782 7.28144L13.0597 12L17.7782 16.7186C18.0711 17.0115 18.0711 17.4863 17.7782 17.7792C17.4854 18.0721 17.0105 18.0721 16.7176 17.7792L11.999 13.0607L7.28033 17.7794C6.98744 18.0722 6.51256 18.0722 6.21967 17.7794C5.92678 17.4865 5.92678 17.0116 6.21967 16.7187L10.9384 12L6.21967 7.28131Z"
+                  fill="currentColor"
+                />
+              </svg>
+            </button>
+          </div>
         </div>
 
-        <ul className="flex flex-col overflow-y-auto custom-scrollbar">
-          {NOTIFS.map((n) => (
-            <li key={n.id}>
-              <DropdownItem
-                onItemClick={() => setIsOpen(false)}
-                className="flex gap-3 rounded-lg border-b border-gray-100 p-3 hover:bg-gray-100"
-              >
-                <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${DOT[n.tone]}`} />
-                <span className="block">
-                  <span className="mb-0.5 block text-theme-sm font-medium text-gray-800">{n.title}</span>
-                  <span className="mb-1 block text-theme-sm text-gray-500">{n.detail}</span>
-                  <span className="block text-theme-xs text-gray-400">{n.meta}</span>
-                </span>
-              </DropdownItem>
-            </li>
-          ))}
-        </ul>
+        {preview.length === 0 ? (
+          <p className="px-3 py-8 text-center text-theme-sm text-gray-500">
+            Aucune notification. Vous êtes à jour.
+          </p>
+        ) : (
+          <ul className="flex flex-col overflow-y-auto custom-scrollbar">
+            {preview.map((n) => (
+              <li key={n.id}>
+                <DropdownItem
+                  tag="a"
+                  href={n.href}
+                  onItemClick={() => {
+                    markRead(n.id);
+                    setIsOpen(false);
+                  }}
+                  baseClassName=""
+                  className={`flex gap-3 rounded-lg border-b border-gray-100 p-3 hover:bg-gray-50 ${
+                    n.read ? "" : "bg-brand-50/40"
+                  }`}
+                >
+                  <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${TONE_DOT[n.tone]}`} />
+                  <span className="block min-w-0 flex-1">
+                    <span
+                      className={`mb-0.5 block truncate text-theme-sm ${
+                        n.read ? "font-medium text-gray-700" : "font-semibold text-gray-900"
+                      }`}
+                    >
+                      {n.title}
+                    </span>
+                    <span className="mb-1 block text-theme-sm text-gray-500">{n.body}</span>
+                    <span className="block text-theme-xs text-gray-400">
+                      {CATEGORY_LABELS[n.category]} · {relative(n.date)}
+                    </span>
+                  </span>
+                </DropdownItem>
+              </li>
+            ))}
+          </ul>
+        )}
 
         <Link
           href="/notifications"
+          onClick={() => setIsOpen(false)}
           className="mt-3 block rounded-lg border border-gray-300 bg-white px-4 py-2 text-center text-sm font-medium text-gray-700 hover:bg-gray-100"
         >
           Voir toutes les notifications

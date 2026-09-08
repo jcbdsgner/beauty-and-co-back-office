@@ -1,6 +1,9 @@
 "use client";
 
 import { useSidebar } from "@/context/SidebarContext";
+import { LocationProvider } from "@/context/LocationContext";
+import { AccountProvider } from "@/context/AccountContext";
+import { NotificationsProvider } from "@/context/NotificationsContext";
 import AppHeader from "@/layout/AppHeader";
 import AppSidebar from "@/layout/AppSidebar";
 import Backdrop from "@/layout/Backdrop";
@@ -17,23 +20,31 @@ export default function AdminLayout({
   const mainContentMargin = isMobileOpen
     ? "ml-0"
     : isExpanded || isHovered
-    ? "lg:ml-[290px]"
+    ? "lg:ml-[240px]"
     : "lg:ml-[90px]";
 
   return (
-    <div className="min-h-screen xl:flex">
-      {/* Sidebar and Backdrop */}
-      <AppSidebar />
-      <Backdrop />
-      {/* Main Content Area */}
-      <div
-        className={`flex-1 transition-all  duration-300 ease-in-out ${mainContentMargin}`}
-      >
-        {/* Header */}
-        <AppHeader />
-        {/* Page Content */}
-        <div className="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6">{children}</div>
-      </div>
-    </div>
+    <LocationProvider>
+      <AccountProvider>
+        <NotificationsProvider>
+          <div className="min-h-screen xl:flex">
+            {/* Sidebar and Backdrop */}
+            <AppSidebar />
+            <Backdrop />
+            {/* Main Content Area */}
+            <div
+              className={`flex-1 transition-all  duration-300 ease-in-out print:!ml-0 ${mainContentMargin}`}
+            >
+              {/* Header */}
+              <AppHeader />
+              {/* Page Content */}
+              <div className="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6 print:p-0">
+                {children}
+              </div>
+            </div>
+          </div>
+        </NotificationsProvider>
+      </AccountProvider>
+    </LocationProvider>
   );
 }

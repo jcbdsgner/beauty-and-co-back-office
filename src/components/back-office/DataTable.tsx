@@ -21,18 +21,23 @@ type Props<T> = {
   empty?: string;
 };
 
-export default function DataTable<T>({ columns, rows, rowKey, empty = "No records" }: Props<T>) {
+export default function DataTable<T>({
+  columns,
+  rows,
+  rowKey,
+  empty = "Aucune donnée",
+}: Props<T>) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+    <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
       <div className="max-w-full overflow-x-auto">
         <Table>
-          <TableHeader className="border-b border-gray-100 dark:border-gray-800">
+          <TableHeader className="border-b border-gray-100">
             <TableRow>
               {columns.map((col) => (
                 <TableCell
                   key={col.key}
                   isHeader
-                  className={`px-5 py-3 font-medium text-gray-500 text-theme-xs dark:text-gray-400 ${
+                  className={`px-5 py-3 font-medium text-gray-500 text-theme-xs ${
                     col.align === "right" ? "text-end" : "text-start"
                   }`}
                 >
@@ -41,20 +46,20 @@ export default function DataTable<T>({ columns, rows, rowKey, empty = "No record
               ))}
             </TableRow>
           </TableHeader>
-          <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
+          <TableBody className="divide-y divide-gray-100">
             {rows.length === 0 ? (
               <TableRow>
-                <TableCell className="px-5 py-8 text-center text-gray-500 text-theme-sm dark:text-gray-400">
+                <TableCell className="px-5 py-8 text-center text-gray-500 text-theme-sm">
                   {empty}
                 </TableCell>
               </TableRow>
             ) : (
               rows.map((row) => (
-                <TableRow key={rowKey(row)} className="hover:bg-gray-50 dark:hover:bg-white/[0.02]">
+                <TableRow key={rowKey(row)} className="hover:bg-gray-50">
                   {columns.map((col) => (
                     <TableCell
                       key={col.key}
-                      className={`px-5 py-4 text-gray-700 text-theme-sm dark:text-gray-300 ${
+                      className={`px-5 py-4 text-gray-700 text-theme-sm ${
                         col.align === "right" ? "text-end" : "text-start"
                       }`}
                     >
