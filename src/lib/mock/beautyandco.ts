@@ -131,25 +131,6 @@ export function salonsToday(scope: SalonScope): SalonToday[] {
 }
 
 /* ------------------------------------------------------------------ */
-/* Alerte stock (« À traiter »)                                        */
-/* ------------------------------------------------------------------ */
-
-export type LowStockItem = { name: string; onHand: number; min: number };
-
-export const lowStockItems: LowStockItem[] = [
-  { name: "Teinture Majirel 6.0", onHand: 4, min: 10 },
-  { name: "Huile d'argan 100 ml", onHand: 2, min: 8 },
-  { name: "Shampoing pro 1 L", onHand: 6, min: 15 },
-];
-
-export const stockAlert = {
-  count: lowStockItems.length,
-  title: `${lowStockItems.length} produits sous le seuil de réappro`,
-  message: `Le plus critique : ${lowStockItems[0].name}, ${lowStockItems[0].onHand} en stock pour un minimum de ${lowStockItems[0].min}.`,
-  href: "/stock",
-};
-
-/* ------------------------------------------------------------------ */
 /* Configuration des salons — identité, postes de travail, horaires    */
 /* ------------------------------------------------------------------ */
 //

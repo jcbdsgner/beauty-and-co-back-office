@@ -1,6 +1,6 @@
 "use client";
 
-import { WEEKDAYS, WEEKDAY_LABELS, type Weekday } from "@/lib/mock/beautyandco";
+import { WEEKDAYS, WEEKDAY_LABELS, salons, type Weekday } from "@/lib/mock/beautyandco";
 import type { DayShift, Member } from "@/lib/mock/staff";
 import { Toggle } from "./ui";
 
@@ -13,6 +13,7 @@ type WorkingShift = Extract<DayShift, { off: false }>;
 
 const DEFAULT_WORKING: WorkingShift = {
   off: false,
+  salonId: salons[0].id,
   start: "09:00",
   end: "19:00",
   breakStart: "13:00",
@@ -37,6 +38,19 @@ function WorkingControls({
 
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-theme-sm text-gray-500">
+      <select
+        value={shift.salonId}
+        onChange={(e) => patch({ salonId: e.target.value as WorkingShift["salonId"] })}
+        className={timeField}
+        aria-label={`Salon — ${day}`}
+      >
+        {salons.map((s) => (
+          <option key={s.id} value={s.id}>
+            {s.name}
+          </option>
+        ))}
+      </select>
+
       <span className="flex items-center gap-1.5">
         <input
           type="time"
@@ -127,8 +141,10 @@ export default function MemberSchedulePanel({ baseHours, onChange }: Props) {
   return (
     <div className="space-y-4">
       <p className="text-theme-sm text-gray-500">
-        Ces horaires sont la trame de référence : le Planning les applique chaque
-        semaine, et vous n&apos;y saisissez que les exceptions (absences, ajustements).
+        Ces horaires sont la trame de référence, salon compris : le Planning les
+        applique chaque semaine, et vous n&apos;y saisissez que les exceptions
+        (absences, ajustements). Une personne peut très bien travailler dans un
+        salon un jour et dans l&apos;autre le lendemain.
       </p>
       <div className="rounded-2xl border border-gray-200 bg-white">
         <div className="divide-y divide-gray-100">

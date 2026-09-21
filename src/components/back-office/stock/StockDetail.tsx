@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import Alert from "@/components/ui/alert/Alert";
 import Badge from "@/components/ui/badge/Badge";
+import DetailModal from "@/components/back-office/detail/DetailModal";
 import { BoxIcon } from "@/icons";
 import {
   groupThousands,
@@ -43,7 +44,7 @@ import {
 } from "@/lib/mock/stock";
 import { products } from "@/lib/mock/services";
 import StockLevelChart from "./StockLevelChart";
-import { BackButton, SectionCard, SelectField, TextInput, btnPrimary } from "./ui";
+import { SectionCard, SelectField, TextInput, btnPrimary } from "./ui";
 
 type Props = {
   productId: string;
@@ -115,10 +116,9 @@ export default function StockDetail({
 
   if (!product) {
     return (
-      <div className="space-y-6">
-        <BackButton onClick={onBack} />
+      <DetailModal title="Fiche produit" onClose={onBack}>
         <p className="text-theme-sm text-gray-500">Produit inconnu.</p>
-      </div>
+      </DetailModal>
     );
   }
 
@@ -126,10 +126,9 @@ export default function StockDetail({
   const scopeLabel = scope === "all" ? "tous les salons" : salonName(scope);
 
   return (
-    <div className="space-y-6">
-      {/* En-tête ---------------------------------------------------------- */}
-      <div>
-        <BackButton onClick={onBack} />
+    <DetailModal title="Fiche produit" onClose={onBack}>
+      <div className="space-y-6">
+        {/* En-tête ---------------------------------------------------------- */}
         <div className="flex flex-wrap items-start justify-between gap-6">
           <div className="flex items-start gap-4">
             <ProductPhoto
@@ -170,9 +169,7 @@ export default function StockDetail({
             )}
           </div>
         </div>
-      </div>
 
-      <div className="max-w-3xl space-y-5">
         {/* Alerte entreprise ------------------------------------------- */}
         {companyBelow && (
           <Alert
@@ -446,7 +443,7 @@ export default function StockDetail({
           )}
         </SectionCard>
       </div>
-    </div>
+    </DetailModal>
   );
 }
 

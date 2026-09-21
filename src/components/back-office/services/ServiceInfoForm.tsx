@@ -3,14 +3,15 @@
 import { useState } from "react";
 import { CheckCircleIcon } from "@/icons";
 import type { SalonId } from "@/lib/mock/beautyandco";
-import { SERVICE_EMOJIS, serviceSalons, type Service } from "@/lib/mock/services";
+import { SERVICE_ICON_OPTIONS, serviceSalons, type Service } from "@/lib/mock/services";
+import { SERVICE_ICONS } from "./serviceIcons";
 import { SectionCard, TextInput, Toggle, btnGhost, btnPrimary } from "./ui";
 
 export type ServiceDraft = Omit<Service, "id">;
 
 const BLANK: ServiceDraft = {
   name: "",
-  emoji: SERVICE_EMOJIS[0],
+  icon: SERVICE_ICON_OPTIONS[0].value,
   description: "",
   active: true,
   salonIds: [],
@@ -27,7 +28,7 @@ export default function ServiceInfoForm({ mode, service, onSubmit, onCancel }: P
   const initial: ServiceDraft = service
     ? {
         name: service.name,
-        emoji: service.emoji,
+        icon: service.icon,
         description: service.description,
         active: service.active,
         salonIds: service.salonIds,
@@ -76,22 +77,27 @@ export default function ServiceInfoForm({ mode, service, onSubmit, onCancel }: P
           <div>
             <span className="mb-1.5 block text-sm font-medium text-gray-800">Vignette</span>
             <div className="flex flex-wrap gap-1">
-              {SERVICE_EMOJIS.map((e) => (
-                <button
-                  key={e}
-                  type="button"
-                  onClick={() => set("emoji", e)}
-                  aria-label={`Choisir la vignette ${e}`}
-                  aria-pressed={draft.emoji === e}
-                  className={`flex h-9 w-9 items-center justify-center rounded-lg border text-base transition ${
-                    draft.emoji === e
-                      ? "border-brand-400 bg-brand-50"
-                      : "border-gray-200 hover:bg-gray-50"
-                  }`}
-                >
-                  {e}
-                </button>
-              ))}
+              {SERVICE_ICON_OPTIONS.map((o) => {
+                const Icon = SERVICE_ICONS[o.value];
+                const on = draft.icon === o.value;
+                return (
+                  <button
+                    key={o.value}
+                    type="button"
+                    onClick={() => set("icon", o.value)}
+                    aria-label={`Choisir la vignette ${o.label}`}
+                    aria-pressed={on}
+                    title={o.label}
+                    className={`flex h-9 w-9 items-center justify-center rounded-lg border transition ${
+                      on
+                        ? "border-brand-400 bg-brand-50 text-brand-700"
+                        : "border-gray-200 text-gray-500 hover:bg-gray-50"
+                    }`}
+                  >
+                    <Icon className="size-4" />
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>

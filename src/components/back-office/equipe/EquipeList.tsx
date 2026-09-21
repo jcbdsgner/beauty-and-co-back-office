@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Badge from "@/components/ui/badge/Badge";
 import DataTable, { type Column } from "@/components/back-office/DataTable";
 import SegmentedControl from "@/components/ui/segmented/SegmentedControl";
-import { salonName } from "@/lib/mock/beautyandco";
+import { weekSalonSummary } from "@/lib/mock/planning";
 import {
   ACCOUNT_LABELS,
   CATEGORY_LABELS,
@@ -93,12 +93,10 @@ export default function EquipeList({ members, requests, onOpen }: Props) {
       ),
     },
     {
-      key: "salons",
-      header: "Salons",
+      key: "planning",
+      header: "Cette semaine",
       render: (m) => (
-        <span className="text-gray-600">
-          {m.salonIds.map((s) => salonName(s)).join(", ") || "—"}
-        </span>
+        <span className="text-gray-600">{weekSalonSummary(m.id)}</span>
       ),
     },
     {
@@ -170,11 +168,7 @@ export default function EquipeList({ members, requests, onOpen }: Props) {
         columns={columns}
         rows={rows}
         rowKey={(m) => m.id}
-        empty={
-          query.trim() || role !== "all"
-            ? "Aucun membre ne correspond à cette recherche."
-            : "Aucun membre dans ce salon."
-        }
+        empty="Aucun membre ne correspond à cette recherche."
       />
     </div>
   );

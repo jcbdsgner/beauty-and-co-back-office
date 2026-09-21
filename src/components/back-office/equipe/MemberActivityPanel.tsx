@@ -66,7 +66,7 @@ export default function MemberActivityPanel({
       // automatiquement dans Planning, on y renvoie la propriétaire.
       setNotice({
         text: "Congé enregistré. Vérifiez la couverture dans Planning.",
-        href: "/planning",
+        href: "/equipe?vue=planning",
         linkLabel: "Ouvrir le Planning",
       });
     }

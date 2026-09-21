@@ -535,6 +535,25 @@ export const rdvEnd = (r: Pick<RdvDetail, "date" | "prestations">): string => {
 export const needsAssign = (r: Pick<RdvDetail, "status" | "prestations">) =>
   !RDV_STATUS_META[r.status].closed && r.prestations.some((p) => p.staff === null);
 
+// Créneau propre à chaque prestation : les prestations d'un même rendez-vous
+// s'enchaînent (pas en parallèle) — la 2ᵉ prestation démarre quand la 1ʳᵉ
+// finit. Sert à positionner chaque prestation sur la ligne de SA praticienne
+// dans l'agenda horaire (une prestation = un bloc, potentiellement affecté à
+// quelqu'un d'autre que la prestation précédente du même rendez-vous).
+export type PrestationSlot = { prestation: RdvPrestation; start: string; end: string };
+
+export const prestationSlots = (r: Pick<RdvDetail, "date" | "prestations">): PrestationSlot[] => {
+  const p = (n: number) => String(n).padStart(2, "0");
+  const fmt = (d: Date) =>
+    `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:00`;
+  let cursor = new Date(r.date.replace(" ", "T"));
+  return r.prestations.map((prestation) => {
+    const start = new Date(cursor);
+    cursor = new Date(cursor.getTime() + prestation.durationMin * 60_000);
+    return { prestation, start: fmt(start), end: fmt(cursor) };
+  });
+};
+
 // « 3 h 10 » / « 45 min »
 export const durationLabel = (min: number) => {
   const h = Math.floor(min / 60);
@@ -556,6 +575,8 @@ export type RdvRow = {
   total: number;
   prestationCount: number;
   prestationNames: string;
+  prestationList: string[];
+  durationMin: number;
   staffNames: string[]; // praticiennes distinctes affectées
   staffLabel: string;
   pendingAssign: number; // prestations sans praticienne
@@ -581,6 +602,8 @@ const toRow = (r: RdvDetail): RdvRow => {
     total: rdvTotal(r),
     prestationCount: r.prestations.length,
     prestationNames: r.prestations.map((p) => p.name).join(", "),
+    prestationList: r.prestations.map((p) => p.name),
+    durationMin: rdvDuration(r),
     staffNames,
     staffLabel:
       staffNames.length === 0

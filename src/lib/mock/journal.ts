@@ -96,8 +96,9 @@ export const addDaysIso = (iso: string, days: number): string =>
 
 /* ------------------------------------------------------------------ */
 /* Seeds — ~10 jours d'activité, du 25 août au 3 septembre 2026.       */
-/* Références croisées vérifiées : p-majirel ∈ stock.ts ;              */
-/* m-* ∈ staff.ts ; toutes les `href` pointent vers une page réelle.  */
+/* Références croisées vérifiées : nutritive-bain-riche-250ml,         */
+/* k-elixir-oil-30ml ∈ productStock de stock.ts ; m-* ∈ staff.ts ;     */
+/* toutes les `href` pointent vers une page réelle.                    */
 /* ------------------------------------------------------------------ */
 
 export const journalEntries: JournalEntry[] = [
@@ -124,7 +125,7 @@ export const journalEntries: JournalEntry[] = [
     salonId: "seaplaza",
     domain: "parametres",
     action: "a modifié un tarif",
-    detail: "Coloration complète : 25.000 → 28.000 FCFA",
+    detail: "Silk Press : 75.000 → 79.000 FCFA",
     tone: "sensitive",
     href: "/services",
   },
@@ -137,9 +138,9 @@ export const journalEntries: JournalEntry[] = [
     salonId: "seaplaza",
     domain: "stock",
     action: "a saisi un inventaire",
-    detail: "Teinture Majirel 6.0 (Sea Plaza) : comptage 9 unités, écart −3",
+    detail: "Nutritive Bain Riche 250ml (Sea Plaza) : comptage 10 unités, écart −3",
     tone: "notable",
-    href: "/stock?produit=p-majirel",
+    href: "/stock?produit=nutritive-bain-riche-250ml",
   },
   {
     id: "jn-0288",
@@ -204,7 +205,7 @@ export const journalEntries: JournalEntry[] = [
     action: "a modifié les horaires habituels",
     detail: "Bineta Cissé — jeudi désormais travaillé (09:00–19:00)",
     tone: "info",
-    href: "/planning",
+    href: "/equipe?vue=planning",
   },
   {
     id: "jn-0221",
@@ -230,7 +231,7 @@ export const journalEntries: JournalEntry[] = [
     action: "a modifié un modèle d'email",
     detail: "Rappel de rendez-vous — délai porté à 48 h avant",
     tone: "info",
-    href: "/emails/modeles",
+    href: "/reglages?section=emails",
   },
 
   /* --------------------------------------------------- Caisse (Awa, Rokhaya) */
@@ -405,9 +406,9 @@ export const journalEntries: JournalEntry[] = [
     salonId: "seaplaza",
     domain: "stock",
     action: "a signalé une consommation",
-    detail: "Patine — 1 flacon hors recette, retouche de couleur",
+    detail: "K Elixir Oil 30ml — 1 flacon hors recette, brillance supplémentaire en fin de Silk Press",
     tone: "notable",
-    href: "/stock",
+    href: "/stock?produit=k-elixir-oil-30ml",
   },
   {
     id: "jn-0252",
@@ -420,7 +421,7 @@ export const journalEntries: JournalEntry[] = [
     action: "a bloqué un créneau",
     detail: "Formation coloriste — vendredi 14:00 à 18:00",
     tone: "info",
-    href: "/planning",
+    href: "/equipe?vue=planning",
   },
   {
     id: "jn-0219",

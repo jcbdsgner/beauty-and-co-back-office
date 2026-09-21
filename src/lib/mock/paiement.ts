@@ -1,7 +1,7 @@
 // Données fictives — paramètres de paiement Beauty & Co. Front-end uniquement,
-// aucune API, aucune persistance : l'écran /paiement édite ces valeurs en mémoire
-// de session. Volontairement indépendant du barrel `@/lib/mock` : importer
-// directement ce fichier (`@/lib/mock/paiement`).
+// aucune API, aucune persistance : l'onglet Paiement de l'écran /reglages édite
+// ces valeurs en mémoire de session. Volontairement indépendant du barrel
+// `@/lib/mock` : importer directement ce fichier (`@/lib/mock/paiement`).
 
 import { fcfa } from "./beautyandco";
 

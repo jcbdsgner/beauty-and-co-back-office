@@ -1,5 +1,4 @@
 "use client";
-import NotificationDropdown from "@/components/header/NotificationDropdown";
 import UserDropdown from "@/components/header/UserDropdown";
 import { useSidebar } from "@/context/SidebarContext";
 import Link from "next/link";
@@ -17,12 +16,12 @@ const AppHeader: React.FC = () => {
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-gray-200 bg-white print:hidden">
+    <header className="sticky top-0 z-40 w-full border-b border-gray-100 bg-white/95 backdrop-blur-sm print:hidden">
       <div className="flex items-center gap-3 px-3 py-3 sm:gap-4 lg:px-6 lg:py-3">
         {/* Zone gauche : bascule sidebar + logo mobile */}
         <div className="flex flex-1 items-center gap-3">
           <button
-            className="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-gray-500 lg:h-11 lg:w-11"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-700 lg:h-11 lg:w-11"
             onClick={handleToggle}
             aria-label="Basculer la barre latérale"
           >
@@ -57,9 +56,8 @@ const AppHeader: React.FC = () => {
           </Link>
         </div>
 
-        {/* Zone droite : notifications + compte */}
+        {/* Zone droite : compte — notifications déplacées sur le tableau de bord */}
         <div className="flex flex-1 items-center justify-end gap-3">
-          <NotificationDropdown />
           <UserDropdown />
         </div>
       </div>

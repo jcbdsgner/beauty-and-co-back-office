@@ -23,9 +23,9 @@ export default function UserDropdown() {
     <div className="relative">
       <button
         onClick={toggleDropdown}
-        className="dropdown-toggle flex items-center text-gray-700"
+        className="dropdown-toggle flex items-center rounded-full text-gray-700 transition-colors hover:bg-gray-50"
       >
-        <span className="mr-3 h-11 w-11 overflow-hidden rounded-full">
+        <span className="mr-3 h-11 w-11 overflow-hidden rounded-full ring-2 ring-brand-100">
           <Image width={44} height={44} src={account.avatarUrl} alt={account.name} />
         </span>
         <span className="mr-1 block text-theme-sm font-medium">{account.name}</span>

@@ -11,8 +11,10 @@ import React from "react";
 
 export default function AdminLayout({
   children,
+  modal,
 }: {
   children: React.ReactNode;
+  modal: React.ReactNode;
 }) {
   const { isExpanded, isHovered, isMobileOpen } = useSidebar();
 
@@ -20,8 +22,8 @@ export default function AdminLayout({
   const mainContentMargin = isMobileOpen
     ? "ml-0"
     : isExpanded || isHovered
-    ? "lg:ml-[240px]"
-    : "lg:ml-[90px]";
+    ? "lg:ml-[256px]"
+    : "lg:ml-[80px]";
 
   return (
     <LocationProvider>
@@ -43,6 +45,7 @@ export default function AdminLayout({
               </div>
             </div>
           </div>
+          {modal}
         </NotificationsProvider>
       </AccountProvider>
     </LocationProvider>

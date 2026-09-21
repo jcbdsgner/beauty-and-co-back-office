@@ -13,6 +13,7 @@ import {
   type AppNotification,
 } from "@/lib/mock/notifications";
 import { requestNotifications, staffRequests } from "@/lib/mock/rh";
+import { stockAlertNotifications } from "@/lib/mock/stock";
 
 // Notifications : une seule source de vérité pour « ce qui s'est passé » et pour
 // l'état « lu / non lu ». Consommée par la cloche du header ET par l'écran
@@ -33,14 +34,17 @@ const NotificationsContext = createContext<NotificationsContextType | undefined>
   undefined,
 );
 
-// Notifs « système » (rendez-vous, paiement, stock, avis) + demandes en attente
-// de l'équipe (avance, congé), fournies par `@/lib/mock/rh`. La concaténation se
+// Notifs « système » ponctuelles (rendez-vous, paiement, avis) + l'alerte
+// stock calculée en direct (`@/lib/mock/stock`) + les demandes en attente de
+// l'équipe (avance, congé), fournies par `@/lib/mock/rh`. La concaténation se
 // fait ici, jamais dans `notifications.ts`, pour éviter un cycle d'imports entre
 // les modules mock.
 function initialNotifications(): AppNotification[] {
-  return [...seedNotifications, ...requestNotifications(staffRequests)].sort((a, b) =>
-    b.date.localeCompare(a.date),
-  );
+  return [
+    ...seedNotifications,
+    ...stockAlertNotifications(),
+    ...requestNotifications(staffRequests),
+  ].sort((a, b) => b.date.localeCompare(a.date));
 }
 
 export const useNotifications = () => {

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { MapPin } from "lucide-react";
 import Badge from "@/components/ui/badge/Badge";
 import { useLocation } from "@/context/LocationContext";
 import {
@@ -34,14 +35,19 @@ export default function TodayAppointments({ scope }: { scope: SalonScope }) {
         return (
           <div
             key={salon.id}
-            className="flex flex-col rounded-2xl border border-gray-200 bg-white p-5 md:p-6"
+            className="flex flex-col rounded-2xl border border-gray-100 bg-white p-5 shadow-[var(--shadow-card)] md:p-6"
           >
             <div className="flex items-start justify-between">
-              <div>
-                <h3 className="text-base font-semibold text-gray-800">{salon.name}</h3>
-                <p className="text-theme-sm text-gray-500">{salon.area}</p>
+              <div className="flex items-start gap-3">
+                <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
+                  <MapPin className="h-[18px] w-[18px]" />
+                </span>
+                <div>
+                  <h3 className="text-base font-semibold text-gray-800">{salon.name}</h3>
+                  <p className="text-theme-sm text-gray-500">{salon.area}</p>
+                </div>
               </div>
-              <span className="flex h-9 min-w-9 items-center justify-center rounded-full bg-brand-50 px-2 text-theme-sm font-semibold text-brand-700">
+              <span className="flex h-9 min-w-9 items-center justify-center rounded-full bg-brand-500 px-2 text-theme-sm font-semibold text-white">
                 {salon.count}
               </span>
             </div>

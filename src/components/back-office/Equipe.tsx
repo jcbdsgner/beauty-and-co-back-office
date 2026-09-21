@@ -8,7 +8,6 @@ import SegmentedControl, {
 } from "@/components/ui/segmented/SegmentedControl";
 import { PlusIcon } from "@/icons";
 import { useLocation } from "@/context/LocationContext";
-import { salons, type SalonScope } from "@/lib/mock/beautyandco";
 import {
   members as memberSeeds,
   type Member,
@@ -22,10 +21,17 @@ import {
   type Autorisations,
   type Capability,
 } from "@/lib/mock/autorisations";
+import {
+  absences as absenceSeeds,
+  shiftOverrides as overrideSeeds,
+  type Absence,
+  type ShiftOverride,
+} from "@/lib/mock/planning";
 import EquipeList from "./equipe/EquipeList";
 import MemberDetail from "./equipe/MemberDetail";
 import AddMemberFlow from "./equipe/AddMemberFlow";
 import RolePermissions from "./equipe/RolePermissions";
+import PlanningPanel from "./equipe/PlanningPanel";
 import { BackButton } from "./equipe/ui";
 
 // Écran « Équipe » — le domicile des personnes qui font tourner les salons.
@@ -41,22 +47,26 @@ import { BackButton } from "./equipe/ui";
 //    prestation → alerte ; recherche sans résultat → message ; désactivation →
 //    confirmation, l'historique est gardé.
 
-const SALON_OPTIONS: SegmentedOption<SalonScope>[] = [
-  { value: "all", label: "Tous les salons" },
-  ...salons.map((s) => ({ value: s.id as SalonScope, label: s.name })),
-];
-
-type Tab = "membres" | "autorisations";
+type Tab = "membres" | "planning" | "autorisations";
 
 const TAB_OPTIONS: SegmentedOption<Tab>[] = [
   { value: "membres", label: "Membres" },
+  { value: "planning", label: "Planning" },
   { value: "autorisations", label: "Autorisations" },
 ];
+
+const TAB_DESCRIPTIONS: Record<Tab, string> = {
+  membres:
+    "Les personnes qui font tourner les salons : rôles, accès à la plateforme, compétences et horaires habituels.",
+  planning:
+    "Qui travaille cette semaine, dans quel salon, et à quelles heures. Les horaires habituels s'appliquent tout seuls — vous ne saisissez ici que les exceptions.",
+  autorisations: "Ce que chaque rôle a le droit de faire sur la plateforme, pour les comptes que vous invitez.",
+};
 
 type View = { kind: "list" } | { kind: "detail"; id: string } | { kind: "new" };
 
 export default function Equipe() {
-  const { scope, setScope } = useLocation();
+  const { scope } = useLocation();
   const searchParams = useSearchParams();
 
   // Aucun backend : tout est édité en mémoire de session (comme Services / Fidélité).
@@ -64,6 +74,10 @@ export default function Equipe() {
   const [requests, setRequests] = useState<StaffRequest[]>(requestSeeds);
   const [autorisations, setAutorisations] =
     useState<Autorisations>(defaultAutorisations);
+  // Onglet Planning : levé ici (pas dans `PlanningPanel`) pour survivre à un
+  // changement d'onglet, comme `autorisations`.
+  const [absences, setAbsences] = useState<Absence[]>(absenceSeeds);
+  const [overrides, setOverrides] = useState<ShiftOverride[]>(overrideSeeds);
   const [view, setView] = useState<View>({ kind: "list" });
   const [tab, setTab] = useState<Tab>("membres");
 
@@ -78,6 +92,19 @@ export default function Equipe() {
     setLastMemberParam(memberParam);
     if (memberParam && memberSeeds.some((m) => m.id === memberParam)) {
       setView({ kind: "detail", id: memberParam });
+    }
+  }
+
+  // Arrivée depuis un lien externe (ex. Journal, fiche membre) avec
+  // ?vue=planning : ouvre directement l'onglet Planning, même motif que
+  // `?membre=` ci-dessus.
+  const vueParam = searchParams.get("vue");
+  const [lastVueParam, setLastVueParam] = useState<string | null>(null);
+  if (vueParam !== lastVueParam) {
+    setLastVueParam(vueParam);
+    if (vueParam === "planning") {
+      setTab("planning");
+      setView({ kind: "list" });
     }
   }
 
@@ -119,11 +146,6 @@ export default function Equipe() {
     setTab("autorisations");
     setView({ kind: "list" });
   };
-
-  const scoped = useMemo(
-    () => (scope === "all" ? members : members.filter((m) => m.salonIds.includes(scope))),
-    [members, scope],
-  );
 
   const selected =
     view.kind === "detail" ? members.find((m) => m.id === view.id) ?? null : null;
@@ -186,36 +208,18 @@ export default function Equipe() {
   return (
     <div className="space-y-6">
       <div>
-        <PageHeader
-          title="Équipe"
-          description={
-            tab === "membres"
-              ? "Les personnes qui font tourner les salons : rôles, accès à la plateforme, compétences et horaires habituels."
-              : "Ce que chaque rôle a le droit de faire sur la plateforme, pour les comptes que vous invitez."
-          }
-        />
+        <PageHeader title="Équipe" description={TAB_DESCRIPTIONS[tab]} />
         <SegmentedControl
           options={TAB_OPTIONS}
           value={tab}
           onChange={setTab}
-          aria-label="Membres ou autorisations"
+          aria-label="Membres, planning ou autorisations"
         />
       </div>
 
       {tab === "membres" ? (
         <>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <span className="text-theme-xs font-medium uppercase tracking-wide text-gray-400">
-                Salon
-              </span>
-              <SegmentedControl
-                options={SALON_OPTIONS}
-                value={scope}
-                onChange={setScope}
-                aria-label="Filtrer par salon"
-              />
-            </div>
+          <div className="flex justify-end">
             <button
               type="button"
               onClick={() => setView({ kind: "new" })}
@@ -227,11 +231,18 @@ export default function Equipe() {
           </div>
 
           <EquipeList
-            members={scoped}
+            members={members}
             requests={requests}
             onOpen={(id) => setView({ kind: "detail", id })}
           />
         </>
+      ) : tab === "planning" ? (
+        <PlanningPanel
+          absences={absences}
+          setAbsences={setAbsences}
+          overrides={overrides}
+          setOverrides={setOverrides}
+        />
       ) : (
         <RolePermissions
           autorisations={autorisations}

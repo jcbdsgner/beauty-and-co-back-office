@@ -23,10 +23,12 @@ import {
   salons,
   salonName,
   frShortDate,
+  groupThousands,
   type SalonId,
   type SalonScope,
 } from "./beautyandco";
 import { products, prestationSeeds, type Product } from "./services";
+import type { AppNotification } from "./notifications";
 
 export { frShortDate };
 
@@ -757,6 +759,76 @@ const STOCK_SEEDS: StockSeed[] = [
       seaplaza: { onHand: 4, weekly: 2.7 },
     },
   },
+  // Autres marques + accessoires — vendus au détail, sans recette (pas de gamme
+  // Kérastase). Faible rotation, petites quantités : onHand aligné sur le total
+  // `stock` de point-de-vente/lib/data/menu.ts (PRODUITS), réparti réserve/salons.
+  {
+    productId: "antiseptique-saryna-keys", min: 3, companyMin: 8, leadDays: 21, weeksHistory: 8, seasonalPct: 100,
+    byLocation: {
+      reserve: { onHand: 8, weekly: 0 },
+      almadies: { onHand: 10, weekly: 1.4 },
+      seaplaza: { onHand: 6, weekly: 0.9 },
+    },
+  },
+  {
+    productId: "damage-repair-oil-saryna-keys", min: 2, companyMin: 5, leadDays: 21, weeksHistory: 8, seasonalPct: 100,
+    byLocation: {
+      reserve: { onHand: 6, weekly: 0 },
+      almadies: { onHand: 7, weekly: 0.6 },
+      seaplaza: { onHand: 3, weekly: 0.3 },
+    },
+  },
+  {
+    productId: "nefertiti-kinky-straight", min: 1, companyMin: 2, leadDays: 28, weeksHistory: 8, seasonalPct: 100,
+    byLocation: {
+      reserve: { onHand: 3, weekly: 0 },
+      almadies: { onHand: 1, weekly: 0.15 },
+      seaplaza: { onHand: 1, weekly: 0.1 },
+    },
+  },
+  // Démonstration du cas « jamais inventorié » : jamais compté à Sea Plaza
+  // (produit rare, arrivé récemment au catalogue) → locationOnHand null,
+  // badge « Niveau inconnu » sur ce salon dans la liste Stock.
+  {
+    productId: "hd-lace-frontal-nefertiti-kinky-straight", min: 1, companyMin: 2, leadDays: 28, weeksHistory: 8, seasonalPct: 100,
+    byLocation: {
+      reserve: { onHand: 2, weekly: 0 },
+      almadies: { onHand: 1, weekly: 0.1 },
+      seaplaza: { onHand: null, weekly: 0 },
+    },
+  },
+  {
+    productId: "ready-made-ponytail-beccy-wave", min: 1, companyMin: 2, leadDays: 28, weeksHistory: 8, seasonalPct: 100,
+    byLocation: {
+      reserve: { onHand: 2, weekly: 0 },
+      almadies: { onHand: 1, weekly: 0.1 },
+      seaplaza: { onHand: 1, weekly: 0.05 },
+    },
+  },
+  {
+    productId: "becky-wave-raw-hair", min: 1, companyMin: 3, leadDays: 28, weeksHistory: 8, seasonalPct: 100,
+    byLocation: {
+      reserve: { onHand: 3, weekly: 0 },
+      almadies: { onHand: 2, weekly: 0.2 },
+      seaplaza: { onHand: 1, weekly: 0.1 },
+    },
+  },
+  {
+    productId: "correcteur-fluide-swiss-perfection-haute-couvrance", min: 2, companyMin: 5, leadDays: 21, weeksHistory: 8, seasonalPct: 100,
+    byLocation: {
+      reserve: { onHand: 5, weekly: 0 },
+      almadies: { onHand: 6, weekly: 0.5 },
+      seaplaza: { onHand: 3, weekly: 0.3 },
+    },
+  },
+  {
+    productId: "peigne-bijou-eclat-de-mariee-finition-or-rose", min: 2, companyMin: 4, leadDays: 21, weeksHistory: 8, seasonalPct: 100,
+    byLocation: {
+      reserve: { onHand: 5, weekly: 0 },
+      almadies: { onHand: 3, weekly: 0.15 },
+      seaplaza: { onHand: 2, weekly: 0.1 },
+    },
+  },
 ];
 
 const seedOf = (productId: string) => STOCK_SEEDS.find((s) => s.productId === productId);
@@ -1216,6 +1288,47 @@ export function stockRows(scope: SalonScope, opts: StockRowsOpts = {}): StockRow
     if (b.coverage === null) return -1;
     return a.coverage - b.coverage;
   });
+}
+
+/* ------------------------------------------------------------------ */
+/* Notification « À traiter » — calculée en direct, jamais codée en dur */
+/* ------------------------------------------------------------------ */
+
+// Alerte stock pour le tableau de bord (`NotificationsPanel`) : dérivée du
+// calcul réel (`stockRows`), jamais d'un seed statique — sinon l'alerte finit
+// par ne plus correspondre au catalogue (cf. l'ancienne notif « Teinture
+// Majirel », qui pointait vers un produit disparu du catalogue réel). Une
+// seule notification agrégée (comme le bandeau de `/stock`), pas une par
+// produit : sinon un jour à plusieurs produits sous seuil noierait le rail
+// « À traiter ». Lien direct vers la fiche s'il n'y a qu'un seul produit.
+export function stockAlertNotifications(): AppNotification[] {
+  const toOrder = stockRows("all").filter((r) => r.status === "order");
+  if (toOrder.length === 0) return [];
+
+  const [first] = toOrder;
+  const title = toOrder.length === 1 ? "Produit à commander" : `${toOrder.length} produits à commander`;
+  const body =
+    toOrder.length === 1
+      ? `${first.product.name} — ${
+          first.onHand === 0 ? "en rupture" : `${groupThousands(first.onHand ?? 0)} en stock`
+        }, sous le seuil de ${groupThousands(first.min)}`
+      : `${toOrder
+          .slice(0, 3)
+          .map((r) => r.product.name)
+          .join(", ")}${toOrder.length > 3 ? "…" : ""} — stock entreprise sous le seuil.`;
+
+  return [
+    {
+      id: "notif-stock-order",
+      category: "stock",
+      title,
+      body,
+      date: `${TODAY_ISO}T07:00:00`,
+      read: false,
+      tone: "warning",
+      href: toOrder.length === 1 ? `/stock?produit=${first.product.id}` : "/stock",
+    },
+  ];
 }
 
 /* ------------------------------------------------------------------ */

@@ -20,9 +20,9 @@ export default function PageHeader({ title, description, backHref, backLabel }: 
         </Link>
       )}
       <div>
-        <h1 className="text-2xl font-semibold text-gray-800">{title}</h1>
+        <h1 className="text-title-sm font-bold text-gray-900">{title}</h1>
         {description && (
-          <p className="mt-1 max-w-2xl text-theme-sm text-gray-500">{description}</p>
+          <p className="mt-1.5 max-w-2xl text-theme-sm text-gray-500">{description}</p>
         )}
       </div>
     </div>

@@ -59,10 +59,27 @@ export const RESERVATION_MODE_OPTIONS: { value: ReservationMode; label: string }
 export const reservationModeLabel = (m: ReservationMode) =>
   RESERVATION_MODE_OPTIONS.find((o) => o.value === m)!.label;
 
-// Palette d'émojis proposée pour la vignette d'un service (pas d'upload d'image
-// dans cette démo front-end).
-export const SERVICE_EMOJIS = [
-  "✂️", "💇", "💅", "💠", "🧖", "🌸", "🪒", "👁️", "🧒", "💄", "🦶", "🧴",
+// Vignette d'un service : icône de catégorie reprise du site vitrine b&co
+// (mêmes pictogrammes qu'à la réservation en ligne — pas d'upload d'image
+// dans cette démo front-end). Le composant est résolu côté UI, voir
+// `SERVICE_ICONS` dans `@/components/back-office/services/serviceIcons`.
+export type ServiceIconKey =
+  | "coiffure"
+  | "manucure-pedicure"
+  | "onglerie"
+  | "spa"
+  | "visage"
+  | "epilation"
+  | "mini";
+
+export const SERVICE_ICON_OPTIONS: { value: ServiceIconKey; label: string }[] = [
+  { value: "coiffure", label: "Coiffure" },
+  { value: "manucure-pedicure", label: "Manucure & pédicure" },
+  { value: "onglerie", label: "Onglerie" },
+  { value: "spa", label: "Spa" },
+  { value: "visage", label: "Soin du visage" },
+  { value: "epilation", label: "Épilation" },
+  { value: "mini", label: "Mini & Co" },
 ];
 
 // Produits consommables (côté stock) : catalogue réel Kérastase (soin capillaire,
@@ -161,6 +178,17 @@ export const products: Product[] = [
   { id: "boisson-ice-coffee-caramel", name: "Ice Coffee Caramel", defaultUnit: "pièce", image: "/images/boissons/ice-coffee-caramel.jpg" },
   { id: "boisson-soin-glace-ice-tea", name: "Soin Glacé Ice Tea", defaultUnit: "pièce", image: "/images/boissons/soin-glace-ice-tea.jpg" },
   { id: "boisson-pretty-latte", name: "Pretty Latte", defaultUnit: "pièce" },
+  // Autres marques + accessoires — vendus au détail, sans recette (repris de
+  // point-de-vente/lib/data/menu.ts, catégories Saryna Keys / Nefertiti / Beccy
+  // Wave / Autres — absents de la synchronisation initiale du 2026-09-04).
+  { id: "antiseptique-saryna-keys", name: "Antisceptique Saryna Keys", defaultUnit: "pièce", image: "/images/produits/antiseptique-saryna-keys.jpg" },
+  { id: "damage-repair-oil-saryna-keys", name: "Damage Repair Oil Saryna Keys", defaultUnit: "pièce", image: "/images/produits/damage-repair-oil-saryna-keys.jpg" },
+  { id: "nefertiti-kinky-straight", name: "Nefertiti Kinky Straight", defaultUnit: "pièce", image: "/images/produits/nefertiti-kinky-straight.jpg" },
+  { id: "hd-lace-frontal-nefertiti-kinky-straight", name: "HD Lace Frontal Nefertiti Kinky Straight", defaultUnit: "pièce", image: "/images/produits/hd-lace-frontal-nefertiti-kinky-straight.jpg" },
+  { id: "ready-made-ponytail-beccy-wave", name: "Ready Made Ponytail Beccy Wave", defaultUnit: "pièce", image: "/images/produits/ready-made-ponytail-beccy-wave.jpg" },
+  { id: "becky-wave-raw-hair", name: "Becky Wave Raw Hair", defaultUnit: "pièce", image: "/images/produits/becky-wave-raw-hair.jpg" },
+  { id: "correcteur-fluide-swiss-perfection-haute-couvrance", name: "Correcteur Fluide « Swiss Perfection » – Haute Couvrance", defaultUnit: "pièce", image: "/images/produits/correcteur-fluide-swiss-perfection-haute-couvrance.jpg" },
+  { id: "peigne-bijou-eclat-de-mariee-finition-or-rose", name: "Peigne Bijou « Éclat de Mariée » – Finition Or Rose", defaultUnit: "pièce", image: "/images/produits/peigne-bijou-eclat-de-mariee-finition-or-rose.jpg" },
 ];
 
 export const productName = (id: string) =>
@@ -202,7 +230,7 @@ export type ServiceQuestion = {
 export type Service = {
   id: string;
   name: string;
-  emoji: string;
+  icon: ServiceIconKey;
   description: string;
   active: boolean;
   salonIds: SalonId[]; // salons où le service est proposé
@@ -216,7 +244,7 @@ export const serviceSeeds: Service[] = [
   {
     id: "s-coiffure",
     name: "Coiffure",
-    emoji: "✂️",
+    icon: "coiffure",
     description: "Coupes, brushings, tresses, tissages, lissages et soins capillaires.",
     active: true,
     salonIds: ["almadies", "seaplaza"],
@@ -224,7 +252,7 @@ export const serviceSeeds: Service[] = [
   {
     id: "s-manucure",
     name: "Manucure & pédicure",
-    emoji: "💅",
+    icon: "manucure-pedicure",
     description: "Soin des mains et des pieds, manucure et pédicure.",
     active: true,
     salonIds: ["almadies", "seaplaza"],
@@ -232,7 +260,7 @@ export const serviceSeeds: Service[] = [
   {
     id: "s-onglerie",
     name: "Onglerie",
-    emoji: "💠",
+    icon: "onglerie",
     description: "Capsules, gel, vernis permanent et nail art.",
     active: true,
     salonIds: ["almadies", "seaplaza"],
@@ -240,7 +268,7 @@ export const serviceSeeds: Service[] = [
   {
     id: "s-spa",
     name: "Spa",
-    emoji: "🧖",
+    icon: "spa",
     description: "Massages, soins du dos et rituels bien-être.",
     active: true,
     salonIds: ["almadies", "seaplaza"],
@@ -248,7 +276,7 @@ export const serviceSeeds: Service[] = [
   {
     id: "s-visage",
     name: "Soin du visage",
-    emoji: "🌸",
+    icon: "visage",
     description: "Nettoyage de peau, soins hydratants et anti-âge.",
     active: true,
     salonIds: ["almadies", "seaplaza"],
@@ -256,7 +284,7 @@ export const serviceSeeds: Service[] = [
   {
     id: "s-epilation",
     name: "Épilation",
-    emoji: "🪒",
+    icon: "epilation",
     description: "Épilation à la cire, visage et corps.",
     active: true,
     salonIds: ["almadies", "seaplaza"],
@@ -264,7 +292,7 @@ export const serviceSeeds: Service[] = [
   {
     id: "s-mini",
     name: "Mini & Co",
-    emoji: "🧒",
+    icon: "mini",
     description: "L'univers beauté des enfants — coiffure et spa.",
     active: true,
     salonIds: ["almadies", "seaplaza"],

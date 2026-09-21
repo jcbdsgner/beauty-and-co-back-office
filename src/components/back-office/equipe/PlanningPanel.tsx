@@ -1,7 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import PageHeader from "@/components/back-office/PageHeader";
+import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import SegmentedControl, {
   type SegmentedOption,
 } from "@/components/ui/segmented/SegmentedControl";
@@ -14,21 +13,22 @@ import {
 } from "@/lib/mock/beautyandco";
 import {
   PLANNING_DEFAULT_MONDAY,
-  absences as absenceSeeds,
   addDays,
   coverageGaps,
-  shiftOverrides as overrideSeeds,
   weekHasExceptions,
+  weekPresence,
   type Absence,
   type PlanningData,
   type ShiftOverride,
 } from "@/lib/mock/planning";
 import { rdvCountByStaffDay } from "@/lib/mock/rendezvous";
-import { membersInScope, type Member } from "@/lib/mock/staff";
-import PlanningGrid from "./planning/PlanningGrid";
-import AbsenceDialog from "./planning/AbsenceDialog";
+import type { Member } from "@/lib/mock/staff";
+import PlanningGrid from "../planning/PlanningGrid";
+import AbsenceDialog from "../planning/AbsenceDialog";
 
-// Écran « Planning » — la présence de l'équipe, pas les rendez-vous.
+// Onglet « Planning » de l'écran Équipe — la présence de l'équipe, pas les
+// rendez-vous. Fusionné depuis l'ancienne page /planning (2026-09-14) : c'est
+// une vue de l'équipe dans le temps, pas un domaine à part.
 //
 // 1. Où en est la propriétaire ? Coup d'œil : « qui travaille cette semaine, où,
 //    et manque-t-il quelqu'un quelque part ? ». Ou geste rapide : poser un congé,
@@ -47,13 +47,24 @@ const SALON_OPTIONS: SegmentedOption<SalonScope>[] = [
 
 const inWeek = (iso: string, monday: string) => iso >= monday && iso <= addDays(monday, 6);
 
-export default function Planning() {
+type Props = {
+  // Levées dans `Equipe` pour survivre à un changement d'onglet (Membres /
+  // Planning / Autorisations), comme `autorisations`.
+  absences: Absence[];
+  setAbsences: Dispatch<SetStateAction<Absence[]>>;
+  overrides: ShiftOverride[];
+  setOverrides: Dispatch<SetStateAction<ShiftOverride[]>>;
+};
+
+export default function PlanningPanel({
+  absences,
+  setAbsences,
+  overrides,
+  setOverrides,
+}: Props) {
   const { scope, setScope } = useLocation();
 
   const [monday, setMonday] = useState(PLANNING_DEFAULT_MONDAY);
-  // Aucun backend : exceptions éditées en mémoire de session.
-  const [absences, setAbsences] = useState<Absence[]>(absenceSeeds);
-  const [overrides, setOverrides] = useState<ShiftOverride[]>(overrideSeeds);
   const [dialog, setDialog] = useState<{ member: Member; date: string } | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
 
@@ -81,7 +92,10 @@ export default function Planning() {
       .map((r) => ({ date: r.date, count: r.count }));
   }, [dialog]);
 
-  const scopedMemberCount = membersInScope(scope).filter((m) => m.active).length;
+  const scopedMemberCount = useMemo(
+    () => weekPresence(scope, monday, data).rows.length,
+    [scope, monday, data],
+  );
 
   const applyUsualHours = () => {
     setOverrides((list) => list.filter((o) => !inWeek(o.date, monday)));
@@ -90,54 +104,48 @@ export default function Planning() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <PageHeader
-          title="Planning"
-          description="Qui travaille cette semaine, dans quel salon, et à quelles heures. Les horaires habituels s'appliquent tout seuls — vous ne saisissez ici que les exceptions."
-        />
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-theme-xs font-medium uppercase tracking-wide text-gray-400">
-              Salon
-            </span>
-            <SegmentedControl
-              options={SALON_OPTIONS}
-              value={scope}
-              onChange={setScope}
-              aria-label="Filtrer par salon"
-            />
-          </div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <span className="text-theme-xs font-medium uppercase tracking-wide text-gray-400">
+            Salon
+          </span>
+          <SegmentedControl
+            options={SALON_OPTIONS}
+            value={scope}
+            onChange={setScope}
+            aria-label="Filtrer par salon"
+          />
+        </div>
 
-          <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setMonday((m) => addDays(m, -7))}
+            aria-label="Semaine précédente"
+            className="flex size-9 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition hover:bg-gray-50 hover:text-gray-800"
+          >
+            ‹
+          </button>
+          <span className="min-w-56 text-center text-theme-sm font-medium text-gray-700">
+            Semaine du {frLongDate(monday)}
+          </span>
+          <button
+            type="button"
+            onClick={() => setMonday((m) => addDays(m, 7))}
+            aria-label="Semaine suivante"
+            className="flex size-9 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition hover:bg-gray-50 hover:text-gray-800"
+          >
+            ›
+          </button>
+          {monday !== PLANNING_DEFAULT_MONDAY && (
             <button
               type="button"
-              onClick={() => setMonday((m) => addDays(m, -7))}
-              aria-label="Semaine précédente"
-              className="flex size-9 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition hover:bg-gray-50 hover:text-gray-800"
+              onClick={() => setMonday(PLANNING_DEFAULT_MONDAY)}
+              className="ml-1 rounded-lg px-2.5 py-1.5 text-theme-xs font-medium text-brand-600 transition hover:bg-brand-50"
             >
-              ‹
+              Cette semaine
             </button>
-            <span className="min-w-56 text-center text-theme-sm font-medium text-gray-700">
-              Semaine du {frLongDate(monday)}
-            </span>
-            <button
-              type="button"
-              onClick={() => setMonday((m) => addDays(m, 7))}
-              aria-label="Semaine suivante"
-              className="flex size-9 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition hover:bg-gray-50 hover:text-gray-800"
-            >
-              ›
-            </button>
-            {monday !== PLANNING_DEFAULT_MONDAY && (
-              <button
-                type="button"
-                onClick={() => setMonday(PLANNING_DEFAULT_MONDAY)}
-                className="ml-1 rounded-lg px-2.5 py-1.5 text-theme-xs font-medium text-brand-600 transition hover:bg-brand-50"
-              >
-                Cette semaine
-              </button>
-            )}
-          </div>
+          )}
         </div>
       </div>
 
@@ -166,7 +174,7 @@ export default function Planning() {
 
       {scopedMemberCount === 0 ? (
         <p className="rounded-2xl border border-dashed border-gray-200 px-4 py-16 text-center text-theme-sm text-gray-500">
-          Aucun membre rattaché à {salonName(scope)}.
+          Personne n&apos;est planifié·e à {salonName(scope)} cette semaine.
         </p>
       ) : (
         <>

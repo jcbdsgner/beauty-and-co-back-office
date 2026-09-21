@@ -49,7 +49,7 @@ export default function ClientDetailActions({ clientName, noun }: Props) {
     <div className="flex items-center gap-3">
       <a
         href="#historique"
-        className="inline-flex items-center gap-2 rounded-lg bg-success-500 px-4 py-2.5 text-theme-sm font-medium text-white hover:bg-success-600"
+        className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-theme-sm font-medium text-gray-700 hover:bg-gray-50"
       >
         Historique complet
       </a>

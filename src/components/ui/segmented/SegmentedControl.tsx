@@ -10,6 +10,9 @@ type Props<T extends string> = {
   onChange: (value: T) => void;
   "aria-label": string;
   size?: "sm" | "md";
+  // Autorise le retour à la ligne des options — utile dans un conteneur étroit
+  // (ex. panneau latéral) où toutes les options ne tiennent pas sur une ligne.
+  wrap?: boolean;
 };
 
 // Contrôle segmenté : choix unique parmi quelques options toutes visibles.
@@ -20,6 +23,7 @@ export default function SegmentedControl<T extends string>({
   onChange,
   "aria-label": ariaLabel,
   size = "md",
+  wrap = false,
 }: Props<T>) {
   const pad = size === "sm" ? "px-2.5 py-1 text-theme-xs" : "px-3 py-1.5 text-theme-sm";
 
@@ -27,7 +31,7 @@ export default function SegmentedControl<T extends string>({
     <div
       role="radiogroup"
       aria-label={ariaLabel}
-      className="inline-flex items-center gap-0.5 rounded-lg bg-gray-100 p-0.5"
+      className={`inline-flex items-center gap-0.5 rounded-lg bg-gray-100 p-0.5 ${wrap ? "flex-wrap" : ""}`}
     >
       {options.map((opt) => {
         const active = opt.value === value;

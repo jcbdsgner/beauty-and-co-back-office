@@ -108,22 +108,6 @@ export default function Stock() {
       return { ...p, [productId]: dataUrl };
     });
 
-  if (view.kind === "detail") {
-    return (
-      <StockDetail
-        productId={view.productId}
-        scope={scope}
-        extraMovements={extraMovements}
-        thresholds={thresholds}
-        photo={photos[view.productId]}
-        onAddMovements={addMovements}
-        onSetThreshold={setThreshold}
-        onSetPhoto={setPhoto}
-        onBack={() => setView({ kind: "list" })}
-      />
-    );
-  }
-
   return (
     <div className="space-y-6">
       <div>
@@ -165,6 +149,20 @@ export default function Stock() {
         scope={scope}
         onOpen={(productId) => setView({ kind: "detail", productId })}
       />
+
+      {view.kind === "detail" && (
+        <StockDetail
+          productId={view.productId}
+          scope={scope}
+          extraMovements={extraMovements}
+          thresholds={thresholds}
+          photo={photos[view.productId]}
+          onAddMovements={addMovements}
+          onSetThreshold={setThreshold}
+          onSetPhoto={setPhoto}
+          onBack={() => setView({ kind: "list" })}
+        />
+      )}
     </div>
   );
 }

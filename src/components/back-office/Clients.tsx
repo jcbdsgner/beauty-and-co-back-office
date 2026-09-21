@@ -7,7 +7,7 @@ import SegmentedControl, {
 } from "@/components/ui/segmented/SegmentedControl";
 import { useLocation } from "@/context/LocationContext";
 import { clients, salons, type ClientRow, type SalonScope } from "@/lib/mock/beautyandco";
-import ClientsTable, { type SortKey, type SortState } from "./ClientsTable";
+import ClientCards from "./ClientCards";
 
 // Écran « Clients ».
 // 1. Où en est l'utilisatrice ? En session de gestion : elle cherche une cliente
@@ -34,7 +34,18 @@ const SEGMENT_OPTIONS: SegmentedOption<SegmentFilter>[] = [
   { value: "a-relancer", label: "À relancer" },
 ];
 
-const TEXT_KEYS = new Set<SortKey>(["name", "email", "phone"]);
+// Le tri par clic sur en-t\u00eate de colonne n'a plus de sens en grille de
+// cartes \u2014 remplac\u00e9 par un contr\u00f4le \u00ab Trier par \u00bb \u00e0 c\u00f4t\u00e9 de la recherche.
+type SortKey = "name" | "lastVisit" | "totalSpent" | "loyaltyPoints";
+type SortState = { key: SortKey; dir: "asc" | "desc" };
+
+const SORT_OPTIONS: [SortKey, string][] = [
+  ["lastVisit", "Derni\u00e8re visite"],
+  ["name", "Nom"],
+  ["totalSpent", "Total d\u00e9pens\u00e9"],
+  ["loyaltyPoints", "Points fid\u00e9lit\u00e9"],
+];
+const TEXT_KEYS = new Set<SortKey>(["name"]);
 
 const normalize = (s: string) =>
   s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -43,9 +54,7 @@ const digitsOf = (s: string) => s.replace(/\D/g, "");
 function compareRows(a: ClientRow, b: ClientRow, key: SortKey): number {
   switch (key) {
     case "name":
-    case "email":
-    case "phone":
-      return a[key].localeCompare(b[key], "fr", { sensitivity: "base" });
+      return a.name.localeCompare(b.name, "fr", { sensitivity: "base" });
     case "lastVisit":
       return (a.lastVisit ?? "").localeCompare(b.lastVisit ?? "");
     default:
@@ -92,12 +101,12 @@ export default function Clients() {
 
   const totalShown = all.filter((c) => !removed.has(c.id)).length;
 
-  const onSort = (key: SortKey) =>
+  const setSortKey = (key: SortKey) =>
     setSort((prev) =>
-      prev.key === key
-        ? { key, dir: prev.dir === "asc" ? "desc" : "asc" }
-        : { key, dir: TEXT_KEYS.has(key) ? "asc" : "desc" },
+      prev.key === key ? prev : { key, dir: TEXT_KEYS.has(key) ? "asc" : "desc" },
     );
+  const toggleSortDir = () =>
+    setSort((prev) => ({ ...prev, dir: prev.dir === "asc" ? "desc" : "asc" }));
 
   const handleDelete = (row: ClientRow) => {
     setRemoved((prev) => new Set(prev).add(row.id));
@@ -170,12 +179,38 @@ export default function Clients() {
             className="h-10 w-full rounded-lg border border-gray-200 bg-white py-2 pl-10 pr-3 text-theme-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10"
           />
         </div>
-        <p className="text-theme-sm text-gray-500">
-          {visible.length} {visible.length > 1 ? "clientes" : "cliente"}
-          {visible.length !== totalShown && (
-            <span className="text-gray-400"> · sur {totalShown}</span>
-          )}
-        </p>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-theme-xs font-medium uppercase tracking-wide text-gray-400">
+              Trier par
+            </span>
+            <select
+              value={sort.key}
+              onChange={(e) => setSortKey(e.target.value as SortKey)}
+              className="h-9 rounded-lg border border-gray-200 bg-white px-2.5 text-theme-xs text-gray-700 focus:border-brand-300 focus:outline-hidden"
+            >
+              {SORT_OPTIONS.map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={toggleSortDir}
+              aria-label={sort.dir === "asc" ? "Tri croissant" : "Tri décroissant"}
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50"
+            >
+              {sort.dir === "asc" ? "↑" : "↓"}
+            </button>
+          </div>
+          <p className="text-theme-sm text-gray-500">
+            {visible.length} {visible.length > 1 ? "clientes" : "cliente"}
+            {visible.length !== totalShown && (
+              <span className="text-gray-400"> · sur {totalShown}</span>
+            )}
+          </p>
+        </div>
       </div>
 
       {undoTarget && (
@@ -216,7 +251,7 @@ export default function Clients() {
           )}
         </div>
       ) : (
-        <ClientsTable rows={visible} sort={sort} onSort={onSort} onDelete={handleDelete} />
+        <ClientCards rows={visible} onDelete={handleDelete} />
       )}
     </div>
   );

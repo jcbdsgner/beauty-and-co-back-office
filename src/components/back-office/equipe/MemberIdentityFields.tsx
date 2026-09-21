@@ -1,7 +1,5 @@
 "use client";
 
-import type { SalonId } from "@/lib/mock/beautyandco";
-import { salons } from "@/lib/mock/beautyandco";
 import {
   CATEGORY_OPTIONS,
   ROLE_OPTIONS,
@@ -17,7 +15,6 @@ export type IdentityDraft = {
   email: string;
   category: StaffCategory;
   roles: StaffRole[];
-  salonIds: SalonId[];
 };
 
 export const BLANK_IDENTITY: IdentityDraft = {
@@ -27,14 +24,10 @@ export const BLANK_IDENTITY: IdentityDraft = {
   email: "",
   category: "coiffure",
   roles: ["praticienne"],
-  salonIds: [],
 };
 
 export const identityValid = (d: IdentityDraft) =>
-  d.firstName.trim().length > 0 &&
-  d.lastName.trim().length > 0 &&
-  d.roles.length > 0 &&
-  d.salonIds.length > 0;
+  d.firstName.trim().length > 0 && d.lastName.trim().length > 0 && d.roles.length > 0;
 
 export const trimIdentity = (d: IdentityDraft): IdentityDraft => ({
   ...d,
@@ -59,14 +52,6 @@ export default function MemberIdentityFields({ value, onChange }: Props) {
       value.roles.includes(role)
         ? value.roles.filter((r) => r !== role)
         : [...value.roles, role],
-    );
-
-  const toggleSalon = (id: SalonId) =>
-    set(
-      "salonIds",
-      value.salonIds.includes(id)
-        ? value.salonIds.filter((s) => s !== id)
-        : [...value.salonIds, id],
     );
 
   return (
@@ -124,26 +109,6 @@ export default function MemberIdentityFields({ value, onChange }: Props) {
         {value.roles.length === 0 && (
           <p className="mt-2 text-theme-xs text-warning-600">
             Choisissez au moins un rôle.
-          </p>
-        )}
-      </div>
-
-      <div>
-        <span className="mb-2 block text-sm font-medium text-gray-800">Salons de rattachement</span>
-        <div className="flex flex-wrap gap-2">
-          {salons.map((s) => (
-            <CheckPill
-              key={s.id}
-              checked={value.salonIds.includes(s.id)}
-              onToggle={() => toggleSalon(s.id)}
-            >
-              {s.name}
-            </CheckPill>
-          ))}
-        </div>
-        {value.salonIds.length === 0 && (
-          <p className="mt-2 text-theme-xs text-warning-600">
-            Rattachez cette personne à au moins un salon.
           </p>
         )}
       </div>

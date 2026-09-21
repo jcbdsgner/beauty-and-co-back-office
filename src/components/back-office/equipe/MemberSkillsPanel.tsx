@@ -23,7 +23,7 @@ type Props = {
 const GROUPS = [
   ...serviceSeeds.map((s) => ({
     id: s.id,
-    label: `${s.emoji} ${s.name}`,
+    label: s.name,
     prestations: prestationSeeds.filter((p) => p.serviceId === s.id),
   })),
   {

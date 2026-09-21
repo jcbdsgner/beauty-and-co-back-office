@@ -3,11 +3,13 @@
 // directement ce fichier (`@/lib/mock/notifications`), comme `rendezvous.ts` /
 // `staff.ts`.
 //
-// Ce module ne connaît que les notifications « système » (rendez-vous, paiement,
-// stock, avis). Les demandes de l'équipe (avance, congé) sont produites par
-// `@/lib/mock/rh` (`requestNotifications`) et concaténées côté contexte
-// (`src/context/NotificationsContext.tsx`) — jamais ici, pour éviter un cycle
-// d'imports.
+// Ce module ne connaît que les notifications « système » ponctuelles
+// (rendez-vous, paiement, avis) — des événements qu'on ne peut pas recalculer.
+// Les alertes stock, elles, sont calculées en direct par
+// `stockAlertNotifications()` (`@/lib/mock/stock`), et les demandes de l'équipe
+// (avance, congé) par `requestNotifications()` (`@/lib/mock/rh`) : les deux
+// sont concaténées côté contexte (`src/context/NotificationsContext.tsx`),
+// jamais ici, pour éviter un cycle d'imports.
 
 /* ------------------------------------------------------------------ */
 /* Types                                                              */
@@ -57,10 +59,10 @@ export const TONE_DOT: Record<NotificationTone, string> = {
 };
 
 /* ------------------------------------------------------------------ */
-/* Seeds — cohérents avec les fixtures beautyandco / rendezvous / stock */
-/* Chaque href pointe vers un id qui existe réellement :               */
-/*   rdv-2409, rdv-2375, rdv-2410 ∈ SEEDS de rendezvous.ts             */
-/*   p-majirel ∈ productStock de stock.ts                              */
+/* Seeds — cohérents avec les fixtures beautyandco / rendezvous          */
+/* Chaque href pointe vers un id qui existe réellement :                 */
+/*   rdv-2409, rdv-2375, rdv-2410 ∈ SEEDS de rendezvous.ts               */
+/* Pas de seed « stock » ici : voir stockAlertNotifications() ci-dessus. */
 /* ------------------------------------------------------------------ */
 
 export const notifications: AppNotification[] = [
@@ -83,16 +85,6 @@ export const notifications: AppNotification[] = [
     read: false,
     tone: "success",
     href: "/rendez-vous/rdv-2410",
-  },
-  {
-    id: "notif-stock-majirel",
-    category: "stock",
-    title: "Stock bas",
-    body: "Teinture Majirel 6.0 — 4 unités en stock, sous le seuil de réapprovisionnement",
-    date: "2026-09-02T17:05:00",
-    read: false,
-    tone: "warning",
-    href: "/stock?produit=p-majirel",
   },
   {
     id: "notif-rdv-2375",

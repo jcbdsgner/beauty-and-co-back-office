@@ -24,7 +24,6 @@ const draftOf = (m: Member): IdentityDraft => ({
   email: m.email,
   category: m.category,
   roles: m.roles,
-  salonIds: m.salonIds,
 });
 
 export default function MemberIdentityForm({ member, onSave, onSetActive }: Props) {
@@ -39,7 +38,7 @@ export default function MemberIdentityForm({ member, onSave, onSetActive }: Prop
   return (
     <SectionCard
       title="Identité & contact"
-      description="Coordonnées, métier, rôles et salons de rattachement."
+      description="Coordonnées, métier et rôles."
     >
       <MemberIdentityFields
         value={draft}

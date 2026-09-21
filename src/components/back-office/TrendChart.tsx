@@ -3,6 +3,7 @@
 import { ApexOptions } from "apexcharts";
 import dynamic from "next/dynamic";
 import { useState } from "react";
+import { TrendingUp } from "lucide-react";
 import SegmentedControl, {
   type SegmentedOption,
 } from "@/components/ui/segmented/SegmentedControl";
@@ -72,13 +73,18 @@ export default function TrendChart({
   };
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white px-5 pt-5 sm:px-6 sm:pt-6">
+    <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white px-5 pt-5 shadow-[var(--shadow-card)] sm:px-6 sm:pt-6">
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-800">
-            {isRevenue ? "Aperçu des revenus" : "Aperçu des rendez-vous"}
-          </h3>
-          <p className="mt-1 text-theme-sm text-gray-500">{chart.subtitle}</p>
+        <div className="flex items-start gap-3">
+          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-500">
+            <TrendingUp className="h-[18px] w-[18px]" />
+          </span>
+          <div>
+            <h3 className="text-lg font-semibold text-gray-800">
+              {isRevenue ? "Aperçu des revenus" : "Aperçu des rendez-vous"}
+            </h3>
+            <p className="mt-1 text-theme-sm text-gray-500">{chart.subtitle}</p>
+          </div>
         </div>
 
         <SegmentedControl

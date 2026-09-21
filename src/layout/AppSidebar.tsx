@@ -5,73 +5,34 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "../context/SidebarContext";
 import {
-  BoxCubeIcon,
-  BoxIcon,
-  ChatIcon,
-  DocsIcon,
-  DollarLineIcon,
-  EnvelopeIcon,
-  FolderIcon,
-  GridIcon,
-  GroupIcon,
-  HorizontaLDots,
-  ListIcon,
-  PieChartIcon,
-  ShootingStarIcon,
-  TaskIcon,
-  TimeIcon,
-  UserCircleIcon,
-} from "../icons/index";
+  CalendarCheck2,
+  FileUser,
+  Gift,
+  LayoutDashboard,
+  MessageCircle,
+  Package,
+  Settings,
+  Sparkles,
+  UserRoundGroup,
+} from "lucide-react";
 
 type NavItem = { name: string; icon: React.ReactNode; path: string };
-type NavGroup = { id: string; title: string; items: NavItem[] };
 
-const menuGroups: NavGroup[] = [
-  {
-    id: "pilotage",
-    title: "Pilotage",
-    items: [
-      { icon: <GridIcon />, name: "Tableau de bord", path: "/" },
-      { icon: <TaskIcon />, name: "Rapports", path: "/rapports" },
-      { icon: <PieChartIcon />, name: "Satisfaction", path: "/satisfaction" },
-    ],
-  },
-  {
-    id: "journee",
-    title: "Journée",
-    items: [
-      { icon: <ListIcon />, name: "Rendez-vous", path: "/rendez-vous" },
-      { icon: <ChatIcon />, name: "Messagerie", path: "/messagerie" },
-      { icon: <GroupIcon />, name: "Clients", path: "/clients" },
-    ],
-  },
-  {
-    id: "equipe",
-    title: "Équipe",
-    items: [
-      { icon: <UserCircleIcon />, name: "Équipe", path: "/equipe" },
-      { icon: <TimeIcon />, name: "Planning", path: "/planning" },
-      { icon: <DocsIcon />, name: "Journal", path: "/journal" },
-    ],
-  },
-  {
-    id: "catalogue",
-    title: "Catalogue & stock",
-    items: [
-      { icon: <BoxCubeIcon />, name: "Services", path: "/services" },
-      { icon: <BoxIcon />, name: "Stock", path: "/stock" },
-    ],
-  },
-  {
-    id: "configuration",
-    title: "Configuration",
-    items: [
-      { icon: <FolderIcon />, name: "Salons", path: "/salons" },
-      { icon: <ShootingStarIcon />, name: "Fidélité & abonnements", path: "/fidelite" },
-      { icon: <EnvelopeIcon />, name: "Emails", path: "/emails/modeles" },
-      { icon: <DollarLineIcon />, name: "Paiement", path: "/paiement" },
-    ],
-  },
+// Rapports, Satisfaction, Journal et Salons ne sont plus dans la sidebar
+// (2026-09-21) : ce sont des écrans de consultation occasionnelle ou déjà
+// accessibles ailleurs (Salons → menu compte du header). Ils restent
+// atteignables via des raccourcis sur le tableau de bord (Rapports,
+// Satisfaction, Journal) et le menu compte (Salons) — voir Dashboard.tsx.
+const menuItems: NavItem[] = [
+  { icon: <LayoutDashboard />, name: "Tableau de bord", path: "/" },
+  { icon: <CalendarCheck2 />, name: "Rendez-vous", path: "/rendez-vous" },
+  { icon: <MessageCircle />, name: "Messagerie", path: "/messagerie" },
+  { icon: <FileUser />, name: "Clients", path: "/clients" },
+  { icon: <UserRoundGroup />, name: "Équipe", path: "/equipe" },
+  { icon: <Sparkles />, name: "Services", path: "/services" },
+  { icon: <Package />, name: "Stock", path: "/stock" },
+  { icon: <Gift />, name: "Fidélité", path: "/fidelite" },
+  { icon: <Settings />, name: "Réglages", path: "/reglages" },
 ];
 
 const AppSidebar: React.FC = () => {
@@ -86,14 +47,16 @@ const AppSidebar: React.FC = () => {
 
   return (
     <aside
-      className={`fixed left-0 top-0 z-50 mt-16 flex h-screen flex-col border-r border-gray-200 bg-white px-5 text-gray-900 transition-all duration-300 ease-in-out lg:mt-0 print:hidden
-        ${isExpanded || isMobileOpen ? "w-[240px]" : isHovered ? "w-[240px]" : "w-[90px]"}
+      className={`fixed left-0 top-0 z-50 mt-16 flex h-screen flex-col border-r border-gray-100 bg-[#FEFAF9] px-3 text-gray-900 transition-all duration-300 ease-in-out lg:mt-0 print:hidden
+        ${isExpanded || isMobileOpen ? "w-[256px] px-4" : isHovered ? "w-[256px] px-4" : "w-[80px]"}
         ${isMobileOpen ? "translate-x-0" : "-translate-x-full"}
         lg:translate-x-0`}
       onMouseEnter={() => !isExpanded && setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className={`flex py-6 ${collapsed ? "lg:justify-center" : "justify-start"}`}>
+      <div
+        className={`flex items-center border-b border-gray-100 py-6 ${collapsed ? "lg:justify-center" : "justify-start px-1"}`}
+      >
         <Link
           href="/"
           aria-label="Beauty & Co — tableau de bord"
@@ -115,52 +78,43 @@ const AppSidebar: React.FC = () => {
               width={1200}
               height={1197}
               priority
-              className="h-11 w-11 object-contain"
+              className="h-11 w-11 rounded-full object-contain ring-2 ring-white shadow-[var(--shadow-card)]"
             />
           )}
         </Link>
       </div>
 
-      <div className="mt-2 flex flex-1 flex-col overflow-y-auto pb-6 no-scrollbar">
+      <div className="mt-3 flex flex-1 flex-col overflow-y-auto pb-6 no-scrollbar">
         <nav>
-          <div className="flex flex-col gap-4">
-            {menuGroups.map((group) => (
-              <div key={group.id}>
-                <h2
-                  className={`mb-4 flex text-xs uppercase leading-[20px] text-gray-400 ${
-                    collapsed ? "lg:justify-center" : "justify-start"
-                  }`}
-                >
-                  {showText ? group.title : <HorizontaLDots />}
-                </h2>
-                <ul className="flex flex-col gap-4">
-                  {group.items.map((nav) => {
-                    const active = isActive(nav.path);
-                    return (
-                      <li key={nav.name}>
-                        <Link
-                          href={nav.path}
-                          className={`menu-item group ${
-                            active ? "menu-item-active" : "menu-item-inactive"
-                          }`}
-                          aria-current={active ? "page" : undefined}
-                        >
-                          <span
-                            className={
-                              active ? "menu-item-icon-active" : "menu-item-icon-inactive"
-                            }
-                          >
-                            {nav.icon}
-                          </span>
-                          {showText && <span className="menu-item-text">{nav.name}</span>}
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            ))}
-          </div>
+          <ul className="flex flex-col gap-0.5">
+            {menuItems.map((nav) => {
+              const active = isActive(nav.path);
+              return (
+                <li key={nav.name}>
+                  <Link
+                    href={nav.path}
+                    className={`group relative flex items-center gap-2.5 rounded-xl text-theme-sm font-medium transition-all duration-150 ${
+                      collapsed ? "mx-auto h-11 w-11 justify-center px-0" : "px-2.5 py-2"
+                    } ${
+                      active
+                        ? "bg-brand-500 text-white shadow-[var(--shadow-card)]"
+                        : "text-gray-600 hover:bg-brand-50/70 hover:text-brand-700"
+                    }`}
+                    aria-current={active ? "page" : undefined}
+                  >
+                    <span
+                      className={`flex h-6 w-6 shrink-0 items-center justify-center [&>svg]:h-5 [&>svg]:w-5 ${
+                        active ? "text-white" : "text-gray-400 group-hover:text-brand-600"
+                      }`}
+                    >
+                      {nav.icon}
+                    </span>
+                    {showText && <span className="whitespace-nowrap">{nav.name}</span>}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
         </nav>
       </div>
     </aside>

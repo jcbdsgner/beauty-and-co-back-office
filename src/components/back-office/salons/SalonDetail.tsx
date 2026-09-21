@@ -14,6 +14,7 @@ import {
   type SalonId,
 } from "@/lib/mock/beautyandco";
 import { prestationSeeds, serviceSeeds } from "@/lib/mock/services";
+import { SERVICE_ICONS } from "../services/serviceIcons";
 import HoursEditor from "./HoursEditor";
 import {
   BackButton,
@@ -205,11 +206,14 @@ export default function SalonDetail({
           </p>
           {proposedServices.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-1.5">
-              {proposedServices.map((s) => (
-                <Badge key={s.id} size="sm" color="light">
-                  {s.emoji} {s.name}
-                </Badge>
-              ))}
+              {proposedServices.map((s) => {
+                const Icon = SERVICE_ICONS[s.icon];
+                return (
+                  <Badge key={s.id} size="sm" color="light" startIcon={<Icon className="size-3.5" />}>
+                    {s.name}
+                  </Badge>
+                );
+              })}
             </div>
           )}
           <Link

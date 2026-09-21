@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import PageHeader from "@/components/back-office/PageHeader";
 import {
   defaultAutomation,
   defaultSiteLink,
@@ -13,7 +12,7 @@ import SettingsCards from "./emails/SettingsCards";
 import TemplateList from "./emails/TemplateList";
 import TemplateEditorPanel, { type EditorTarget } from "./emails/TemplateEditorPanel";
 
-export default function EmailTemplates() {
+export default function EmailsPanel() {
   // Aucun backend : tout est édité en mémoire de session, comme Fidélité.
   const [siteLink, setSiteLink] = useState(defaultSiteLink);
   const [automation, setAutomation] = useState<EmailAutomation>(defaultAutomation);
@@ -36,11 +35,6 @@ export default function EmailTemplates() {
 
   return (
     <div className="max-w-5xl space-y-6">
-      <PageHeader
-        title="Modèles d'email"
-        description="Le texte des emails envoyés aux clientes et le réglage de leurs envois. Démo front-end : les modifications ne sont pas conservées."
-      />
-
       <SettingsCards
         siteLink={siteLink}
         onSaveSiteLink={setSiteLink}

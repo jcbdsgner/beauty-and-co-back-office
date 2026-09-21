@@ -1,13 +1,16 @@
 // Données fictives « Équipe » — front-end uniquement, aucune API, aucune persistance.
 // Indépendant du barrel `@/lib/mock` : importer directement `@/lib/mock/staff`.
 //
-// Le domicile des personnes qui font tourner les salons : identité, rôles, salons
-// de rattachement, accès à la plateforme, compétences (les prestations qu'elles
-// savent réaliser) et horaires habituels. Ces horaires sont la trame de
-// référence que « Planning » applique semaine après semaine ; « Rendez-vous »
-// lit les compétences pour savoir qui proposer à la réservation.
+// Le domicile des personnes qui font tourner les salons : identité, rôles,
+// accès à la plateforme, compétences (les prestations qu'elles savent
+// réaliser) et horaires habituels. Une personne n'est PAS rattachée à un
+// salon fixe : `baseHours` précise le salon pour chaque jour travaillé — le
+// planning peut l'envoyer un jour à Almadies, un autre à Sea Plaza. Cette
+// trame est la référence que « Planning » applique semaine après semaine ;
+// « Rendez-vous » lit les compétences ET la présence du jour (cf.
+// `@/lib/mock/planning`) pour savoir qui proposer à la réservation.
 
-import { type SalonId, type SalonScope, type Weekday } from "./beautyandco";
+import { type SalonId, type Weekday } from "./beautyandco";
 
 /* ------------------------------------------------------------------ */
 /* Types                                                              */
@@ -45,11 +48,18 @@ export const CATEGORY_OPTIONS: { value: StaffCategory; label: string }[] = (
   ["coiffure", "esthetique", "staff"] as StaffCategory[]
 ).map((value) => ({ value, label: CATEGORY_LABELS[value] }));
 
-// Horaire habituel d'un jour : soit repos, soit une plage avec coupure
-// optionnelle. Heures au format "HH:MM".
+// Horaire habituel d'un jour : soit repos, soit une plage dans un salon donné
+// (coupure optionnelle). Heures au format "HH:MM".
 export type DayShift =
   | { off: true }
-  | { off: false; start: string; end: string; breakStart?: string; breakEnd?: string };
+  | {
+      off: false;
+      salonId: SalonId;
+      start: string;
+      end: string;
+      breakStart?: string;
+      breakEnd?: string;
+    };
 
 export type Member = {
   id: string;
@@ -59,7 +69,6 @@ export type Member = {
   email: string;
   roles: StaffRole[];
   category: StaffCategory;
-  salonIds: SalonId[]; // salons de rattachement
   account: AccountState;
   active: boolean;
   skills: string[]; // ids de prestations (cf. `@/lib/mock/services`)
@@ -73,8 +82,9 @@ export type Member = {
 const OFF: DayShift = { off: true };
 
 // Journée « standard salon » : 09:00–19:00, coupure 13:00–14:00.
-const full = (start = "09:00", end = "19:00"): DayShift => ({
+const full = (salonId: SalonId, start = "09:00", end = "19:00"): DayShift => ({
   off: false,
+  salonId,
   start,
   end,
   breakStart: "13:00",
@@ -106,7 +116,6 @@ export const members: Member[] = [
     email: "sophie.ndione@beautyandco.sn",
     roles: ["praticienne"],
     category: "coiffure",
-    salonIds: ["almadies"],
     account: "active",
     active: true,
     skills: [
@@ -139,7 +148,13 @@ export const members: Member[] = [
       "mini-co-coupe-pointes-enfants-mini-co",
     ],
     // Mercredi repos.
-    baseHours: week({ lun: full(), mar: full(), jeu: full(), ven: full(), sam: full() }),
+    baseHours: week({
+      lun: full("almadies"),
+      mar: full("almadies"),
+      jeu: full("almadies"),
+      ven: full("almadies"),
+      sam: full("almadies"),
+    }),
   },
   {
     id: "m-mariama",
@@ -149,7 +164,6 @@ export const members: Member[] = [
     email: "mariama.ba@beautyandco.sn",
     roles: ["praticienne"],
     category: "coiffure",
-    salonIds: ["almadies"],
     account: "active",
     active: true,
     skills: [
@@ -178,7 +192,13 @@ export const members: Member[] = [
       "mini-co-defaire-tresses-enfant",
     ],
     // Mardi–samedi.
-    baseHours: week({ mar: full(), mer: full(), jeu: full(), ven: full(), sam: full() }),
+    baseHours: week({
+      mar: full("almadies"),
+      mer: full("almadies"),
+      jeu: full("almadies"),
+      ven: full("almadies"),
+      sam: full("almadies"),
+    }),
   },
   {
     id: "m-aida",
@@ -188,7 +208,6 @@ export const members: Member[] = [
     email: "aida.sarr@beautyandco.sn",
     roles: ["praticienne"],
     category: "coiffure",
-    salonIds: ["almadies"],
     account: "invited",
     active: true,
     // Coiffure + un peu d'onglerie/manucure (dépannage).
@@ -207,12 +226,12 @@ export const members: Member[] = [
     ],
     // Lundi–vendredi pleine journée, samedi matin seulement.
     baseHours: week({
-      lun: full(),
-      mar: full(),
-      mer: full(),
-      jeu: full(),
-      ven: full(),
-      sam: { off: false, start: "09:00", end: "14:00" },
+      lun: full("almadies"),
+      mar: full("almadies"),
+      mer: full("almadies"),
+      jeu: full("almadies"),
+      ven: full("almadies"),
+      sam: { off: false, salonId: "almadies", start: "09:00", end: "14:00" },
     }),
   },
   {
@@ -223,7 +242,6 @@ export const members: Member[] = [
     email: "bineta.cisse@beautyandco.sn",
     roles: ["praticienne"],
     category: "esthetique",
-    salonIds: ["seaplaza"],
     account: "active",
     active: true,
     skills: [
@@ -252,7 +270,13 @@ export const members: Member[] = [
       "mini-co-mini-cutie-pedicure",
     ],
     // Jeudi repos.
-    baseHours: week({ lun: full(), mar: full(), mer: full(), ven: full(), sam: full() }),
+    baseHours: week({
+      lun: full("seaplaza"),
+      mar: full("seaplaza"),
+      mer: full("seaplaza"),
+      ven: full("seaplaza"),
+      sam: full("seaplaza"),
+    }),
   },
   {
     id: "m-coumba",
@@ -262,7 +286,6 @@ export const members: Member[] = [
     email: "coumba.faye@beautyandco.sn",
     roles: ["praticienne"],
     category: "esthetique",
-    salonIds: ["seaplaza"],
     account: "none",
     active: true,
     skills: [
@@ -287,13 +310,48 @@ export const members: Member[] = [
       "onglerie-supplement-decoration-chrome-cat-eye-baby-boomer",
       "mini-co-mini-jely-manucure",
     ],
-    // Mardi–samedi, démarrage 10:00, coupure 13:30–14:30.
+    // Mardi–samedi, démarrage 10:00, coupure 13:30–14:30 — à Sea Plaza.
     baseHours: week({
-      mar: { off: false, start: "10:00", end: "19:00", breakStart: "13:30", breakEnd: "14:30" },
-      mer: { off: false, start: "10:00", end: "19:00", breakStart: "13:30", breakEnd: "14:30" },
-      jeu: { off: false, start: "10:00", end: "19:00", breakStart: "13:30", breakEnd: "14:30" },
-      ven: { off: false, start: "10:00", end: "19:00", breakStart: "13:30", breakEnd: "14:30" },
-      sam: { off: false, start: "10:00", end: "19:00", breakStart: "13:30", breakEnd: "14:30" },
+      mar: {
+        off: false,
+        salonId: "seaplaza",
+        start: "10:00",
+        end: "19:00",
+        breakStart: "13:30",
+        breakEnd: "14:30",
+      },
+      mer: {
+        off: false,
+        salonId: "seaplaza",
+        start: "10:00",
+        end: "19:00",
+        breakStart: "13:30",
+        breakEnd: "14:30",
+      },
+      jeu: {
+        off: false,
+        salonId: "seaplaza",
+        start: "10:00",
+        end: "19:00",
+        breakStart: "13:30",
+        breakEnd: "14:30",
+      },
+      ven: {
+        off: false,
+        salonId: "seaplaza",
+        start: "10:00",
+        end: "19:00",
+        breakStart: "13:30",
+        breakEnd: "14:30",
+      },
+      sam: {
+        off: false,
+        salonId: "seaplaza",
+        start: "10:00",
+        end: "19:00",
+        breakStart: "13:30",
+        breakEnd: "14:30",
+      },
     }),
   },
   {
@@ -304,17 +362,16 @@ export const members: Member[] = [
     email: "awa.diagne@beautyandco.sn",
     roles: ["caisse"],
     category: "staff",
-    salonIds: ["almadies"],
     account: "active",
     active: true,
     skills: [],
     baseHours: week({
-      lun: full("08:30", "19:00"),
-      mar: full("08:30", "19:00"),
-      mer: full("08:30", "19:00"),
-      jeu: full("08:30", "19:00"),
-      ven: full("08:30", "19:00"),
-      sam: full("08:30", "19:00"),
+      lun: full("almadies", "08:30", "19:00"),
+      mar: full("almadies", "08:30", "19:00"),
+      mer: full("almadies", "08:30", "19:00"),
+      jeu: full("almadies", "08:30", "19:00"),
+      ven: full("almadies", "08:30", "19:00"),
+      sam: full("almadies", "08:30", "19:00"),
     }),
   },
   {
@@ -325,16 +382,17 @@ export const members: Member[] = [
     email: "rokhaya.diallo@beautyandco.sn",
     roles: ["manager", "caisse"],
     category: "staff",
-    salonIds: ["almadies", "seaplaza"],
     account: "active",
     active: true,
     skills: [],
+    // Manager itinérante : elle partage sa semaine entre les deux salons selon
+    // le planning, exactement comme une praticienne pourrait le faire.
     baseHours: week({
-      lun: { off: false, start: "09:00", end: "17:00" },
-      mar: { off: false, start: "09:00", end: "17:00" },
-      mer: { off: false, start: "09:00", end: "17:00" },
-      jeu: { off: false, start: "09:00", end: "17:00" },
-      ven: { off: false, start: "09:00", end: "17:00" },
+      lun: { off: false, salonId: "almadies", start: "09:00", end: "17:00" },
+      mar: { off: false, salonId: "seaplaza", start: "09:00", end: "17:00" },
+      mer: { off: false, salonId: "almadies", start: "09:00", end: "17:00" },
+      jeu: { off: false, salonId: "seaplaza", start: "09:00", end: "17:00" },
+      ven: { off: false, salonId: "almadies", start: "09:00", end: "17:00" },
     }),
   },
 ];
@@ -351,9 +409,6 @@ export const initials = (m: Member) =>
 export const memberById = (id: string): Member | null =>
   members.find((m) => m.id === id) ?? null;
 
-export const membersInScope = (scope: SalonScope): Member[] =>
-  scope === "all" ? members : members.filter((m) => m.salonIds.includes(scope));
-
 export const roleLabel = (r: StaffRole) => ROLE_LABELS[r];
 export const categoryLabel = (c: StaffCategory) => CATEGORY_LABELS[c];
 export const accountLabel = (a: AccountState) => ACCOUNT_LABELS[a];
@@ -362,19 +417,13 @@ export const accountLabel = (a: AccountState) => ACCOUNT_LABELS[a];
 export const canPerform = (memberId: string, prestationId: string) =>
   memberById(memberId)?.skills.includes(prestationId) ?? false;
 
-// Personnes qui peuvent être proposées à la réservation pour une prestation :
-// actives, praticiennes, compétentes, et — si un salon est précisé — rattachées
-// à ce salon.
-export const membersForPrestation = (
-  prestationId: string,
-  scope: SalonScope = "all",
-): Member[] =>
+// Personnes qui peuvent être proposées à la réservation pour une prestation,
+// tous salons confondus : actives, praticiennes, compétentes. Ne dit rien de
+// leur présence un jour donné — ça dépend du planning, pas d'un rattachement
+// fixe (cf. `presentPractitionersForPrestation` dans `@/lib/mock/planning`).
+export const membersForPrestation = (prestationId: string): Member[] =>
   members.filter(
-    (m) =>
-      m.active &&
-      m.roles.includes("praticienne") &&
-      m.skills.includes(prestationId) &&
-      (scope === "all" || m.salonIds.includes(scope)),
+    (m) => m.active && m.roles.includes("praticienne") && m.skills.includes(prestationId),
   );
 
 export const newStaffId = () => `m-${Date.now().toString(36)}`;

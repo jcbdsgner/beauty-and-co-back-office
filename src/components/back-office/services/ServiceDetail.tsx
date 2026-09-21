@@ -9,6 +9,7 @@ import Alert from "@/components/ui/alert/Alert";
 import ServiceInfoForm from "./ServiceInfoForm";
 import PrestationsPanel from "./PrestationsPanel";
 import QuestionsPanel from "./QuestionsPanel";
+import { SERVICE_ICONS } from "./serviceIcons";
 import { BackButton } from "./ui";
 
 type TabId = "infos" | "prestations" | "questions";
@@ -43,6 +44,7 @@ export default function ServiceDetail({
 
   // Prestations actives que personne dans l'équipe ne sait réaliser → non réservables.
   const unbookable = prestations.filter(isUnbookable);
+  const Icon = SERVICE_ICONS[service.icon];
 
   const tabs: { id: TabId; label: string }[] = [
     { id: "infos", label: "Informations" },
@@ -56,8 +58,8 @@ export default function ServiceDetail({
         <BackButton onClick={onBack} />
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex items-center gap-4">
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-2xl">
-              {service.emoji}
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+              <Icon className="size-6" />
             </span>
             <div>
               <h1 className="flex items-center gap-2 text-2xl font-semibold text-gray-800">

@@ -18,9 +18,10 @@ import {
   WEEKDAYS,
   closuresFor,
   isClosed,
+  salonName,
   salons,
 } from "./beautyandco";
-import { type Member, members, membersInScope } from "./staff";
+import { type Member, members } from "./staff";
 
 // Repère temporel figé pour la démo (aligné sur `beautyandco.ts`).
 export const TODAY_ISO = "2026-09-03";
@@ -204,13 +205,11 @@ export function presenceFor(
 
   const shift = member.baseHours[isoWeekday(iso)];
   if (shift.off) return { state: "off" };
-
-  const salonId = member.salonIds[0];
-  if (!salonId || isClosed(salonId, iso)) return { state: "off" };
+  if (isClosed(shift.salonId, iso)) return { state: "off" };
 
   return {
     state: "present",
-    salonId,
+    salonId: shift.salonId,
     start: shift.start,
     end: shift.end,
     breakStart: shift.breakStart,
@@ -254,13 +253,20 @@ export function weekPresence(
     return { iso, weekday, closed, closure };
   });
 
-  const rows: WeekRow[] = membersInScope(scope)
+  // Une personne n'est pas rattachée à un salon : filtrer par salon revient à
+  // ne garder que celles qui y sont réellement présentes au moins un jour de
+  // la semaine affichée (pas à une appartenance fixe).
+  const rows: WeekRow[] = members
     .filter((m) => m.active)
     .sort(byDisplayOrder)
     .map((member) => ({
       member,
       cells: days.map((d) => presenceFor(member.id, d.iso, data)),
-    }));
+    }))
+    .filter(
+      (row) =>
+        scope === "all" || row.cells.some((c) => c.state === "present" && c.salonId === scope),
+    );
 
   return { days, rows };
 }
@@ -311,6 +317,58 @@ export function weekHasExceptions(mondayIso: string, data: PlanningData): boolea
 // Membre dont aucun jour n'est travaillé dans la trame de référence.
 export const hasNoBaseHours = (member: Member): boolean =>
   WEEKDAYS.every((d) => member.baseHours[d].off);
+
+/* ------------------------------------------------------------------ */
+/* Présence par salon — pour l'affectation d'un rendez-vous            */
+/* ------------------------------------------------------------------ */
+
+// Praticiennes actives réellement présentes dans CE salon ce jour-là (pas
+// « rattachées » à ce salon — une praticienne peut y être un jour et ailleurs
+// le lendemain).
+export function presentPractitioners(
+  salonId: SalonId,
+  iso: string,
+  data: PlanningData = SEED_DATA,
+): Member[] {
+  return members.filter((m) => {
+    if (!m.active || !m.roles.includes("praticienne")) return false;
+    const p = presenceFor(m.id, iso, data);
+    return p.state === "present" && p.salonId === salonId;
+  });
+}
+
+// Idem, restreint à celles compétentes pour une prestation donnée — alimente
+// les `select` d'affectation de `/rendez-vous`.
+export function presentPractitionersForPrestation(
+  prestationId: string,
+  salonId: SalonId,
+  iso: string,
+  data: PlanningData = SEED_DATA,
+): Member[] {
+  return presentPractitioners(salonId, iso, data).filter((m) =>
+    m.skills.includes(prestationId),
+  );
+}
+
+// Résumé lisible de la semaine d'un membre : « 3j Almadies · 2j Sea Plaza ».
+// Sert de remplacement, sur la fiche membre et la liste Équipe, à l'ancien
+// badge « salons de rattachement » — dérivé du planning plutôt que figé.
+export function weekSalonSummary(
+  memberId: string,
+  mondayIso: string = PLANNING_DEFAULT_MONDAY,
+  data: PlanningData = SEED_DATA,
+): string {
+  const counts = new Map<SalonId, number>();
+  for (let i = 0; i < 7; i++) {
+    const p = presenceFor(memberId, addDays(mondayIso, i), data);
+    if (p.state === "present") counts.set(p.salonId, (counts.get(p.salonId) ?? 0) + 1);
+  }
+  if (counts.size === 0) return "Aucun jour planifié cette semaine";
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([id, n]) => `${n}j ${salonName(id)}`)
+    .join(" · ");
+}
 
 /* ------------------------------------------------------------------ */
 /* Format                                                             */

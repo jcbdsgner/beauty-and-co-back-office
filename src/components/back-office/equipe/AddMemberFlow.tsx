@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { WEEKDAYS, type Weekday } from "@/lib/mock/beautyandco";
+import { WEEKDAYS, salons, type Weekday } from "@/lib/mock/beautyandco";
 import {
   fullName,
   newStaffId,
@@ -27,6 +27,7 @@ type Props = {
 
 const STANDARD_DAY: DayShift = {
   off: false,
+  salonId: salons[0].id,
   start: "09:00",
   end: "19:00",
   breakStart: "13:00",

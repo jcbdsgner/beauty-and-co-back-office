@@ -3,11 +3,15 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import PageHeader from "@/components/back-office/PageHeader";
+import DetailModal from "@/components/back-office/detail/DetailModal";
+import DetailIdentityHeader, {
+  DetailAvatar,
+} from "@/components/back-office/detail/DetailIdentityHeader";
+import StatTile from "@/components/back-office/detail/StatTile";
 import Badge from "@/components/ui/badge/Badge";
 import Alert from "@/components/ui/alert/Alert";
-import { fullName, membersForPrestation, membersInScope } from "@/lib/mock/staff";
-import { presenceFor } from "@/lib/mock/planning";
+import { fullName } from "@/lib/mock/staff";
+import { presentPractitioners, presentPractitionersForPrestation } from "@/lib/mock/planning";
 import {
   BoxCubeIcon,
   CalenderIcon,
@@ -51,7 +55,12 @@ import { getPackPrestations } from "@/lib/mock/packs";
 
 const FIRST_AVAILABLE = "__any__";
 
-// Fiche rendez-vous — redesign.
+// Fiche rendez-vous — présentée en modal centré (inspiré d'un gabarit « fiche
+// employé » : bandeau identité + grille d'infos, cartes de résumé, tableau) au
+// lieu d'une page dédiée. closeMode "back" : ouverte par navigation depuis une
+// autre page de l'admin (route interceptée) → referme sur l'écran d'origine.
+// "list" : accès direct (URL tapée, rechargement) → referme vers /rendez-vous.
+//
 // 1. Où en est la propriétaire ? Elle ouvre la fiche avant l'arrivée d'une
 //    cliente (qui, quand, quelles prestations, combien, qui s'en occupe, quel
 //    avantage mobiliser) ou pour gérer un imprévu (annulation, réaffectation).
@@ -225,11 +234,34 @@ function AdvantageItem({ advantage }: { advantage: RdvAdvantage }) {
 
 /* --- composant principal -------------------------------------------- */
 
-export default function RendezVousDetail({ detail }: { detail: RdvDetail }) {
+export default function RendezVousDetail({
+  detail,
+  closeMode,
+  onClose,
+  onAssign,
+  onStatusChange,
+  onDelete,
+}: {
+  detail: RdvDetail;
+  closeMode: "back" | "list";
+  // Présente cette fiche « branchée » sur un état de session partagé (écran
+  // Rendez-vous : liste + agenda) au lieu du mode autonome par défaut (route
+  // dédiée / modal interceptée, sans liste à tenir à jour derrière).
+  onClose?: () => void;
+  onAssign?: (prestationId: string, staff: string | null) => void;
+  onStatusChange?: (status: RdvStatus) => void;
+  onDelete?: () => void;
+}) {
   const router = useRouter();
+  const close = () =>
+    onClose ? onClose() : closeMode === "back" ? router.back() : router.push("/rendez-vous");
   const day = detail.date.slice(0, 10);
 
-  const [status, setStatus] = useState<RdvStatus>(detail.status);
+  const [status, setStatusState] = useState<RdvStatus>(detail.status);
+  const setStatus = (next: RdvStatus) => {
+    setStatusState(next);
+    onStatusChange?.(next);
+  };
   const [notice, setNotice] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -238,10 +270,7 @@ export default function RendezVousDetail({ detail }: { detail: RdvDetail }) {
 
   // Praticiennes présentes ce jour-là dans le salon (pour « assigner tout le RDV »).
   const presentRoster = useMemo(
-    () =>
-      membersInScope(detail.salon)
-        .filter((m) => m.roles.includes("praticienne"))
-        .filter((m) => presenceFor(m.id, day).state === "present"),
+    () => presentPractitioners(detail.salon, day),
     [detail.salon, day],
   );
 
@@ -252,8 +281,11 @@ export default function RendezVousDetail({ detail }: { detail: RdvDetail }) {
     ),
   );
 
-  const setEveryone = (name: string) =>
+  const setEveryone = (name: string) => {
     setPerStaff(Object.fromEntries(detail.prestations.map((p) => [p.id, name])));
+    const staff = name === FIRST_AVAILABLE ? null : name;
+    detail.prestations.forEach((p) => onAssign?.(p.id, staff));
+  };
 
   const staffOf = (pid: string) => {
     const v = perStaff[pid];
@@ -269,11 +301,8 @@ export default function RendezVousDetail({ detail }: { detail: RdvDetail }) {
             .map((p) => p.requestedStaff)
             .filter((n): n is string => Boolean(n)),
         ),
-      ].filter((name) => {
-        const m = membersInScope(detail.salon).find((x) => fullName(x) === name);
-        return !m || presenceFor(m.id, day).state !== "present";
-      }),
-    [detail.prestations, detail.salon, day],
+      ].filter((name) => !presentRoster.some((m) => fullName(m) === name)),
+    [detail.prestations, presentRoster],
   );
 
   // Prestations regroupées par catégorie du catalogue.
@@ -296,38 +325,9 @@ export default function RendezVousDetail({ detail }: { detail: RdvDetail }) {
       : null;
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title={detail.client.name}
-        description={`Rendez-vous ${detail.ref}`}
-        backHref="/rendez-vous"
-        backLabel="Rendez-vous"
-      />
-
-      {/* Bandeau d'en-tête : l'essentiel + action contextuelle */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-5 md:p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex items-start gap-4">
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700 [&_svg]:h-6 [&_svg]:w-6">
-              <CalenderIcon />
-            </span>
-            <div>
-              <div className="flex items-center gap-2">
-                <Badge size="sm" color={badgeColor[status]}>
-                  {meta.label}
-                </Badge>
-                <span className="text-theme-xs text-gray-400">{detail.ref}</span>
-              </div>
-              <p className="mt-1 text-lg font-semibold text-gray-800">
-                {frFullDate(detail.date)}
-              </p>
-              <p className="text-theme-sm text-gray-500">
-                {detail.date.slice(11, 16)} → {rdvEnd(detail).slice(11, 16)} · {detail.salonLabel} ·{" "}
-                {durationLabel(rdvDuration(detail))}
-              </p>
-            </div>
-          </div>
-
+    <DetailModal title="Fiche rendez-vous" onClose={close} widthClassName="max-w-4xl">
+      <div className="space-y-6">
+        <div className="flex items-center justify-end">
           {primaryAction && (
             <button
               type="button"
@@ -339,15 +339,39 @@ export default function RendezVousDetail({ detail }: { detail: RdvDetail }) {
           )}
         </div>
 
+        <DetailIdentityHeader
+          avatar={
+            <DetailAvatar>
+              <CalenderIcon />
+            </DetailAvatar>
+          }
+          name={detail.client.name}
+          subtitle={`Rendez-vous ${detail.ref}`}
+          badges={
+            <Badge size="sm" color={badgeColor[status]}>
+              {meta.label}
+            </Badge>
+          }
+          fields={[
+            { label: "Date", value: frFullDate(detail.date) },
+            {
+              label: "Créneau",
+              value: `${detail.date.slice(11, 16)} → ${rdvEnd(detail).slice(11, 16)}`,
+            },
+            { label: "Salon", value: detail.salonLabel },
+            { label: "Durée", value: durationLabel(rdvDuration(detail)) },
+          ]}
+        />
+
         {notice && (
-          <p className="mt-4 rounded-lg bg-gray-900 px-4 py-2.5 text-theme-sm font-medium text-white">
+          <p className="rounded-lg bg-gray-900 px-4 py-2.5 text-theme-sm font-medium text-white">
             {notice}
           </p>
         )}
 
         {meta.closed && status !== "terminé" && (
           <p
-            className={`mt-4 rounded-lg px-4 py-3 text-theme-sm ${
+            className={`rounded-lg px-4 py-3 text-theme-sm ${
               status === "annulé"
                 ? "bg-error-50 text-error-600"
                 : "bg-warning-50 text-warning-600"
@@ -360,46 +384,32 @@ export default function RendezVousDetail({ detail }: { detail: RdvDetail }) {
         )}
 
         {requestedAbsent.length > 0 && !meta.closed && (
-          <div className="mt-4">
-            <Alert
-              variant="warning"
-              title="Praticienne demandée absente ce jour-là"
-              message={`La cliente a demandé ${requestedAbsent.join(
-                ", ",
-              )}. Affectez une autre praticienne ci-dessous, ou proposez un autre créneau.`}
-            />
-          </div>
+          <Alert
+            variant="warning"
+            title="Praticienne demandée absente ce jour-là"
+            message={`La cliente a demandé ${requestedAbsent.join(
+              ", ",
+            )}. Affectez une autre praticienne ci-dessous, ou proposez un autre créneau.`}
+          />
         )}
-      </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Colonne latérale — argent + avantages */}
-        <div className="space-y-6 lg:sticky lg:top-24 lg:self-start">
-          <SectionCard icon={<DollarLineIcon />} title="Total des prestations">
-            <p className="text-theme-xl font-bold tabular-nums text-gray-800">{fcfa(total)}</p>
-            <p className="mt-1 text-theme-xs text-gray-400">
-              {detail.prestations.length} prestation{detail.prestations.length > 1 ? "s" : ""} ·{" "}
-              {status === "terminé" ? "encaissé" : "à encaisser à la fin de la visite"}
-            </p>
-          </SectionCard>
-
-          <SectionCard icon={<ShootingStarIcon />} title="Avantages">
-            {detail.advantages.length === 0 ? (
-              <p className="text-theme-sm text-gray-500">
-                Aucun avantage mobilisé sur ce rendez-vous.
-              </p>
-            ) : (
-              <div className="space-y-5">
-                {detail.advantages.map((a, i) => (
-                  <AdvantageItem key={i} advantage={a} />
-                ))}
-              </div>
-            )}
-          </SectionCard>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <StatTile label="Total à payer" value={fcfa(total)} />
+          <StatTile
+            label="Prestations"
+            value={`${detail.prestations.length}`}
+          />
+          <StatTile
+            label="Avantages mobilisés"
+            value={detail.advantages.length > 0 ? `${detail.advantages.length}` : "Aucun"}
+          />
+          <StatTile
+            label="Encaissement"
+            value={status === "terminé" ? "Encaissé" : "À la fin de la visite"}
+          />
         </div>
 
-        {/* Colonne principale */}
-        <div className="space-y-6 lg:col-span-2">
+        <div className="space-y-6">
           <SectionCard
             icon={<PageIcon />}
             title="Prestations réservées"
@@ -501,8 +511,10 @@ export default function RendezVousDetail({ detail }: { detail: RdvDetail }) {
 
             <ul className="mt-4 space-y-3 border-t border-gray-100 pt-4">
               {detail.prestations.map((p) => {
-                const options = membersForPrestation(p.prestationId, detail.salon).filter(
-                  (m) => presenceFor(m.id, day).state === "present",
+                const options = presentPractitionersForPrestation(
+                  p.prestationId,
+                  detail.salon,
+                  day,
                 );
                 return (
                   <li key={p.id} className="flex items-center justify-between gap-4">
@@ -512,9 +524,11 @@ export default function RendezVousDetail({ detail }: { detail: RdvDetail }) {
                     <div className="shrink-0">
                       <select
                         value={perStaff[p.id] ?? FIRST_AVAILABLE}
-                        onChange={(e) =>
-                          setPerStaff((prev) => ({ ...prev, [p.id]: e.target.value }))
-                        }
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setPerStaff((prev) => ({ ...prev, [p.id]: value }));
+                          onAssign?.(p.id, value === FIRST_AVAILABLE ? null : value);
+                        }}
                         className="h-9 w-56 rounded-lg border border-gray-200 bg-white px-3 text-theme-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10"
                       >
                         <option value={FIRST_AVAILABLE}>Première disponible</option>
@@ -536,6 +550,20 @@ export default function RendezVousDetail({ detail }: { detail: RdvDetail }) {
             </ul>
           </SectionCard>
           )}
+
+          <SectionCard icon={<ShootingStarIcon />} title="Avantages">
+            {detail.advantages.length === 0 ? (
+              <p className="text-theme-sm text-gray-500">
+                Aucun avantage mobilisé sur ce rendez-vous.
+              </p>
+            ) : (
+              <div className="space-y-5">
+                {detail.advantages.map((a, i) => (
+                  <AdvantageItem key={i} advantage={a} />
+                ))}
+              </div>
+            )}
+          </SectionCard>
 
           <SectionCard icon={<UserCircleIcon />} title="Coordonnées client">
             <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -637,7 +665,7 @@ export default function RendezVousDetail({ detail }: { detail: RdvDetail }) {
                 </span>
                 <button
                   type="button"
-                  onClick={() => router.push("/rendez-vous")}
+                  onClick={() => (onDelete ? onDelete() : router.push("/rendez-vous"))}
                   className="font-semibold text-error-600 hover:underline"
                 >
                   Supprimer
@@ -662,6 +690,6 @@ export default function RendezVousDetail({ detail }: { detail: RdvDetail }) {
           </div>
         </div>
       </div>
-    </div>
+    </DetailModal>
   );
 }

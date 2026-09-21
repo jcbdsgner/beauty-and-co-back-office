@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Badge from "@/components/ui/badge/Badge";
-import { salonName } from "@/lib/mock/beautyandco";
+import { weekSalonSummary } from "@/lib/mock/planning";
 import {
   ACCOUNT_LABELS,
   CATEGORY_LABELS,
@@ -26,8 +26,8 @@ import { Avatar, BackButton } from "./ui";
 //  · Activité (défaut) : note de satisfaction client + commentaires, charge de
 //    rendez-vous, et le bloc « Demandes » (bandeau de décision avance / congé +
 //    historique daté). C'est l'état de la personne, pas sa config.
-//  · Identité & accès : coordonnées / métier / rôles / salons + membre actif,
-//    puis accès à la plateforme et récap des autorisations par rôle.
+//  · Identité & accès : coordonnées / métier / rôles + membre actif, puis
+//    accès à la plateforme et récap des autorisations par rôle.
 //  · Compétences & horaires : prestations réalisées + trame hebdomadaire.
 
 type TabId = "activite" | "identite" | "competences";
@@ -124,7 +124,7 @@ export default function MemberDetail({
                 </Badge>
                 <span className="text-gray-300">·</span>
                 <span className="text-theme-sm text-gray-500">
-                  {member.salonIds.map((s) => salonName(s)).join(", ") || "aucun salon"}
+                  {weekSalonSummary(member.id)}
                 </span>
               </div>
             </div>

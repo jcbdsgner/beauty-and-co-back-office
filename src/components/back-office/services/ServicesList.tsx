@@ -11,6 +11,7 @@ import {
 import Badge from "@/components/ui/badge/Badge";
 import { TrashBinIcon } from "@/icons";
 import type { Service, ServiceRow } from "@/lib/mock/services";
+import { SERVICE_ICONS } from "./serviceIcons";
 import { Toggle } from "./ui";
 
 type Props = {
@@ -91,6 +92,7 @@ export default function ServicesList({
         <TableBody className="divide-y divide-gray-100">
           {rows.map((row, i) => {
             const s = row.service;
+            const Icon = SERVICE_ICONS[s.icon];
             const confirming = confirmId === s.id;
             return (
               <TableRow key={s.id} className="hover:bg-gray-50">
@@ -125,8 +127,8 @@ export default function ServicesList({
                     onClick={() => onOpen(s.id)}
                     className="group flex items-center gap-3 text-left"
                   >
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-lg">
-                      {s.emoji}
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+                      <Icon className="size-5" />
                     </span>
                     <span className="min-w-0">
                       <span className="flex items-center gap-2">
