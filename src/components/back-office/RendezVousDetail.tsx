@@ -11,15 +11,19 @@ import StatTile from "@/components/back-office/detail/StatTile";
 import Badge from "@/components/ui/badge/Badge";
 import Alert from "@/components/ui/alert/Alert";
 import { fullName } from "@/lib/mock/staff";
-import { presentPractitioners, presentPractitionersForPrestation } from "@/lib/mock/planning";
+import { presentPractitioners, presentPractitionersForPrestation, type PlanningData } from "@/lib/mock/planning";
+import { clientDetail, PREFERENCE_GROUPS } from "@/lib/mock/beautyandco";
+import { prestationSeeds, productName } from "@/lib/mock/services";
 import {
   BoxCubeIcon,
+  BoxIcon,
   CalenderIcon,
   ChatIcon,
   DollarLineIcon,
   EnvelopeIcon,
   GroupIcon,
   PageIcon,
+  PlusIcon,
   ShootingStarIcon,
   TimeIcon,
   UserCircleIcon,
@@ -28,6 +32,7 @@ import {
   RDV_STATUS_META,
   advantageLabel,
   durationLabel,
+  extraPrice,
   fcfa,
   frFullDate,
   frLongDate,
@@ -37,8 +42,10 @@ import {
   rdvTotal,
   type RdvAdvantage,
   type RdvDetail,
+  type RdvPrestation,
   type RdvStatus,
 } from "@/lib/mock/rendezvous";
+import EditRdvDialog from "./rendezvous/EditRdvDialog";
 import {
   ABONNEMENT_STATUS_META,
   abonnementSeeds,
@@ -241,6 +248,13 @@ export default function RendezVousDetail({
   onAssign,
   onStatusChange,
   onDelete,
+  rdvs,
+  onUpdatePrestation,
+  onAddPrestation,
+  onRemovePrestation,
+  onCancelWithReason,
+  onOpenBooking,
+  planningData,
 }: {
   detail: RdvDetail;
   closeMode: "back" | "list";
@@ -251,6 +265,16 @@ export default function RendezVousDetail({
   onAssign?: (prestationId: string, staff: string | null) => void;
   onStatusChange?: (status: RdvStatus) => void;
   onDelete?: () => void;
+  // Édition (« Modifier ») — tous facultatifs, seulement fournis quand la
+  // fiche est ouverte depuis l'écran Rendez-vous (accès à l'état de session
+  // complet, nécessaire pour valider les créneaux d'une modification).
+  rdvs?: RdvDetail[];
+  onUpdatePrestation?: (prestationId: string, patch: Partial<RdvPrestation>) => void;
+  onAddPrestation?: (line: RdvPrestation) => void;
+  onRemovePrestation?: (prestationId: string) => void;
+  onCancelWithReason?: (reason: string) => void;
+  onOpenBooking?: () => void;
+  planningData?: PlanningData;
 }) {
   const router = useRouter();
   const close = () =>
@@ -264,14 +288,15 @@ export default function RendezVousDetail({
   };
   const [notice, setNotice] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   const meta = RDV_STATUS_META[status];
   const total = rdvTotal(detail);
 
   // Praticiennes présentes ce jour-là dans le salon (pour « assigner tout le RDV »).
   const presentRoster = useMemo(
-    () => presentPractitioners(detail.salon, day),
-    [detail.salon, day],
+    () => presentPractitioners(detail.salon, day, planningData),
+    [detail.salon, day, planningData],
   );
 
   // Affectation par prestation : nom de la praticienne, ou FIRST_AVAILABLE.
@@ -305,40 +330,38 @@ export default function RendezVousDetail({
     [detail.prestations, presentRoster],
   );
 
-  // Prestations regroupées par catégorie du catalogue.
-  const categories = detail.prestations.reduce<Record<string, typeof detail.prestations>>(
-    (acc, p) => {
+  // Prestations regroupées par bénéficiaire (visible seulement si le rendez-vous
+  // vise plus d'une personne), puis par catégorie du catalogue au sein de
+  // chaque groupe.
+  const byBeneficiary = useMemo(() => {
+    const map = new Map<string, typeof detail.prestations>();
+    for (const p of detail.prestations) {
+      (map.get(p.beneficiaryName) ?? map.set(p.beneficiaryName, []).get(p.beneficiaryName)!).push(p);
+    }
+    return [...map.entries()];
+  }, [detail]);
+  const multiBeneficiary = byBeneficiary.length > 1;
+
+  const byCategory = (items: typeof detail.prestations) =>
+    items.reduce<Record<string, typeof detail.prestations>>((acc, p) => {
       (acc[p.category] ??= []).push(p);
       return acc;
-    },
-    {},
-  );
+    }, {});
+
+  const extras = detail.extras ?? [];
+
+  const clientPrefs = useMemo(() => clientDetail(detail.client.id), [detail.client.id]);
+  const preferenceLines = clientPrefs
+    ? PREFERENCE_GROUPS.map((g) => ({ label: g.label, items: clientPrefs.preferences[g.key] })).filter(
+        (g) => g.items.length > 0,
+      )
+    : [];
 
   const flash = (msg: string) => setNotice(msg);
-
-  const primaryAction: { label: string; run: () => void } | null =
-    status === "à venir"
-      ? {
-          label: "Marquer la visite terminée",
-          run: () => (setStatus("terminé"), flash("Visite terminée.")),
-        }
-      : null;
 
   return (
     <DetailModal title="Fiche rendez-vous" onClose={close} widthClassName="max-w-4xl">
       <div className="space-y-6">
-        <div className="flex items-center justify-end">
-          {primaryAction && (
-            <button
-              type="button"
-              onClick={primaryAction.run}
-              className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-theme-sm font-medium text-white transition-colors hover:bg-brand-600"
-            >
-              {primaryAction.label}
-            </button>
-          )}
-        </div>
-
         <DetailIdentityHeader
           avatar={
             <DetailAvatar>
@@ -378,7 +401,7 @@ export default function RendezVousDetail({
             }`}
           >
             {status === "annulé"
-              ? "Ce rendez-vous a été annulé. Il reste consultable pour l'historique."
+              ? `Ce rendez-vous a été annulé${detail.cancelReason ? ` — ${detail.cancelReason}` : ""}. Il reste consultable pour l'historique.`
               : "La cliente ne s'est pas présentée. Vous pouvez la recontacter pour reprogrammer."}
           </p>
         )}
@@ -393,7 +416,7 @@ export default function RendezVousDetail({
           />
         )}
 
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           <StatTile label="Total à payer" value={fcfa(total)} />
           <StatTile
             label="Prestations"
@@ -402,10 +425,6 @@ export default function RendezVousDetail({
           <StatTile
             label="Avantages mobilisés"
             value={detail.advantages.length > 0 ? `${detail.advantages.length}` : "Aucun"}
-          />
-          <StatTile
-            label="Encaissement"
-            value={status === "terminé" ? "Encaissé" : "À la fin de la visite"}
           />
         </div>
 
@@ -420,37 +439,84 @@ export default function RendezVousDetail({
               </span>
             }
           >
-            <div className="space-y-5">
-              {Object.entries(categories).map(([category, items]) => (
-                <div key={category}>
-                  <p className="text-theme-xs font-semibold uppercase tracking-wide text-gray-400">
-                    {category}
-                  </p>
-                  <ul className="mt-2 divide-y divide-gray-100">
-                    {items.map((p) => (
-                      <li key={p.id} className="flex items-center justify-between gap-4 py-3">
-                        <div className="min-w-0">
-                          <p className="font-medium text-gray-800">{p.name}</p>
-                          <p className="text-theme-xs text-gray-500">
-                            {durationLabel(p.durationMin)} ·{" "}
-                            {staffOf(p.id) ? (
-                              staffOf(p.id)
-                            ) : meta.closed ? (
-                              <span className="text-gray-400">praticienne non précisée</span>
-                            ) : (
-                              <span className="text-warning-600">à affecter</span>
-                            )}
-                          </p>
-                        </div>
-                        <span className="shrink-0 text-theme-sm font-semibold tabular-nums text-gray-800">
-                          {fcfa(p.price)}
-                        </span>
-                      </li>
+            <div className="space-y-6">
+              {byBeneficiary.map(([beneficiaryName, benPrestations]) => (
+                <div key={beneficiaryName}>
+                  {multiBeneficiary && (
+                    <div className="mb-2 flex items-center justify-between">
+                      <p className="text-theme-sm font-semibold text-gray-800">{beneficiaryName}</p>
+                      <span className="text-theme-xs font-medium tabular-nums text-gray-500">
+                        {fcfa(benPrestations.reduce((sum, p) => sum + p.price, 0))}
+                      </span>
+                    </div>
+                  )}
+                  <div className="space-y-5">
+                    {Object.entries(byCategory(benPrestations)).map(([category, items]) => (
+                      <div key={category}>
+                        <p className="text-theme-xs font-semibold uppercase tracking-wide text-gray-400">
+                          {category}
+                        </p>
+                        <ul className="mt-2 divide-y divide-gray-100">
+                          {items.map((p) => (
+                            <li key={p.id} className="flex items-center justify-between gap-4 py-3">
+                              <div className="min-w-0">
+                                <p className="font-medium text-gray-800">
+                                  {p.name}
+                                  {p.secondStaff && (
+                                    <span className="ml-1.5 text-theme-xs font-normal text-gray-400">
+                                      (à deux)
+                                    </span>
+                                  )}
+                                </p>
+                                <p className="text-theme-xs text-gray-500">
+                                  {p.start} · {durationLabel(p.durationMin)} ·{" "}
+                                  {staffOf(p.id) ? (
+                                    <>
+                                      {staffOf(p.id)}
+                                      {p.secondStaff ? ` + ${p.secondStaff}` : ""}
+                                    </>
+                                  ) : meta.closed ? (
+                                    <span className="text-gray-400">praticienne non précisée</span>
+                                  ) : (
+                                    <span className="text-warning-600">à affecter</span>
+                                  )}
+                                </p>
+                              </div>
+                              <span className="shrink-0 text-theme-sm font-semibold tabular-nums text-gray-800">
+                                {fcfa(p.price)}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 </div>
               ))}
             </div>
+
+            {extras.length > 0 && (
+              <div className="mt-5 border-t border-gray-100 pt-5">
+                <div className="flex items-center gap-2">
+                  <BoxIcon className="h-4 w-4 text-gray-400" />
+                  <p className="text-theme-xs font-semibold uppercase tracking-wide text-gray-400">
+                    Boissons &amp; produits
+                  </p>
+                </div>
+                <ul className="mt-3 divide-y divide-gray-100">
+                  {extras.map((e) => (
+                    <li key={e.id} className="flex items-center justify-between gap-4 py-2.5">
+                      <span className="text-theme-sm text-gray-700">
+                        {e.qty}× {productName(e.productId)}
+                      </span>
+                      <span className="shrink-0 text-theme-sm font-medium tabular-nums text-gray-700">
+                        {fcfa(extraPrice(e))}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {detail.questions.length > 0 && (
               <div className="mt-5 border-t border-gray-100 pt-5">
@@ -515,13 +581,16 @@ export default function RendezVousDetail({
                   p.prestationId,
                   detail.salon,
                   day,
+                  planningData,
                 );
+                const twoPractitioners = prestationSeeds.find((x) => x.id === p.prestationId)?.twoPractitioners;
+                const currentStaff = staffOf(p.id);
                 return (
                   <li key={p.id} className="flex items-center justify-between gap-4">
                     <span className="min-w-0 flex-1 truncate text-theme-sm text-gray-700">
                       {p.name}
                     </span>
-                    <div className="shrink-0">
+                    <div className="shrink-0 space-y-1.5">
                       <select
                         value={perStaff[p.id] ?? FIRST_AVAILABLE}
                         onChange={(e) => {
@@ -539,9 +608,28 @@ export default function RendezVousDetail({
                         ))}
                       </select>
                       {options.length === 0 && (
-                        <p className="mt-1 w-56 text-theme-xs text-warning-700">
+                        <p className="w-56 text-theme-xs text-warning-700">
                           Aucune praticienne compétente et présente.
                         </p>
+                      )}
+                      {twoPractitioners && currentStaff && (
+                        <select
+                          value={p.secondStaff ?? "__none__"}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            onUpdatePrestation?.(p.id, { secondStaff: v === "__none__" ? null : v });
+                          }}
+                          className="h-9 w-56 rounded-lg border border-gray-200 bg-white px-3 text-theme-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10"
+                        >
+                          <option value="__none__">Seule</option>
+                          {options
+                            .filter((m) => fullName(m) !== currentStaff)
+                            .map((m) => (
+                              <option key={m.id} value={fullName(m)}>
+                                2ᵉ praticienne : {fullName(m)}
+                              </option>
+                            ))}
+                        </select>
                       )}
                     </div>
                   </li>
@@ -586,6 +674,21 @@ export default function RendezVousDetail({
                 {groupThousands(detail.client.loyaltyPoints)} points
               </Field>
             </dl>
+            {preferenceLines.length > 0 && (
+              <div className="mt-4 border-t border-gray-100 pt-4">
+                <p className="text-theme-xs font-semibold uppercase tracking-wide text-gray-400">
+                  Préférences
+                </p>
+                <dl className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {preferenceLines.map((g) => (
+                    <div key={g.label}>
+                      <dt className="text-theme-xs text-gray-400">{g.label}</dt>
+                      <dd className="text-theme-sm text-gray-700">{g.items.join(", ")}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            )}
             <div className="mt-4 flex flex-wrap gap-2 border-t border-gray-100 pt-4">
               <Link
                 href={`/clients/${detail.client.id}`}
@@ -625,15 +728,34 @@ export default function RendezVousDetail({
           {/* Actions de gestion */}
           <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-gray-200 bg-white p-5">
             {!meta.closed && (
-              <Link
-                href="/rendez-vous"
-                className={`${inertBtn} border border-gray-200 text-gray-700 hover:bg-gray-50`}
-              >
-                <CalenderIcon className="h-4 w-4" />
-                Déplacer (depuis l&apos;agenda)
-              </Link>
+              <>
+                <button
+                  type="button"
+                  onClick={() => setEditOpen(true)}
+                  className={`${inertBtn} cursor-pointer border border-gray-200 text-gray-700 hover:bg-gray-50`}
+                >
+                  Modifier
+                </button>
+                <Link
+                  href="/rendez-vous"
+                  className={`${inertBtn} border border-gray-200 text-gray-700 hover:bg-gray-50`}
+                >
+                  <CalenderIcon className="h-4 w-4" />
+                  Déplacer (depuis l&apos;agenda)
+                </Link>
+              </>
             )}
-            {status === "annulé" ? (
+            {onOpenBooking && (
+              <button
+                type="button"
+                onClick={onOpenBooking}
+                className={`${inertBtn} cursor-pointer border border-gray-200 text-gray-700 hover:bg-gray-50`}
+              >
+                <PlusIcon className="h-4 w-4" />
+                Nouveau rendez-vous
+              </button>
+            )}
+            {status === "annulé" && (
               <button
                 type="button"
                 onClick={() => {
@@ -644,19 +766,6 @@ export default function RendezVousDetail({
               >
                 Rétablir le rendez-vous
               </button>
-            ) : (
-              !meta.closed && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStatus("annulé");
-                    flash("Rendez-vous annulé — cliente prévenue par email.");
-                  }}
-                  className={`${inertBtn} cursor-pointer border border-error-200 text-error-600 hover:bg-error-50`}
-                >
-                  Annuler le rendez-vous
-                </button>
-              )
             )}
             {confirmDelete ? (
               <span className="ml-auto flex items-center gap-2 text-theme-xs">
@@ -690,6 +799,29 @@ export default function RendezVousDetail({
           </div>
         </div>
       </div>
+
+      {editOpen && (
+        <EditRdvDialog
+          open={editOpen}
+          detail={detail}
+          rdvs={rdvs ?? [detail]}
+          planningData={planningData}
+          onClose={() => setEditOpen(false)}
+          onUpdateLine={(pid, patch) => onUpdatePrestation?.(pid, patch)}
+          onAddLine={(line) => onAddPrestation?.(line)}
+          onRemoveLine={(pid) => onRemovePrestation?.(pid)}
+          onCancelRdv={(reason) => {
+            setStatus("annulé");
+            onCancelWithReason?.(reason);
+            setEditOpen(false);
+            flash(
+              reason
+                ? `Rendez-vous annulé — ${reason} — cliente prévenue par email.`
+                : "Rendez-vous annulé — cliente prévenue par email.",
+            );
+          }}
+        />
+      )}
     </DetailModal>
   );
 }

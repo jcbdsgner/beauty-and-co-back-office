@@ -10,6 +10,7 @@ import {
   type SalonId,
   type SalonScope,
 } from "./beautyandco";
+import { productPrice } from "./services";
 
 export { fcfa, groupThousands };
 export type { PosteType };
@@ -124,6 +125,19 @@ export type RdvPrestation = {
   posteType: PosteType; // poste de travail mobilisé (dérivé de la catégorie)
   staff: string | null; // collaboratrice affectée à cette prestation (null = à affecter)
   requestedStaff?: string | null; // praticienne demandée par la cliente sur le site
+  secondStaff?: string | null; // 2ᵉ praticienne — prestation « à deux » (temps de chaise divisé)
+  start: string; // "HH:MM" — horaire propre à cette prestation (explicite, ne se déduit plus par chaînage)
+  beneficiaryName: string; // qui reçoit la prestation — le payeur (`RdvDetail.client.name`) par défaut, ou une autre personne
+  beneficiaryClientId?: string | null; // renseigné si le bénéficiaire est une autre cliente du fichier
+};
+
+// Boisson/produit pré-commandé pour la visite — jamais une prestation, jamais
+// modifié après création (même principe que les extras de point-de-vente).
+export type RdvExtra = {
+  id: string;
+  kind: "produit" | "boisson";
+  productId: string; // réf. `@/lib/mock/services` `products`
+  qty: number;
 };
 
 export type RdvQuestion = {
@@ -157,9 +171,11 @@ export type RdvDetail = {
   client: RdvClient;
   staffGlobal: string | null; // « Assigner tout le monde à » — null si mixte / non assigné
   prestations: RdvPrestation[];
+  extras?: RdvExtra[]; // boissons/produits pré-commandés, saisis à la création
   questions: RdvQuestion[];
   advantages: RdvAdvantage[];
   events: RdvEvent[]; // du plus récent au plus ancien
+  cancelReason?: string; // motif libre saisi à l'annulation
 };
 
 /* ------------------------------------------------------------------ */
@@ -175,7 +191,12 @@ export const staffBySalon: Record<SalonId, string[]> = {
 /* Fixtures                                                            */
 /* ------------------------------------------------------------------ */
 
-// Raccourci de saisie d'une prestation : le `posteType` est dérivé de la catégorie.
+// Raccourci de saisie d'une prestation : le `posteType` est dérivé de la
+// catégorie. `start`/`beneficiaryName` sont laissés vides ici et complétés par
+// `normalize()` ci-dessous (chaînage séquentiel depuis `RdvDetail.date`, comme
+// avant l'introduction d'un horaire explicite par prestation ; bénéficiaire =
+// le client du rendez-vous) — seuls les nouveaux RDV de démo (bénéficiaires
+// multiples, « à deux », extras) renseignent ces champs à la main via `extra`.
 const pr = (
   id: string,
   prestationId: string,
@@ -185,6 +206,12 @@ const pr = (
   price: number,
   staff: string | null,
   requestedStaff?: string | null,
+  extra?: {
+    secondStaff?: string | null;
+    start?: string;
+    beneficiaryName?: string;
+    beneficiaryClientId?: string | null;
+  },
 ): RdvPrestation => ({
   id,
   prestationId,
@@ -195,9 +222,13 @@ const pr = (
   posteType: posteTypeForCategory(category),
   staff,
   requestedStaff,
+  secondStaff: extra?.secondStaff,
+  start: extra?.start ?? "",
+  beneficiaryName: extra?.beneficiaryName ?? "",
+  beneficiaryClientId: extra?.beneficiaryClientId,
 });
 
-const SEEDS: RdvDetail[] = [
+const RAW_SEEDS: RdvDetail[] = [
   /* ---- Journée en cours : jeudi 3 septembre 2026 ---- */
   {
     id: "rdv-3001",
@@ -509,50 +540,193 @@ const SEEDS: RdvDetail[] = [
       { at: "2026-08-30T09:05:00", label: "Rendez-vous créé", detail: "Réservation en ligne" },
     ],
   },
+
+  /* ---- Démo : bénéficiaires multiples + extras (2026-09-04) ---- */
+  {
+    id: "rdv-3007",
+    ref: "#f4c8a913",
+    status: "à venir",
+    date: "2026-09-04T10:00:00",
+    salon: "almadies",
+    salonLabel: salonName("almadies"),
+    client: {
+      id: "c02",
+      name: "Fatou Ndiaye",
+      email: "fatou.ndiaye@yahoo.fr",
+      phone: "+221 78 204 11 39",
+      whatsapp: "+221 78 204 11 39",
+      loyaltyPoints: 260,
+    },
+    staffGlobal: null,
+    prestations: [
+      pr("p1", "manucure-pedicure-manucure-russe-sans-vernis-sans-gel", "Manucure & pédicure", "Manucure russe", 30, 13_000, "Aïda Sarr", null, { start: "10:00", beneficiaryName: "Fatou Ndiaye" }),
+      // Bénéficiaire distinct de la payeuse — sa fille, prestation en parallèle (pas de praticienne dédiée « Mini & Co » compétente présente ce jour-là).
+      pr("p2", "mini-co-mini-hair-treat-mini-co", "Mini & Co", "Mini Hair Treat (Mini&Co)", 90, 28_000, null, null, { start: "10:00", beneficiaryName: "Aïssa Ndiaye (fille)" }),
+    ],
+    extras: [
+      { id: "ex1", kind: "boisson", productId: "boisson-pure-glow", qty: 2 },
+      { id: "ex2", kind: "boisson", productId: "boisson-eclat-matcha", qty: 1 },
+    ],
+    questions: [],
+    advantages: [],
+    events: [
+      { at: "2026-09-01T11:00:00", label: "Rendez-vous créé", detail: "Réservation en ligne · pour elle et sa fille" },
+    ],
+  },
+  {
+    id: "rdv-3008",
+    ref: "#3b7e2d01",
+    status: "à venir",
+    date: "2026-09-04T13:00:00",
+    salon: "almadies",
+    salonLabel: salonName("almadies"),
+    client: {
+      id: "c06",
+      name: "Khady Guèye",
+      email: "khady.gueye@yahoo.fr",
+      phone: "+221 77 902 33 47",
+      whatsapp: null,
+      loyaltyPoints: 60,
+    },
+    staffGlobal: "Mariama Bâ",
+    prestations: [
+      // Prestation « à deux praticiennes » — temps de chaise divisé. Vendredi
+      // 4/09 : Mariama en renfort d'après-midi (12h-19h) et Sophie en journée
+      // complète, toutes deux présentes et compétentes à Almadies ce jour-là.
+      pr("p1", "coiffure-tissage-versatile", "Coiffure", "Tissage Versatile", 120, 56_000, "Mariama Bâ", null, {
+        secondStaff: "Sophie Ndione",
+        start: "13:00",
+        beneficiaryName: "Khady Guèye",
+      }),
+    ],
+    questions: [],
+    advantages: [],
+    events: [
+      { at: "2026-08-30T15:40:00", label: "Rendez-vous créé", detail: "Pris au comptoir · à deux praticiennes" },
+    ],
+  },
 ];
+
+export const timeToMinutes = (t: string): number => {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+};
+
+export const minutesToTime = (min: number): string => {
+  const wrapped = ((min % 1440) + 1440) % 1440;
+  const h = Math.floor(wrapped / 60);
+  const m = wrapped % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+};
+
+// Chaînage séquentiel historique (avant l'introduction d'un `start` explicite
+// par prestation) : la 1ʳᵉ prestation démarre à `RdvDetail.date`, chaque
+// suivante enchaîne quand la précédente finit. Sert uniquement à compléter les
+// seeds qui ne renseignent pas `start`/`beneficiaryName` à la main.
+function normalize(r: RdvDetail): RdvDetail {
+  let cursor = r.date.slice(11, 16);
+  const prestations = r.prestations.map((p) => {
+    const start = p.start || cursor;
+    if (!p.start) cursor = minutesToTime(timeToMinutes(cursor) + p.durationMin);
+    return {
+      ...p,
+      start,
+      beneficiaryName: p.beneficiaryName || r.client.name,
+    };
+  });
+  return { ...r, prestations, extras: r.extras ?? [] };
+}
+
+const SEEDS: RdvDetail[] = RAW_SEEDS.map(normalize);
 
 /* ------------------------------------------------------------------ */
 /* Dérivés                                                             */
 /* ------------------------------------------------------------------ */
 
-export const rdvTotal = (r: Pick<RdvDetail, "prestations">) =>
-  r.prestations.reduce((sum, p) => sum + p.price, 0);
+export const extraPrice = (e: RdvExtra) => productPrice(e.productId) * e.qty;
 
-export const rdvDuration = (r: Pick<RdvDetail, "prestations">) =>
-  r.prestations.reduce((sum, p) => sum + p.durationMin, 0);
+export const rdvTotal = (r: Pick<RdvDetail, "prestations" | "extras">) =>
+  r.prestations.reduce((sum, p) => sum + p.price, 0) +
+  (r.extras ?? []).reduce((sum, e) => sum + extraPrice(e), 0);
 
-// Fin du rendez-vous = début + durée cumulée des prestations (ISO datetime).
+// Durée = amplitude de la visite (de la 1ʳᵉ prestation qui démarre à la
+// dernière qui finit) — les prestations de bénéficiaires différents peuvent
+// désormais se dérouler en parallèle, ce n'est plus une simple somme.
+export const rdvDuration = (r: Pick<RdvDetail, "prestations">) => {
+  if (r.prestations.length === 0) return 0;
+  const starts = r.prestations.map((p) => timeToMinutes(p.start));
+  const ends = r.prestations.map((p) => timeToMinutes(p.start) + p.durationMin);
+  return Math.max(...ends) - Math.min(...starts);
+};
+
+// Fin du rendez-vous = la dernière prestation à finir (ISO datetime).
 export const rdvEnd = (r: Pick<RdvDetail, "date" | "prestations">): string => {
-  const start = new Date(r.date.replace(" ", "T"));
-  start.setMinutes(start.getMinutes() + rdvDuration(r));
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${start.getFullYear()}-${p(start.getMonth() + 1)}-${p(start.getDate())}T${p(
-    start.getHours(),
-  )}:${p(start.getMinutes())}:00`;
+  const day = r.date.slice(0, 10);
+  if (r.prestations.length === 0) return r.date;
+  const endMin = Math.max(...r.prestations.map((p) => timeToMinutes(p.start) + p.durationMin));
+  return `${day}T${minutesToTime(endMin)}:00`;
 };
 
 // Au moins une prestation sans praticienne, sur un rendez-vous non clos.
 export const needsAssign = (r: Pick<RdvDetail, "status" | "prestations">) =>
   !RDV_STATUS_META[r.status].closed && r.prestations.some((p) => p.staff === null);
 
-// Créneau propre à chaque prestation : les prestations d'un même rendez-vous
-// s'enchaînent (pas en parallèle) — la 2ᵉ prestation démarre quand la 1ʳᵉ
-// finit. Sert à positionner chaque prestation sur la ligne de SA praticienne
-// dans l'agenda horaire (une prestation = un bloc, potentiellement affecté à
-// quelqu'un d'autre que la prestation précédente du même rendez-vous).
+// Créneau propre à chaque prestation — lu directement sur `RdvPrestation.start`
+// (explicite depuis chaque prestation, plus de chaînage implicite à
+// l'affichage). Permet nativement des bénéficiaires en parallèle sur des
+// lignes de praticiennes différentes. Sert à positionner chaque prestation sur
+// la ligne de SA praticienne dans l'agenda horaire.
 export type PrestationSlot = { prestation: RdvPrestation; start: string; end: string };
 
 export const prestationSlots = (r: Pick<RdvDetail, "date" | "prestations">): PrestationSlot[] => {
-  const p = (n: number) => String(n).padStart(2, "0");
-  const fmt = (d: Date) =>
-    `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:00`;
-  let cursor = new Date(r.date.replace(" ", "T"));
+  const day = r.date.slice(0, 10);
   return r.prestations.map((prestation) => {
-    const start = new Date(cursor);
-    cursor = new Date(cursor.getTime() + prestation.durationMin * 60_000);
-    return { prestation, start: fmt(start), end: fmt(cursor) };
+    const startMin = timeToMinutes(prestation.start);
+    return {
+      prestation,
+      start: `${day}T${minutesToTime(startMin)}:00`,
+      end: `${day}T${minutesToTime(startMin + prestation.durationMin)}:00`,
+    };
   });
 };
+
+// Fenêtres occupées d'une praticienne (comme principale OU 2ᵉ praticienne) sur
+// un jour donné, tous rendez-vous non annulés confondus — sert à valider un
+// créneau à la création (`BookingDialog`) ou à l'édition (`EditRdvDialog`).
+// `excludeRdvId` exclut le rendez-vous en cours d'édition de son propre calcul.
+export function staffBusyWindows(
+  list: RdvDetail[],
+  staffName: string,
+  iso: string,
+  excludeRdvId?: string,
+): { start: number; end: number }[] {
+  const windows: { start: number; end: number }[] = [];
+  for (const r of list) {
+    if (r.id === excludeRdvId) continue;
+    if (r.status === "annulé") continue;
+    if (r.date.slice(0, 10) !== iso) continue;
+    for (const p of r.prestations) {
+      if (p.staff !== staffName && p.secondStaff !== staffName) continue;
+      const start = timeToMinutes(p.start);
+      windows.push({ start, end: start + p.durationMin });
+    }
+  }
+  return windows;
+}
+
+export function isStaffFreeForWindow(
+  list: RdvDetail[],
+  staffName: string,
+  iso: string,
+  startMin: number,
+  durationMin: number,
+  excludeRdvId?: string,
+): boolean {
+  const end = startMin + durationMin;
+  return !staffBusyWindows(list, staffName, iso, excludeRdvId).some(
+    (w) => startMin < w.end && w.start < end,
+  );
+}
 
 // « 3 h 10 » / « 45 min »
 export const durationLabel = (min: number) => {
@@ -577,18 +751,23 @@ export type RdvRow = {
   prestationNames: string;
   prestationList: string[];
   durationMin: number;
-  staffNames: string[]; // praticiennes distinctes affectées
+  staffNames: string[]; // praticiennes distinctes affectées (principale + 2ᵉ praticienne)
   staffLabel: string;
   pendingAssign: number; // prestations sans praticienne
   posteTypes: PosteType[];
+  beneficiaryCount: number; // personnes distinctes visées par ce rendez-vous
+  composition: string; // "" si une seule personne, sinon « 3 personnes »
   upcoming: boolean;
   cancelled: boolean;
   needsAssign: boolean;
 };
 
 const toRow = (r: RdvDetail): RdvRow => {
-  const staffNames = [...new Set(r.prestations.map((p) => p.staff).filter(Boolean))] as string[];
+  const staffNames = [
+    ...new Set(r.prestations.flatMap((p) => [p.staff, p.secondStaff]).filter(Boolean)),
+  ] as string[];
   const pendingAssign = r.prestations.filter((p) => p.staff === null).length;
+  const beneficiaryCount = new Set(r.prestations.map((p) => p.beneficiaryName)).size;
   return {
     id: r.id,
     ref: r.ref,
@@ -613,6 +792,8 @@ const toRow = (r: RdvDetail): RdvRow => {
           : `${staffNames.length} praticiennes`,
     pendingAssign,
     posteTypes: [...new Set(r.prestations.map((p) => p.posteType))],
+    beneficiaryCount,
+    composition: beneficiaryCount > 1 ? `${beneficiaryCount} personnes` : "",
     upcoming: !RDV_STATUS_META[r.status].closed,
     cancelled: r.status === "annulé",
     needsAssign: needsAssign(r),
@@ -671,7 +852,7 @@ export function rdvCountByStaffDay(
     const date = r.date.slice(0, 10);
     const firsts = new Set(
       r.prestations
-        .map((p) => p.staff)
+        .flatMap((p) => [p.staff, p.secondStaff])
         .filter((s): s is string => Boolean(s))
         .map((s) => s.split(" ")[0]),
     );

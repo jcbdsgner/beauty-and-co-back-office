@@ -67,9 +67,14 @@ function RdvCard({ row, onOpen }: { row: RdvRow; onOpen: (id: string) => void })
               <p className="truncate text-theme-xs tabular-nums text-gray-400">{row.clientPhone}</p>
             </div>
           </div>
-          <Badge size="sm" color={badgeColor[row.status]}>
-            {meta.label}
-          </Badge>
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            <Badge size="sm" color={badgeColor[row.status]}>
+              {meta.label}
+            </Badge>
+            {row.composition && (
+              <span className="text-theme-xs font-medium text-gray-400">{row.composition}</span>
+            )}
+          </div>
         </div>
 
         <div className="mt-3 flex items-baseline gap-2 text-theme-sm">

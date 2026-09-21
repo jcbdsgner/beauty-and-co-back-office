@@ -8,6 +8,7 @@ import SegmentedControl, {
 } from "@/components/ui/segmented/SegmentedControl";
 import { PlusIcon } from "@/icons";
 import { useLocation } from "@/context/LocationContext";
+import { usePlanningData } from "@/context/PlanningContext";
 import {
   members as memberSeeds,
   type Member,
@@ -21,12 +22,6 @@ import {
   type Autorisations,
   type Capability,
 } from "@/lib/mock/autorisations";
-import {
-  absences as absenceSeeds,
-  shiftOverrides as overrideSeeds,
-  type Absence,
-  type ShiftOverride,
-} from "@/lib/mock/planning";
 import EquipeList from "./equipe/EquipeList";
 import MemberDetail from "./equipe/MemberDetail";
 import AddMemberFlow from "./equipe/AddMemberFlow";
@@ -55,14 +50,6 @@ const TAB_OPTIONS: SegmentedOption<Tab>[] = [
   { value: "autorisations", label: "Autorisations" },
 ];
 
-const TAB_DESCRIPTIONS: Record<Tab, string> = {
-  membres:
-    "Les personnes qui font tourner les salons : rôles, accès à la plateforme, compétences et horaires habituels.",
-  planning:
-    "Qui travaille cette semaine, dans quel salon, et à quelles heures. Les horaires habituels s'appliquent tout seuls — vous ne saisissez ici que les exceptions.",
-  autorisations: "Ce que chaque rôle a le droit de faire sur la plateforme, pour les comptes que vous invitez.",
-};
-
 type View = { kind: "list" } | { kind: "detail"; id: string } | { kind: "new" };
 
 export default function Equipe() {
@@ -74,10 +61,10 @@ export default function Equipe() {
   const [requests, setRequests] = useState<StaffRequest[]>(requestSeeds);
   const [autorisations, setAutorisations] =
     useState<Autorisations>(defaultAutorisations);
-  // Onglet Planning : levé ici (pas dans `PlanningPanel`) pour survivre à un
-  // changement d'onglet, comme `autorisations`.
-  const [absences, setAbsences] = useState<Absence[]>(absenceSeeds);
-  const [overrides, setOverrides] = useState<ShiftOverride[]>(overrideSeeds);
+  // Onglet Planning : état partagé via `PlanningContext` (pas local à cet
+  // écran) — l'action rapide « marquer absente aujourd'hui » de l'agenda
+  // `/rendez-vous` doit voir et modifier la même donnée.
+  const { absences, setAbsences, overrides, setOverrides } = usePlanningData();
   const [view, setView] = useState<View>({ kind: "list" });
   const [tab, setTab] = useState<Tab>("membres");
 
@@ -168,10 +155,7 @@ export default function Equipe() {
       <div className="space-y-6">
         <div>
           <BackButton onClick={() => setView({ kind: "list" })} />
-          <PageHeader
-            title="Ajouter un membre"
-            description="Renseignez l'identité, cochez les compétences et posez les horaires habituels."
-          />
+          <PageHeader title="Ajouter un membre" />
         </div>
         <div className="max-w-3xl">
           <AddMemberFlow
@@ -208,7 +192,21 @@ export default function Equipe() {
   return (
     <div className="space-y-6">
       <div>
-        <PageHeader title="Équipe" description={TAB_DESCRIPTIONS[tab]} />
+        <PageHeader
+          title="Équipe"
+          actions={
+            tab === "membres" ? (
+              <button
+                type="button"
+                onClick={() => setView({ kind: "new" })}
+                className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-theme-sm font-semibold text-white transition-colors hover:bg-brand-600"
+              >
+                <PlusIcon className="size-4" />
+                Ajouter un membre
+              </button>
+            ) : undefined
+          }
+        />
         <SegmentedControl
           options={TAB_OPTIONS}
           value={tab}
@@ -218,24 +216,11 @@ export default function Equipe() {
       </div>
 
       {tab === "membres" ? (
-        <>
-          <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={() => setView({ kind: "new" })}
-              className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-theme-sm font-medium text-white transition hover:bg-brand-600"
-            >
-              <PlusIcon className="size-4" />
-              Ajouter un membre
-            </button>
-          </div>
-
-          <EquipeList
-            members={members}
-            requests={requests}
-            onOpen={(id) => setView({ kind: "detail", id })}
-          />
-        </>
+        <EquipeList
+          members={members}
+          requests={requests}
+          onOpen={(id) => setView({ kind: "detail", id })}
+        />
       ) : tab === "planning" ? (
         <PlanningPanel
           absences={absences}

@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { EyeIcon, EyeCloseIcon, UserIcon, MoreDotIcon } from "@/icons";
+import { Dropdown } from "@/components/ui/dropdown/Dropdown";
+import { DropdownItem } from "@/components/ui/dropdown/DropdownItem";
 import { accentForStaffName, type StaffAccent } from "@/lib/mock/staff-colors";
 import { prestationSlots, type RdvDetail } from "@/lib/mock/rendezvous";
 
@@ -44,6 +47,12 @@ type Props = {
   rdvs: RdvDetail[]; // déjà filtrés (salon, jour, hors annulés)
   onOpen: (id: string) => void;
   onMove: (id: string, newStartIso: string) => void;
+  // Menu par ligne — tous facultatifs (absents = pas de menu, ex. vitrine).
+  isolated?: string | null; // clé de la ligne actuellement isolée, ou null
+  onIsolate?: (key: string) => void;
+  onShowAll?: () => void;
+  onMarkAbsent?: (key: string) => void;
+  onReorderRow?: (draggedKey: string, targetKey: string) => void;
 };
 
 const toMin = (hhmm: string) => {
@@ -56,22 +65,32 @@ type Block = {
   rdv: RdvDetail;
   prestationId: string;
   name: string;
+  beneficiaryName: string;
+  secondStaff: string | null;
   start: number; // minutes depuis minuit
   end: number;
   offsetFromRdvStart: number; // minutes — pour recalculer la date au drop
   pending: boolean;
 };
 
-function blocksForRow(rdvs: RdvDetail[], match: (staffName: string | null) => boolean): Block[] {
+// Une prestation « à deux » apparaît sur les deux lignes concernées (principale
+// et 2ᵉ praticienne), comme un rendez-vous à une seule praticienne apparaît sur
+// la sienne — `match` reçoit les deux noms et décide.
+function blocksForRow(
+  rdvs: RdvDetail[],
+  match: (staff: string | null, secondStaff: string | null) => boolean,
+): Block[] {
   const out: Block[] = [];
   for (const rdv of rdvs) {
     const rdvStartMin = minOfIso(rdv.date);
     for (const { prestation, start } of prestationSlots(rdv)) {
-      if (!match(prestation.staff)) continue;
+      if (!match(prestation.staff, prestation.secondStaff ?? null)) continue;
       out.push({
         rdv,
         prestationId: prestation.id,
         name: prestation.name,
+        beneficiaryName: prestation.beneficiaryName,
+        secondStaff: prestation.secondStaff ?? null,
         start: minOfIso(start),
         end: minOfIso(start) + prestation.durationMin,
         offsetFromRdvStart: minOfIso(start) - rdvStartMin,
@@ -109,8 +128,16 @@ export default function DayTimeline({
   rdvs,
   onOpen,
   onMove,
+  isolated,
+  onIsolate,
+  onShowAll,
+  onMarkAbsent,
+  onReorderRow,
 }: Props) {
   const [dragId, setDragId] = useState<string | null>(null);
+  const [dragRowKey, setDragRowKey] = useState<string | null>(null);
+  const [menuKey, setMenuKey] = useState<string | null>(null);
+  const showRowMenu = Boolean(onIsolate || onShowAll || onMarkAbsent);
 
   const gridStart = Math.floor(toMin(windowStart) / 60) * 60;
   const gridEnd = Math.max(Math.ceil(toMin(windowEnd) / 60) * 60, gridStart + 4 * 60);
@@ -168,17 +195,34 @@ export default function DayTimeline({
         {rows.map((row) => {
           const raw = row.pending
             ? blocksForRow(rdvs, (staff) => staff === null)
-            : blocksForRow(rdvs, (staff) => staff === row.label);
+            : blocksForRow(rdvs, (staff, second) => staff === row.label || second === row.label);
           const placed = pack(raw);
           const lanes = Math.max(1, ...placed.map((p) => p.lane + 1));
           const rowH = Math.max(ROW_H, lanes * 30 + 20);
           const beforeW = row.hours ? x(toMin(row.hours.start)) : 0;
           const afterStart = row.hours ? x(toMin(row.hours.end)) : bodyW;
 
+          const canReorder = Boolean(onReorderRow) && !row.pending;
           return (
             <div key={row.key} className="flex border-b border-gray-100 last:border-b-0">
               <div
-                className="sticky left-0 z-10 flex shrink-0 items-center gap-2 border-r border-l-[3px] border-gray-100 bg-white px-3"
+                draggable={canReorder}
+                onDragStart={(e) => {
+                  if (!canReorder) return;
+                  setDragRowKey(row.key);
+                  e.dataTransfer.effectAllowed = "move";
+                }}
+                onDragEnd={() => setDragRowKey(null)}
+                onDragOver={(e) => {
+                  if (dragRowKey && dragRowKey !== row.key) e.preventDefault();
+                }}
+                onDrop={(e) => {
+                  if (!dragRowKey || dragRowKey === row.key) return;
+                  e.preventDefault();
+                  onReorderRow?.(dragRowKey, row.key);
+                  setDragRowKey(null);
+                }}
+                className={`sticky left-0 z-10 flex shrink-0 items-center gap-2 border-r border-l-[3px] border-gray-100 bg-white px-3 ${canReorder ? "cursor-grab active:cursor-grabbing" : ""}`}
                 style={{ width: LABEL_W, minHeight: rowH, borderLeftColor: row.accent.dot }}
               >
                 <span
@@ -196,6 +240,45 @@ export default function DayTimeline({
                     {row.sublabel}
                   </p>
                 </div>
+                {showRowMenu && !row.pending && (
+                  <div className="relative shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setMenuKey((k) => (k === row.key ? null : row.key))}
+                      aria-label={`Options pour ${row.label}`}
+                      className="dropdown-toggle flex size-7 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-50 hover:text-gray-700"
+                    >
+                      <MoreDotIcon className="size-4" />
+                    </button>
+                    <Dropdown isOpen={menuKey === row.key} onClose={() => setMenuKey(null)} className="w-56 p-1.5">
+                      {isolated === row.key ? (
+                        <DropdownItem
+                          onItemClick={() => (setMenuKey(null), onShowAll?.())}
+                          baseClassName="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-theme-sm text-gray-700 hover:bg-gray-50"
+                        >
+                          <EyeIcon className="size-4" /> Afficher toute l&apos;équipe
+                        </DropdownItem>
+                      ) : (
+                        onIsolate && (
+                          <DropdownItem
+                            onItemClick={() => (setMenuKey(null), onIsolate(row.key))}
+                            baseClassName="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-theme-sm text-gray-700 hover:bg-gray-50"
+                          >
+                            <EyeCloseIcon className="size-4" /> Isoler cette ligne
+                          </DropdownItem>
+                        )
+                      )}
+                      {isToday && onMarkAbsent && !row.absent && (
+                        <DropdownItem
+                          onItemClick={() => (setMenuKey(null), onMarkAbsent(row.key))}
+                          baseClassName="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-theme-sm text-warning-700 hover:bg-warning-50"
+                        >
+                          <UserIcon className="size-4" /> Marquer absente aujourd&apos;hui
+                        </DropdownItem>
+                      )}
+                    </Dropdown>
+                  </div>
+                )}
               </div>
 
               <div
@@ -263,7 +346,8 @@ export default function DayTimeline({
                       className="absolute flex flex-col justify-center overflow-hidden rounded-md border border-l-[3px] px-2 text-left shadow-sm transition hover:z-10 hover:shadow-md active:opacity-70"
                     >
                       <span className="truncate text-[11px] font-semibold" style={{ color: accent.text }}>
-                        {block.rdv.client.name} · {block.name}
+                        {block.beneficiaryName} · {block.name}
+                        {block.secondStaff ? " · à deux" : ""}
                       </span>
                     </button>
                   );

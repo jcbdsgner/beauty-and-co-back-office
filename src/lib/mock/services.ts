@@ -86,7 +86,18 @@ export const SERVICE_ICON_OPTIONS: { value: ServiceIconKey; label: string }[] = 
 // utilisé dans les recettes des prestations Coiffure) + boissons du bar (vendues
 // au détail, sans recette). `image` = photo produit réelle (sert de défaut à la
 // fiche Stock, remplaçable par une photo de session).
-export type Product = { id: string; name: string; defaultUnit: RecipeUnit; image?: string };
+// `priceFcfa` : prix de vente au détail — renseigné seulement pour les boissons
+// du bar (vendues telles quelles pendant une visite, cf. extras de rendez-vous
+// dans `@/lib/mock/rendezvous`). Aucune donnée de prix retail réelle n'existe
+// pour les produits Kérastase (catalogue de consommation, pas de vente au
+// détail dans ce projet) — laissé `undefined` pour eux.
+export type Product = {
+  id: string;
+  name: string;
+  defaultUnit: RecipeUnit;
+  image?: string;
+  priceFcfa?: number;
+};
 
 export type RecipeUnit = "g" | "ml" | "cl" | "pièce" | "dose" | "application";
 
@@ -171,13 +182,14 @@ export const products: Product[] = [
   { id: "ker-elixir-ult-bain-250ml", name: "Ker Elixir ULT Bain 250ml", defaultUnit: "ml", image: "/images/produits/ker-elixir-ult-bain-250ml.jpg" },
   { id: "ker-elixir-ult-masque-200ml", name: "Ker Elixir ULT Masque 200ml", defaultUnit: "ml", image: "/images/produits/ker-elixir-ult-masque-200ml.jpg" },
   // Boissons — bar Beauty & Co (données b&co lib/data/bar-beauty.ts), vendues au détail (pas de recette).
-  { id: "boisson-pure-glow", name: "Pure Glow", defaultUnit: "pièce", image: "/images/boissons/pure-glow.jpg" },
-  { id: "boisson-dragon-mystic", name: "Dragon Mystic", defaultUnit: "pièce", image: "/images/boissons/dragon-mystic.jpg" },
-  { id: "boisson-pause-tropical", name: "Pause Tropical", defaultUnit: "pièce", image: "/images/boissons/pause-tropical.jpg" },
-  { id: "boisson-eclat-matcha", name: "L'Éclat Matcha", defaultUnit: "pièce", image: "/images/boissons/eclat-matcha.jpg" },
-  { id: "boisson-ice-coffee-caramel", name: "Ice Coffee Caramel", defaultUnit: "pièce", image: "/images/boissons/ice-coffee-caramel.jpg" },
-  { id: "boisson-soin-glace-ice-tea", name: "Soin Glacé Ice Tea", defaultUnit: "pièce", image: "/images/boissons/soin-glace-ice-tea.jpg" },
-  { id: "boisson-pretty-latte", name: "Pretty Latte", defaultUnit: "pièce" },
+  // Prix retail plausibles (aucune donnée de prix réelle n'existe côté point-de-vente).
+  { id: "boisson-pure-glow", name: "Pure Glow", defaultUnit: "pièce", image: "/images/boissons/pure-glow.jpg", priceFcfa: 2500 },
+  { id: "boisson-dragon-mystic", name: "Dragon Mystic", defaultUnit: "pièce", image: "/images/boissons/dragon-mystic.jpg", priceFcfa: 3000 },
+  { id: "boisson-pause-tropical", name: "Pause Tropical", defaultUnit: "pièce", image: "/images/boissons/pause-tropical.jpg", priceFcfa: 2500 },
+  { id: "boisson-eclat-matcha", name: "L'Éclat Matcha", defaultUnit: "pièce", image: "/images/boissons/eclat-matcha.jpg", priceFcfa: 3000 },
+  { id: "boisson-ice-coffee-caramel", name: "Ice Coffee Caramel", defaultUnit: "pièce", image: "/images/boissons/ice-coffee-caramel.jpg", priceFcfa: 2500 },
+  { id: "boisson-soin-glace-ice-tea", name: "Soin Glacé Ice Tea", defaultUnit: "pièce", image: "/images/boissons/soin-glace-ice-tea.jpg", priceFcfa: 2000 },
+  { id: "boisson-pretty-latte", name: "Pretty Latte", defaultUnit: "pièce", priceFcfa: 2500 },
   // Autres marques + accessoires — vendus au détail, sans recette (repris de
   // point-de-vente/lib/data/menu.ts, catégories Saryna Keys / Nefertiti / Beccy
   // Wave / Autres — absents de la synchronisation initiale du 2026-09-04).
@@ -193,6 +205,18 @@ export const products: Product[] = [
 
 export const productName = (id: string) =>
   products.find((p) => p.id === id)?.name ?? "Produit inconnu";
+
+export const productPrice = (id: string) => products.find((p) => p.id === id)?.priceFcfa ?? 0;
+
+// Extras de rendez-vous (boissons/produits pré-commandés, cf. `@/lib/mock/rendezvous`) :
+// "boisson" = un des 7 produits du bar ci-dessus, "produit" = le reste du catalogue.
+export const productKind = (id: string): "produit" | "boisson" =>
+  id.startsWith("boisson-") ? "boisson" : "produit";
+
+// Boissons du bar, seules à porter un prix de vente au détail — alimentent le
+// sélecteur d'extras de `rendezvous/BookingDialog.tsx` (un produit Kérastase
+// n'a pas de prix retail connu, cf. commentaire sur `Product.priceFcfa`).
+export const sellableExtras = products.filter((p) => productKind(p.id) === "boisson");
 
 /* ------------------------------------------------------------------ */
 /* Types                                                               */
@@ -217,6 +241,11 @@ export type Prestation = {
   // parent. `[]` = héritée de tous les salons du parent (aucune restriction).
   salonIds: SalonId[];
   reservationMode: ReservationMode;
+  // Prestation réalisable à deux praticiennes simultanément (temps de chaise
+  // divisé) — repris du principe de point-de-vente (`twoPractitionersEligible`),
+  // activé ici sur quelques prestations longues à rallonges/extensions où deux
+  // mains en simultané sont plausibles.
+  twoPractitioners?: boolean;
 };
 
 export type ServiceQuestion = {
@@ -435,11 +464,26 @@ const rawPrestations: Omit<Prestation, "salonIds">[] = [
   { id: "mini-co-mini-cutie-pedicure", serviceId: "s-mini", name: "Mini Cutie Pédicure", priceFcfa: 15000, durationMin: 35, active: true, recipe: [], reservationMode: "both" },
 ];
 
+// Prestations éligibles « à deux praticiennes » — rallonges/extensions longues
+// où un travail à deux mains en simultané est plausible (même esprit que le
+// seed « Tissage Versatile » de point-de-vente, temps de chaise divisé par 2).
+const TWO_PRACTITIONER_IDS = new Set([
+  "coiffure-hybrid-extensions",
+  "coiffure-extensions-tapes-2-paquets-de-cheveux-soit-100-g-18-pouces-coiffage",
+  "coiffure-extensions-tapes-3-paquets-de-cheveux-soit-150g-18-pouces-coiffage",
+  "coiffure-extension-aux-fils-2-paquets",
+  "coiffure-extensions-aux-fils-1-paquet",
+  "coiffure-extensions-anneaux-haute-couture-2-paquets",
+  "coiffure-tissage-versatile",
+  "coiffure-head-spa-ultimate-deep-relaxation",
+]);
+
 // `salonIds: []` = héritée du service parent (aucune restriction propre à la
 // prestation) — le catalogue réel ne distingue pas les prestations par salon.
 export const prestationSeeds: Prestation[] = rawPrestations.map((p) => ({
   ...p,
   salonIds: [],
+  twoPractitioners: TWO_PRACTITIONER_IDS.has(p.id),
 }));
 
 export const questionSeeds: ServiceQuestion[] = [

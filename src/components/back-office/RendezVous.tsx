@@ -1,12 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Plus } from "lucide-react";
 import PageHeader from "@/components/back-office/PageHeader";
 import Alert from "@/components/ui/alert/Alert";
 import SegmentedControl, {
   type SegmentedOption,
 } from "@/components/ui/segmented/SegmentedControl";
 import { useLocation } from "@/context/LocationContext";
+import { usePlanningData } from "@/context/PlanningContext";
 import {
   ABSENCE_LABELS,
   addDays,
@@ -28,7 +31,7 @@ import {
   type Weekday,
 } from "@/lib/mock/beautyandco";
 import { accentForMemberId, accentForStaffName } from "@/lib/mock/staff-colors";
-import { fullName, members } from "@/lib/mock/staff";
+import { fullName, members, memberById } from "@/lib/mock/staff";
 import {
   RDV_STATUS_META,
   allRendezvous,
@@ -37,6 +40,7 @@ import {
   rdvEnd,
   rendezvousRows,
   type RdvDetail,
+  type RdvPrestation,
   type RdvStatus,
 } from "@/lib/mock/rendezvous";
 import DayTimeline, { type TimelineRow } from "@/components/back-office/rendezvous/DayTimeline";
@@ -44,6 +48,7 @@ import WeekTimeline, { type WeekRow } from "@/components/back-office/rendezvous/
 import ListView from "@/components/back-office/rendezvous/ListView";
 import BookingDialog from "@/components/back-office/rendezvous/BookingDialog";
 import RendezVousDetail from "@/components/back-office/RendezVousDetail";
+import AbsenceDialog from "@/components/back-office/planning/AbsenceDialog";
 
 // Écran « Rendez-vous » — une destination, deux vues (Liste + Agenda).
 // 1. Où en est la propriétaire ? Coup d'œil courant (« qui vient aujourd'hui,
@@ -127,16 +132,50 @@ function AgendaView({
 }) {
   const [period, setPeriod] = useState<"jour" | "semaine">("jour");
   const [selectedIso, setSelectedIso] = useState(TODAY_ISO);
+  // Isoler une praticienne / réordonner les lignes — pur confort d'affichage,
+  // pas partagé avec l'onglet Planning (chaque écran garde sa propre vue).
+  const [isolated, setIsolated] = useState<string | null>(null);
+  const [rowOrder, setRowOrder] = useState<string[]>([]);
+  const { data: planningData, addAbsence } = usePlanningData();
+  const [absenceMemberId, setAbsenceMemberId] = useState<string | null>(null);
 
   const scopeIds: SalonId[] = scope === "all" ? salons.map((s) => s.id) : [scope];
   const win = dayWindow(scopeIds, selectedIso);
   const monday = mondayOf(selectedIso);
-  const { days, rows: presenceRows } = useMemo(() => weekPresence(scope, monday), [scope, monday]);
-  const practitionerRows = useMemo(
+  const { days, rows: presenceRows } = useMemo(
+    () => weekPresence(scope, monday, planningData),
+    [scope, monday, planningData],
+  );
+  const unorderedPractitionerRows = useMemo(
     () => presenceRows.filter((r) => r.member.roles.includes("praticienne")),
     [presenceRows],
   );
+  const practitionerRows = useMemo(() => {
+    if (rowOrder.length === 0) return unorderedPractitionerRows;
+    const byId = new Map(unorderedPractitionerRows.map((r) => [r.member.id, r]));
+    const ordered = rowOrder.map((id) => byId.get(id)).filter((r): r is (typeof unorderedPractitionerRows)[number] => Boolean(r));
+    const rest = unorderedPractitionerRows.filter((r) => !rowOrder.includes(r.member.id));
+    return [...ordered, ...rest];
+  }, [unorderedPractitionerRows, rowOrder]);
   const dayIndex = days.findIndex((d) => d.iso === selectedIso);
+
+  const reorderRows = (draggedId: string, targetId: string) => {
+    const base = rowOrder.length > 0 ? rowOrder : unorderedPractitionerRows.map((r) => r.member.id);
+    const withoutDragged = base.filter((id) => id !== draggedId);
+    const targetIdx = withoutDragged.indexOf(targetId);
+    withoutDragged.splice(targetIdx === -1 ? withoutDragged.length : targetIdx, 0, draggedId);
+    setRowOrder(withoutDragged);
+  };
+
+  // Rendez-vous non annulés de la praticienne visée par le dialogue d'absence,
+  // par jour — pour l'alerte de conflit (même logique que `equipe/PlanningPanel`).
+  const absenceMember = absenceMemberId ? memberById(absenceMemberId) : null;
+  const absenceRdvDays = useMemo(() => {
+    if (!absenceMember) return [];
+    return rdvCountByStaffDay("all")
+      .filter((r) => r.staffFirstName === absenceMember.firstName)
+      .map((r) => ({ date: r.date, count: r.count }));
+  }, [absenceMember]);
 
   const rdvCountMap = useMemo(() => {
     const map = new Map<string, number>();
@@ -182,6 +221,7 @@ function AgendaView({
     }
     return base;
   }, [practitionerRows, dayIndex, scope, pendingCount]);
+  const visibleTimelineRows = isolated ? timelineRows.filter((r) => r.key === isolated) : timelineRows;
 
   const weekRows: WeekRow[] = useMemo(
     () =>
@@ -198,6 +238,7 @@ function AgendaView({
       })),
     [practitionerRows, days, rdvCountMap],
   );
+  const visibleWeekRows = isolated ? weekRows.filter((r) => r.memberId === isolated) : weekRows;
 
   const closedDays = scopeIds.every((id) => isClosed(id, selectedIso));
   const isToday = selectedIso === TODAY_ISO;
@@ -264,22 +305,44 @@ function AgendaView({
           windowEnd={win.max}
           isToday={isToday}
           nowTime={NOW_TIME}
-          rows={timelineRows}
+          rows={visibleTimelineRows}
           rdvs={dayRdvs}
           onOpen={onOpen}
           onMove={onMove}
+          isolated={isolated}
+          onIsolate={setIsolated}
+          onShowAll={() => setIsolated(null)}
+          onMarkAbsent={(key) => setAbsenceMemberId(key)}
+          onReorderRow={reorderRows}
         />
       ) : (
         <WeekTimeline
           days={days}
-          rows={weekRows}
+          rows={visibleWeekRows}
           todayIso={TODAY_ISO}
-          onPickDay={(iso) => {
+          onPickDay={(iso, memberId) => {
             setSelectedIso(iso);
             setPeriod("jour");
+            if (memberId) setIsolated(memberId);
           }}
+          isolated={isolated}
+          onIsolate={setIsolated}
+          onShowAll={() => setIsolated(null)}
+          onMarkAbsent={(memberId) => setAbsenceMemberId(memberId)}
         />
       )}
+
+      <AbsenceDialog
+        open={absenceMemberId !== null}
+        member={absenceMember}
+        defaultDate={TODAY_ISO}
+        rdvDays={absenceRdvDays}
+        onClose={() => setAbsenceMemberId(null)}
+        onSubmit={(absence) => {
+          addAbsence(absence);
+          setAbsenceMemberId(null);
+        }}
+      />
     </div>
   );
 }
@@ -338,6 +401,10 @@ const LIST_FILTERS: [ListFilter, string][] = [
 
 export default function RendezVous() {
   const { scope, setScope } = useLocation();
+  // Même source que l'agenda (§ AgendaView) et l'onglet Planning d'Équipe —
+  // pour que les menus d'affectation (fiche RDV, nouveau rendez-vous) tiennent
+  // compte d'une absence tout juste posée, sans attendre un rechargement.
+  const { data: planningData } = usePlanningData();
   const [rdvs, setRdvs] = useState<RdvDetail[]>(() => allRendezvous());
   const [view, setView] = useState<"liste" | "agenda">("liste");
   const [listFilter, setListFilter] = useState<ListFilter>("upcoming");
@@ -346,6 +413,14 @@ export default function RendezVous() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [newOpen, setNewOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+
+  // ?nouveau=1 : ouverture directe du dialog de réservation, utilisée par le
+  // bouton « Nouveau RDV » du tableau de bord (`dashboard/DashboardHeader`).
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get("nouveau") === "1") setNewOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const flash = (msg: string) => {
     setToast(msg);
@@ -386,6 +461,21 @@ export default function RendezVous() {
       prestations: r.prestations.map((p) => (p.id === prestationId ? { ...p, staff } : p)),
     }));
 
+  const updatePrestation = (id: string, prestationId: string, fields: Partial<RdvPrestation>) =>
+    patch(id, (r) => ({
+      ...r,
+      prestations: r.prestations.map((p) => (p.id === prestationId ? { ...p, ...fields } : p)),
+    }));
+
+  const addPrestation = (id: string, line: RdvPrestation) =>
+    patch(id, (r) => ({ ...r, prestations: [...r.prestations, line] }));
+
+  const removePrestation = (id: string, prestationId: string) =>
+    patch(id, (r) => ({ ...r, prestations: r.prestations.filter((p) => p.id !== prestationId) }));
+
+  const cancelWithReason = (id: string, reason: string) =>
+    patch(id, (r) => ({ ...r, status: "annulé", cancelReason: reason || undefined }));
+
   const setStatus = (id: string, status: RdvStatus) => {
     patch(id, (r) => ({ ...r, status }));
     if (status === "annulé") flash("Rendez-vous annulé — cliente prévenue par email.");
@@ -414,35 +504,33 @@ export default function RendezVous() {
       <div>
         <PageHeader
           title="Rendez-vous"
-          description="Le planning des salons — les clientes réservent en ligne, vous affectez une praticienne et ajustez ici."
+          actions={
+            <>
+              <SegmentedControl
+                options={SALON_OPTIONS}
+                value={scope}
+                onChange={setScope}
+                aria-label="Filtrer par salon"
+                variant="tinted"
+              />
+              <button
+                type="button"
+                onClick={() => setNewOpen(true)}
+                className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-theme-sm font-semibold text-white transition-colors hover:bg-brand-600"
+              >
+                <Plus className="h-[14px] w-[14px]" />
+                Nouveau rendez-vous
+              </button>
+            </>
+          }
         />
         <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-          <div className="flex items-center gap-2">
-            <span className="text-theme-xs font-medium uppercase tracking-wide text-gray-400">
-              Salon
-            </span>
-            <SegmentedControl
-              options={SALON_OPTIONS}
-              value={scope}
-              onChange={setScope}
-              aria-label="Filtrer par salon"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <SegmentedControl
-              options={VIEW_OPTIONS}
-              value={view}
-              onChange={setView}
-              aria-label="Vue Liste ou Agenda"
-            />
-          </div>
-          <button
-            type="button"
-            onClick={() => setNewOpen(true)}
-            className="ml-auto inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-theme-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            + Nouveau rendez-vous
-          </button>
+          <SegmentedControl
+            options={VIEW_OPTIONS}
+            value={view}
+            onChange={setView}
+            aria-label="Vue Liste ou Agenda"
+          />
         </div>
 
         {assignCount > 0 && (
@@ -524,11 +612,24 @@ export default function RendezVous() {
           onAssign={(pid, staff) => assign(selected.id, pid, staff)}
           onStatusChange={(s) => setStatus(selected.id, s)}
           onDelete={() => remove(selected.id)}
+          rdvs={rdvs}
+          onUpdatePrestation={(pid, patchFields) => updatePrestation(selected.id, pid, patchFields)}
+          onAddPrestation={(line) => addPrestation(selected.id, line)}
+          onRemovePrestation={(pid) => removePrestation(selected.id, pid)}
+          onCancelWithReason={(reason) => cancelWithReason(selected.id, reason)}
+          onOpenBooking={() => setNewOpen(true)}
+          planningData={planningData}
         />
       )}
 
       {newOpen && (
-        <BookingDialog scope={scope} rdvs={rdvs} onCancel={() => setNewOpen(false)} onCreate={create} />
+        <BookingDialog
+          scope={scope}
+          rdvs={rdvs}
+          onCancel={() => setNewOpen(false)}
+          onCreate={create}
+          planningData={planningData}
+        />
       )}
 
       {toast && (

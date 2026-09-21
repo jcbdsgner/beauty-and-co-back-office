@@ -1,5 +1,9 @@
 "use client";
 
+import { useState } from "react";
+import { EyeIcon, EyeCloseIcon, UserIcon, MoreDotIcon } from "@/icons";
+import { Dropdown } from "@/components/ui/dropdown/Dropdown";
+import { DropdownItem } from "@/components/ui/dropdown/DropdownItem";
 import { accentForMemberId, type StaffAccent } from "@/lib/mock/staff-colors";
 import { WEEKDAY_LABELS, type Weekday } from "@/lib/mock/beautyandco";
 
@@ -29,9 +33,25 @@ type Props = {
   rows: WeekRow[];
   todayIso: string;
   onPickDay: (iso: string, memberId?: string) => void;
+  isolated?: string | null;
+  onIsolate?: (memberId: string) => void;
+  onShowAll?: () => void;
+  onMarkAbsent?: (memberId: string) => void;
 };
 
-export default function WeekTimeline({ days, rows, todayIso, onPickDay }: Props) {
+export default function WeekTimeline({
+  days,
+  rows,
+  todayIso,
+  onPickDay,
+  isolated,
+  onIsolate,
+  onShowAll,
+  onMarkAbsent,
+}: Props) {
+  const [menuKey, setMenuKey] = useState<string | null>(null);
+  const showRowMenu = Boolean(onIsolate || onShowAll || onMarkAbsent);
+
   if (rows.length === 0) {
     return (
       <div className="rounded-2xl border border-gray-200 bg-white px-6 py-14 text-center text-theme-sm text-gray-400">
@@ -80,9 +100,48 @@ export default function WeekTimeline({ days, rows, todayIso, onPickDay }: Props)
                 >
                   {row.label.slice(0, 1)}
                 </span>
-                <span className="truncate text-theme-sm font-semibold" style={{ color: accent.text }}>
+                <span className="min-w-0 flex-1 truncate text-theme-sm font-semibold" style={{ color: accent.text }}>
                   {row.label}
                 </span>
+                {showRowMenu && (
+                  <div className="relative shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setMenuKey((k) => (k === row.memberId ? null : row.memberId))}
+                      aria-label={`Options pour ${row.label}`}
+                      className="dropdown-toggle flex size-7 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-50 hover:text-gray-700"
+                    >
+                      <MoreDotIcon className="size-4" />
+                    </button>
+                    <Dropdown isOpen={menuKey === row.memberId} onClose={() => setMenuKey(null)} className="w-56 p-1.5">
+                      {isolated === row.memberId ? (
+                        <DropdownItem
+                          onItemClick={() => (setMenuKey(null), onShowAll?.())}
+                          baseClassName="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-theme-sm text-gray-700 hover:bg-gray-50"
+                        >
+                          <EyeIcon className="size-4" /> Afficher toute l&apos;équipe
+                        </DropdownItem>
+                      ) : (
+                        onIsolate && (
+                          <DropdownItem
+                            onItemClick={() => (setMenuKey(null), onIsolate(row.memberId))}
+                            baseClassName="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-theme-sm text-gray-700 hover:bg-gray-50"
+                          >
+                            <EyeCloseIcon className="size-4" /> Isoler cette ligne
+                          </DropdownItem>
+                        )
+                      )}
+                      {onMarkAbsent && (
+                        <DropdownItem
+                          onItemClick={() => (setMenuKey(null), onMarkAbsent(row.memberId))}
+                          baseClassName="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-theme-sm text-warning-700 hover:bg-warning-50"
+                        >
+                          <UserIcon className="size-4" /> Marquer absente aujourd&apos;hui
+                        </DropdownItem>
+                      )}
+                    </Dropdown>
+                  </div>
+                )}
               </div>
               {days.map((d, i) => {
                 const cell = row.cells[i];
