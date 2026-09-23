@@ -391,12 +391,12 @@ function CapacityBanner({
 
 type ListFilter = "upcoming" | "today" | "past" | "cancelled" | "all";
 
-const LIST_FILTERS: [ListFilter, string][] = [
-  ["upcoming", "À venir"],
-  ["today", "Aujourd'hui"],
-  ["past", "Passés"],
-  ["cancelled", "Annulés"],
-  ["all", "Tous"],
+const LIST_FILTERS: SegmentedOption<ListFilter>[] = [
+  { value: "upcoming", label: "À venir" },
+  { value: "today", label: "Aujourd'hui" },
+  { value: "past", label: "Passés" },
+  { value: "cancelled", label: "Annulés" },
+  { value: "all", label: "Tous" },
 ];
 
 export default function RendezVous() {
@@ -557,20 +557,12 @@ export default function RendezVous() {
       {view === "liste" ? (
         <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-2">
-            {LIST_FILTERS.map(([value, label]) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setListFilter(value)}
-                className={`rounded-lg px-3 py-1.5 text-theme-xs font-medium transition ${
-                  listFilter === value
-                    ? "bg-brand-500 text-white"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
+            <SegmentedControl
+              options={LIST_FILTERS}
+              value={listFilter}
+              onChange={setListFilter}
+              aria-label="Filtrer les rendez-vous par statut"
+            />
             <select
               value={staffFilter}
               onChange={(e) => setStaffFilter(e.target.value)}

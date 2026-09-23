@@ -47,31 +47,31 @@ export default function Rapports() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <PageHeader
-          title="Rapports"
-          description="Composez un rapport : choisissez les indicateurs et l'axe d'analyse, puis imprimez-le ou téléchargez-le."
-        />
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-3 print:hidden">
-          <div className="flex items-center gap-2">
-            <span className="text-theme-xs font-medium uppercase tracking-wide text-gray-400">
-              Salon
-            </span>
-            <SegmentedControl
-              options={SALON_OPTIONS}
-              value={scope}
-              onChange={setScope}
-              aria-label="Filtrer par salon"
-            />
+      <PageHeader
+        title="Rapports"
+        actions={
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-3 print:hidden">
+            <div className="flex items-center gap-2">
+              <span className="text-theme-xs font-medium uppercase tracking-wide text-gray-400">
+                Salon
+              </span>
+              <SegmentedControl
+                options={SALON_OPTIONS}
+                value={scope}
+                onChange={setScope}
+                aria-label="Filtrer par salon"
+                variant="tinted"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-theme-xs font-medium uppercase tracking-wide text-gray-400">
+                Période
+              </span>
+              <PeriodFilter value={period} onChange={setPeriod} />
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-theme-xs font-medium uppercase tracking-wide text-gray-400">
-              Période
-            </span>
-            <PeriodFilter value={period} onChange={setPeriod} />
-          </div>
-        </div>
-      </div>
+        }
+      />
 
       <div className="grid grid-cols-[280px_minmax(0,1fr)] items-start gap-6">
         <ReportBuilderPanel

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import RendezVous from "@/components/back-office/RendezVous";
 
 export const metadata: Metadata = {
@@ -8,5 +9,11 @@ export const metadata: Metadata = {
 };
 
 export default function RendezVousPage() {
-  return <RendezVous />;
+  // <Suspense> : requis par Next pour `useSearchParams()` (lecture de
+  // ?nouveau=1 à l'arrivée depuis le bouton « Nouveau RDV » du tableau de bord).
+  return (
+    <Suspense fallback={null}>
+      <RendezVous />
+    </Suspense>
+  );
 }

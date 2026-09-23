@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import Image from "next/image";
 import PageHeader from "@/components/back-office/PageHeader";
 import { CheckCircleIcon, EyeCloseIcon, EyeIcon } from "@/icons";
@@ -28,10 +28,10 @@ import {
 //    champ perdu au milieu.
 // 3. Quand ça se passe mal : email ou téléphone invalide → message sous le champ
 //    au moment d'enregistrer, on ne soumet pas ; mot de passe → champ actuel
-//    vide / trop court / confirmation différente, message clair, on ne soumet
-//    pas ; aucun canal de notification actif → avertissement ; pas d'import de
-//    photo (front-end) → bouton désactivé et annoncé. Aucune persistance :
-//    rafraîchir la page remet le compte à zéro (cohérent avec tout le projet).
+//    incorrect / vide / trop court / confirmation différente, message clair, on
+//    ne soumet pas ; aucun canal de notification actif → avertissement. Aucune
+//    persistance : rafraîchir la page remet le compte à zéro (cohérent avec
+//    tout le projet) — y compris la photo et le mot de passe changés en session.
 
 /* --------------------------------------------------------------- primitives */
 
@@ -146,6 +146,7 @@ function TextField({
 
 export default function Compte() {
   const { account, updateAccount } = useAccount();
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   // Brouillon en mémoire de session — rien n'est modifié tant que « Enregistrer »
   // n'est pas cliqué.
@@ -196,7 +197,7 @@ export default function Compte() {
   const [pwAttempted, setPwAttempted] = useState(false);
   const [pwJustSaved, setPwJustSaved] = useState(false);
 
-  const pwErr = passwordError(pwCurrent, pwNext, pwConfirm);
+  const pwErr = passwordError(account.password, pwCurrent, pwNext, pwConfirm);
 
   const closePw = () => {
     setPwOpen(false);
@@ -210,6 +211,7 @@ export default function Compte() {
   const submitPw = () => {
     setPwAttempted(true);
     if (pwErr) return;
+    updateAccount({ password: pwNext });
     closePw();
     setPwJustSaved(true);
   };
@@ -218,10 +220,7 @@ export default function Compte() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Mon compte"
-        description="Vos informations personnelles, votre identifiant de connexion et la façon dont vous êtes prévenue."
-      />
+      <PageHeader title="Mon compte" />
 
       <div className="max-w-3xl rounded-2xl border border-gray-200 bg-white">
         {/* Identité ------------------------------------------------------- */}
@@ -236,6 +235,7 @@ export default function Compte() {
                   alt=""
                   width={64}
                   height={64}
+                  unoptimized
                   className="h-full w-full object-cover"
                 />
               ) : (
@@ -243,16 +243,39 @@ export default function Compte() {
               )}
             </span>
             <div>
-              <button
-                type="button"
-                disabled
-                className="inline-flex cursor-not-allowed items-center rounded-lg border border-gray-300 bg-white px-3 py-2 text-theme-sm font-medium text-gray-400"
-              >
-                Modifier la photo
-              </button>
-              <p className="mt-1.5 text-theme-xs text-gray-500">
-                L&apos;import d&apos;une photo sera bientôt disponible.
-              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => photoInputRef.current?.click()}
+                  className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-3 py-2 text-theme-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  {account.avatarUrl ? "Changer la photo" : "Ajouter une photo"}
+                </button>
+                {account.avatarUrl && (
+                  <button
+                    type="button"
+                    onClick={() => updateAccount({ avatarUrl: "" })}
+                    className="text-theme-xs font-medium text-gray-400 hover:text-error-600 hover:underline"
+                  >
+                    Retirer
+                  </button>
+                )}
+              </div>
+              <p className="mt-1.5 text-theme-xs text-gray-500">JPG ou PNG, gardée pour cette session.</p>
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = () => updateAccount({ avatarUrl: String(reader.result) });
+                  reader.readAsDataURL(file);
+                }}
+              />
             </div>
           </div>
 

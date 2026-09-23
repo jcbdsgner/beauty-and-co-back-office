@@ -241,29 +241,31 @@ export default function Journal() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <PageHeader
-          title="Journal d'activité"
-          description="Tout ce que votre équipe a fait dans les salons — encaissements, rendez-vous, stock, décisions. Choisissez un rôle et une période."
-        />
-
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-          <div className="flex items-center gap-2">
-            <span className="text-theme-xs font-medium uppercase tracking-wide text-gray-400">
-              Salon
-            </span>
-            <SegmentedControl
-              options={SALON_OPTIONS}
-              value={scope}
-              onChange={setScope}
-              aria-label="Filtrer par salon"
-            />
-          </div>
-          <div className="ml-auto">
-            <JournalPeriodPicker value={period} onChange={setPeriod} />
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        title="Journal d'activité"
+        actions={
+          <>
+            <div className="flex items-center gap-2">
+              <span className="text-theme-xs font-medium uppercase tracking-wide text-gray-400">
+                Salon
+              </span>
+              <SegmentedControl
+                options={SALON_OPTIONS}
+                value={scope}
+                onChange={setScope}
+                aria-label="Filtrer par salon"
+                variant="tinted"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-theme-xs font-medium uppercase tracking-wide text-gray-400">
+                Période
+              </span>
+              <JournalPeriodPicker value={period} onChange={setPeriod} />
+            </div>
+          </>
+        }
+      />
 
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
         <div className="flex items-center gap-2">

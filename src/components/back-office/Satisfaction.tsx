@@ -273,36 +273,36 @@ export default function Satisfaction() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <PageHeader
-          title="Satisfaction client"
-          description="Avis laissés par les clientes après leur visite."
-        />
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-          <div className="flex items-center gap-2">
-            <span className="text-theme-xs font-medium uppercase tracking-wide text-gray-400">
-              Salon
-            </span>
-            <SegmentedControl
-              options={SALON_OPTIONS}
-              value={scope}
-              onChange={setScope}
-              aria-label="Filtrer par salon"
-            />
-          </div>
-          <div className="ml-auto flex items-center gap-2">
-            <span className="text-theme-xs font-medium uppercase tracking-wide text-gray-400">
-              Période
-            </span>
-            <SegmentedControl
-              options={WINDOW_OPTIONS}
-              value={window}
-              onChange={setWindow}
-              aria-label="Période affichée"
-            />
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        title="Satisfaction client"
+        actions={
+          <>
+            <div className="flex items-center gap-2">
+              <span className="text-theme-xs font-medium uppercase tracking-wide text-gray-400">
+                Salon
+              </span>
+              <SegmentedControl
+                options={SALON_OPTIONS}
+                value={scope}
+                onChange={setScope}
+                aria-label="Filtrer par salon"
+                variant="tinted"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-theme-xs font-medium uppercase tracking-wide text-gray-400">
+                Période
+              </span>
+              <SegmentedControl
+                options={WINDOW_OPTIONS}
+                value={window}
+                onChange={setWindow}
+                aria-label="Période affichée"
+              />
+            </div>
+          </>
+        }
+      />
 
       {data.count === 0 ? (
         <div className="rounded-2xl border border-gray-200 bg-white p-6">

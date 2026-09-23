@@ -47,15 +47,15 @@ const AppSidebar: React.FC = () => {
 
   return (
     <aside
-      className={`fixed left-0 top-0 z-50 mt-16 flex h-screen flex-col border-r border-gray-100 bg-[#FEFAF9] px-3 text-gray-900 transition-all duration-300 ease-in-out lg:mt-0 print:hidden
-        ${isExpanded || isMobileOpen ? "w-[256px] px-4" : isHovered ? "w-[256px] px-4" : "w-[80px]"}
+      className={`fixed left-0 top-0 z-50 mt-16 flex h-screen flex-col border-r border-[#efe9e8] bg-white px-3 text-gray-900 shadow-[1px_0_2px_rgba(0,0,0,0.04)] transition-all duration-300 ease-in-out lg:mt-0 print:hidden
+        ${isExpanded || isMobileOpen ? "w-[260px] px-5" : isHovered ? "w-[260px] px-5" : "w-[80px]"}
         ${isMobileOpen ? "translate-x-0" : "-translate-x-full"}
         lg:translate-x-0`}
       onMouseEnter={() => !isExpanded && setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       <div
-        className={`flex items-center border-b border-gray-100 py-6 ${collapsed ? "lg:justify-center" : "justify-start px-1"}`}
+        className={`flex items-center border-b border-[#efe9e8] py-5 ${collapsed ? "lg:justify-center" : "justify-center"}`}
       >
         <Link
           href="/"
@@ -69,7 +69,7 @@ const AppSidebar: React.FC = () => {
               width={497}
               height={230}
               priority
-              className="h-14 w-auto"
+              className="h-11 w-auto"
             />
           ) : (
             <Image
@@ -84,27 +84,27 @@ const AppSidebar: React.FC = () => {
         </Link>
       </div>
 
-      <div className="mt-3 flex flex-1 flex-col overflow-y-auto pb-6 no-scrollbar">
+      <div className="mt-4 flex flex-1 flex-col overflow-y-auto pb-6 no-scrollbar">
         <nav>
-          <ul className="flex flex-col gap-0.5">
+          <ul className="flex flex-col gap-2">
             {menuItems.map((nav) => {
               const active = isActive(nav.path);
               return (
                 <li key={nav.name}>
                   <Link
                     href={nav.path}
-                    className={`group relative flex items-center gap-2.5 rounded-xl text-theme-sm font-medium transition-all duration-150 ${
-                      collapsed ? "mx-auto h-11 w-11 justify-center px-0" : "px-2.5 py-2"
+                    className={`group relative flex items-center gap-3 rounded-lg text-sm font-medium transition-all duration-150 ${
+                      collapsed ? "mx-auto h-11 w-11 justify-center px-0" : "px-4 py-3"
                     } ${
                       active
-                        ? "bg-brand-500 text-white shadow-[var(--shadow-card)]"
-                        : "text-gray-600 hover:bg-brand-50/70 hover:text-brand-700"
+                        ? "bg-brand-500 text-white shadow-[0_1px_2px_rgba(0,0,0,0.08)]"
+                        : "text-[#6a6060] hover:bg-brand-50/70 hover:text-brand-700"
                     }`}
                     aria-current={active ? "page" : undefined}
                   >
                     <span
-                      className={`flex h-6 w-6 shrink-0 items-center justify-center [&>svg]:h-5 [&>svg]:w-5 ${
-                        active ? "text-white" : "text-gray-400 group-hover:text-brand-600"
+                      className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center [&>svg]:h-[18px] [&>svg]:w-[18px] ${
+                        active ? "text-white" : "text-[#6a6060] group-hover:text-brand-600"
                       }`}
                     >
                       {nav.icon}

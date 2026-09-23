@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import ClientDetailModal from "@/components/back-office/ClientDetailModal";
+import ClientDetailRoute from "@/components/back-office/ClientDetailRoute";
 import { clientDetail } from "@/lib/mock/beautyandco";
 
 // Fallback pleine page de la fiche cliente : n'est atteint que par navigation
@@ -8,6 +7,10 @@ import { clientDetail } from "@/lib/mock/beautyandco";
 // l'admin, le clic ouvre la même fiche en modal (route interceptée, voir
 // src/app/(admin)/@modal/(.)clients/[id]/page.tsx). Même contenu, présenté de
 // la même façon : referme vers /clients faute d'écran d'origine à retrouver.
+// La résolution de la fiche (seed OU cliente créée en session) est déléguée à
+// `ClientDetailRoute` (client component, lit `ClientsContext`) — `notFound()`
+// ne peut plus être décidé ici puisqu'une cliente créée en session n'existe pas
+// dans les seeds que ce composant serveur peut lire.
 //
 // 1. Où en est l'utilisatrice ? Elle arrive de la liste Clients, souvent juste
 //    avant ou pendant un rendez-vous : elle veut se rappeler qui est la cliente
@@ -34,8 +37,5 @@ export default async function ClientDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const detail = clientDetail(id);
-  if (!detail) notFound();
-
-  return <ClientDetailModal detail={detail} closeMode="list" />;
+  return <ClientDetailRoute id={id} closeMode="list" />;
 }

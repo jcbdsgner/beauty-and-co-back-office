@@ -1,13 +1,17 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import PageHeader from "@/components/back-office/PageHeader";
 import SegmentedControl, {
   type SegmentedOption,
 } from "@/components/ui/segmented/SegmentedControl";
+import { PlusIcon } from "@/icons";
 import { useLocation } from "@/context/LocationContext";
-import { clients, salons, type ClientRow, type SalonScope } from "@/lib/mock/beautyandco";
+import { useClientsData } from "@/context/ClientsContext";
+import { isNewClient, salons, type ClientRow, type SalonScope } from "@/lib/mock/beautyandco";
 import ClientCards from "./ClientCards";
+import { NewClientDialog } from "./ClientEditDialogs";
 
 // Écran « Clients ».
 // 1. Où en est l'utilisatrice ? En session de gestion : elle cherche une cliente
@@ -26,12 +30,13 @@ const SALON_OPTIONS: SegmentedOption<SalonScope>[] = [
   ...salons.map((s) => ({ value: s.id as SalonScope, label: s.name })),
 ];
 
-type SegmentFilter = "all" | "active" | "a-relancer";
+type SegmentFilter = "all" | "active" | "a-relancer" | "new";
 
 const SEGMENT_OPTIONS: SegmentedOption<SegmentFilter>[] = [
   { value: "all", label: "Toutes" },
   { value: "active", label: "Actives" },
   { value: "a-relancer", label: "À relancer" },
+  { value: "new", label: "Nouvelles" },
 ];
 
 // Le tri par clic sur en-t\u00eate de colonne n'a plus de sens en grille de
@@ -63,15 +68,18 @@ function compareRows(a: ClientRow, b: ClientRow, key: SortKey): number {
 }
 
 export default function Clients() {
+  const router = useRouter();
   const { scope, setScope } = useLocation();
+  const { rows: clientRows, createClient } = useClientsData();
   const [query, setQuery] = useState("");
   const [segment, setSegment] = useState<SegmentFilter>("all");
   const [sort, setSort] = useState<SortState>({ key: "lastVisit", dir: "desc" });
   // Suppressions de la session — aucune persistance, purement local.
   const [removed, setRemoved] = useState<Set<string>>(() => new Set());
   const [undoTarget, setUndoTarget] = useState<ClientRow | null>(null);
+  const [creating, setCreating] = useState(false);
 
-  const all = useMemo(() => clients(scope), [scope]);
+  const all = useMemo(() => clientRows(scope), [clientRows, scope]);
 
   const visible = useMemo(() => {
     const q = normalize(query.trim());
@@ -79,7 +87,7 @@ export default function Clients() {
 
     const rows = all
       .filter((c) => !removed.has(c.id))
-      .filter((c) => segment === "all" || c.segment === segment)
+      .filter((c) => segment === "all" || (segment === "new" ? isNewClient(c) : c.segment === segment))
       .filter((c) => {
         if (!q && !qDigits) return true;
         const byText = normalize(c.name).includes(q) || normalize(c.email).includes(q);
@@ -127,35 +135,50 @@ export default function Clients() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <PageHeader
-          title="Clients"
-          description="Toute la clientèle Beauty & Co — historique de visites, dépenses et fidélité."
-        />
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-          <div className="flex items-center gap-2">
-            <span className="text-theme-xs font-medium uppercase tracking-wide text-gray-400">
-              Salon
-            </span>
+      <PageHeader
+        title="Clients"
+        actions={
+          <div className="flex items-center gap-3">
             <SegmentedControl
               options={SALON_OPTIONS}
               value={scope}
               onChange={setScope}
               aria-label="Filtrer par salon"
+              variant="tinted"
             />
+            <button
+              type="button"
+              onClick={() => setCreating(true)}
+              className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-theme-sm font-medium text-white transition-colors hover:bg-brand-600"
+            >
+              <PlusIcon className="h-4 w-4" />
+              Nouvelle cliente
+            </button>
           </div>
-          <div className="ml-auto flex items-center gap-2">
-            <span className="text-theme-xs font-medium uppercase tracking-wide text-gray-400">
-              Affichage
-            </span>
-            <SegmentedControl
-              options={SEGMENT_OPTIONS}
-              value={segment}
-              onChange={setSegment}
-              aria-label="Filtrer la liste des clientes"
-            />
-          </div>
-        </div>
+        }
+      />
+
+      <NewClientDialog
+        open={creating}
+        defaultSalon={scope === "all" ? salons[0].id : scope}
+        initialName={query.trim()}
+        onClose={() => setCreating(false)}
+        onCreate={(draft) => {
+          const id = createClient(draft);
+          router.push(`/clients/${id}`);
+        }}
+      />
+
+      <div className="flex items-center gap-2">
+        <span className="text-theme-xs font-medium uppercase tracking-wide text-gray-400">
+          Affichage
+        </span>
+        <SegmentedControl
+          options={SEGMENT_OPTIONS}
+          value={segment}
+          onChange={setSegment}
+          aria-label="Filtrer la liste des clientes"
+        />
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -237,6 +260,15 @@ export default function Clients() {
               ? "Aucune cliente pour ce salon."
               : "Aucune cliente ne correspond à votre recherche."}
           </p>
+          {query.trim() !== "" && (
+            <button
+              type="button"
+              onClick={() => setCreating(true)}
+              className="mt-3 text-theme-sm font-medium text-brand-500 hover:text-brand-600"
+            >
+              + Créer une fiche pour « {query.trim()} »
+            </button>
+          )}
           {filtering && totalShown > 0 && (
             <button
               type="button"

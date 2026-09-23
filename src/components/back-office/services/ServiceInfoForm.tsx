@@ -7,7 +7,9 @@ import { SERVICE_ICON_OPTIONS, serviceSalons, type Service } from "@/lib/mock/se
 import { SERVICE_ICONS } from "./serviceIcons";
 import { SectionCard, TextInput, Toggle, btnGhost, btnPrimary } from "./ui";
 
-export type ServiceDraft = Omit<Service, "id">;
+// Les sous-catégories ne se gèrent pas dans ce formulaire (cf.
+// `SubcategoriesPanel`) : le brouillon les omet, l'appelant les préserve.
+export type ServiceDraft = Omit<Service, "id" | "subcategories">;
 
 const BLANK: ServiceDraft = {
   name: "",
@@ -64,12 +66,12 @@ export default function ServiceInfoForm({ mode, service, onSubmit, onCancel }: P
   return (
     <SectionCard
       title="Informations"
-      description="Ce que la cliente voit au moment de choisir un service à la réservation."
+      description="Ce que la cliente voit au moment de choisir une catégorie à la réservation."
     >
       <div className="space-y-6">
         <div className="grid grid-cols-[1fr_auto] items-end gap-4">
           <TextInput
-            label="Nom du service"
+            label="Nom de la catégorie"
             placeholder="Coiffure"
             value={draft.name}
             onChange={(v) => set("name", v)}
@@ -154,23 +156,23 @@ export default function ServiceInfoForm({ mode, service, onSubmit, onCancel }: P
           </div>
           {draft.salonIds.length === 0 && (
             <p className="mt-2 text-theme-xs text-warning-600">
-              Sans salon, ce service ne sera proposé nulle part à la réservation.
+              Sans salon, cette catégorie ne sera proposée nulle part à la réservation.
             </p>
           )}
         </div>
 
         <div className="flex items-start justify-between gap-6 border-t border-gray-100 pt-5">
           <div className="min-w-0">
-            <p className="text-sm font-medium text-gray-800">Service actif</p>
+            <p className="text-sm font-medium text-gray-800">Catégorie active</p>
             <p className="mt-0.5 text-theme-xs text-gray-500">
-              Un service inactif reste paramétrable mais n&apos;apparaît pas à la réservation.
+              Une catégorie inactive reste paramétrable mais n&apos;apparaît pas à la réservation.
             </p>
           </div>
           <div className="shrink-0 pt-0.5">
             <Toggle
               checked={draft.active}
               onChange={(v) => set("active", v)}
-              aria-label="Service actif"
+              aria-label="Catégorie active"
             />
           </div>
         </div>
@@ -178,7 +180,7 @@ export default function ServiceInfoForm({ mode, service, onSubmit, onCancel }: P
 
       <div className="mt-8 flex items-center gap-3">
         <button type="button" onClick={submit} disabled={!canSubmit} className={btnPrimary}>
-          {mode === "create" ? "Créer le service" : "Enregistrer"}
+          {mode === "create" ? "Créer la catégorie" : "Enregistrer"}
         </button>
         {mode === "create" && onCancel && (
           <button type="button" onClick={onCancel} className={btnGhost}>

@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import Badge from "@/components/ui/badge/Badge";
-import DataTable, { type Column } from "@/components/back-office/DataTable";
 import SegmentedControl from "@/components/ui/segmented/SegmentedControl";
 import { weekSalonSummary } from "@/lib/mock/planning";
 import {
@@ -20,7 +19,7 @@ import { Avatar } from "./ui";
 
 type Props = {
   members: Member[];
-  // Demandes de toute l'équipe (état de session) — sert la pastille par ligne.
+  // Demandes de toute l'équipe (état de session) — sert la pastille par carte.
   requests: StaffRequest[];
   onOpen: (id: string) => void;
 };
@@ -38,6 +37,9 @@ const ROLE_FILTERS: { value: StaffRole | "all"; label: string }[] = [
   { value: "manager", label: "Managers" },
 ];
 
+// Grille de cartes membres — remplace l'ancien tableau (2026-09-22, passage
+// listes → blocs demandé par l'utilisatrice, même grammaire que
+// `ClientCards`, façon répertoire).
 export default function EquipeList({ members, requests, onOpen }: Props) {
   const [query, setQuery] = useState("");
   const [role, setRole] = useState<StaffRole | "all">("all");
@@ -54,85 +56,6 @@ export default function EquipeList({ members, requests, onOpen }: Props) {
       );
     });
   }, [members, query, role]);
-
-  const columns: Column<Member>[] = [
-    {
-      key: "member",
-      header: "Membre",
-      render: (m) => {
-        const pending = pendingRequestsForMember(m.id, requests).length;
-        return (
-          <div className="flex items-center gap-3">
-            <Avatar initials={initials(m)} size="sm" />
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <p className="font-medium text-gray-800">{fullName(m)}</p>
-                {pending > 0 && (
-                  <Badge size="sm" color="warning">
-                    {pending === 1 ? "1 demande" : `${pending} demandes`}
-                  </Badge>
-                )}
-              </div>
-              <p className="text-theme-xs text-gray-500">{CATEGORY_LABELS[m.category]}</p>
-            </div>
-          </div>
-        );
-      },
-    },
-    {
-      key: "roles",
-      header: "Rôles",
-      render: (m) => (
-        <div className="flex flex-wrap gap-1">
-          {m.roles.map((r) => (
-            <Badge key={r} size="sm" color="primary">
-              {ROLE_LABELS[r]}
-            </Badge>
-          ))}
-        </div>
-      ),
-    },
-    {
-      key: "planning",
-      header: "Cette semaine",
-      render: (m) => (
-        <span className="text-gray-600">{weekSalonSummary(m.id)}</span>
-      ),
-    },
-    {
-      key: "account",
-      header: "Accès",
-      render: (m) => (
-        <Badge size="sm" color={ACCOUNT_TONE[m.account]}>
-          {ACCOUNT_LABELS[m.account]}
-        </Badge>
-      ),
-    },
-    {
-      key: "active",
-      header: "Statut",
-      render: (m) =>
-        m.active ? (
-          <span className="text-gray-600">Actif</span>
-        ) : (
-          <span className="text-gray-400">Inactif</span>
-        ),
-    },
-    {
-      key: "action",
-      header: "",
-      align: "right",
-      render: (m) => (
-        <button
-          type="button"
-          onClick={() => onOpen(m.id)}
-          className="rounded-lg border border-gray-200 px-3 py-1.5 text-theme-xs font-medium text-gray-600 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700"
-        >
-          Détails
-        </button>
-      ),
-    },
-  ];
 
   return (
     <div className="space-y-4">
@@ -164,12 +87,61 @@ export default function EquipeList({ members, requests, onOpen }: Props) {
         />
       </div>
 
-      <DataTable
-        columns={columns}
-        rows={rows}
-        rowKey={(m) => m.id}
-        empty="Aucun membre ne correspond à cette recherche."
-      />
+      {rows.length === 0 ? (
+        <div className="rounded-2xl border border-gray-200 bg-white p-10 text-center">
+          <p className="text-theme-sm text-gray-500">
+            Aucun membre ne correspond à cette recherche.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          {rows.map((m) => {
+            const pending = pendingRequestsForMember(m.id, requests).length;
+            return (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => onOpen(m.id)}
+                className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 text-left shadow-theme-xs transition hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-theme-sm"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <Avatar initials={initials(m)} size="sm" />
+                  {pending > 0 && (
+                    <Badge size="sm" color="warning">
+                      {pending === 1 ? "1 demande" : `${pending} demandes`}
+                    </Badge>
+                  )}
+                </div>
+
+                <div className="min-w-0">
+                  <p className="truncate font-semibold text-gray-800">{fullName(m)}</p>
+                  <p className="text-theme-xs text-gray-500">{CATEGORY_LABELS[m.category]}</p>
+                </div>
+
+                <div className="flex flex-wrap gap-1">
+                  {m.roles.map((r) => (
+                    <Badge key={r} size="sm" color="primary">
+                      {ROLE_LABELS[r]}
+                    </Badge>
+                  ))}
+                </div>
+
+                <div className="mt-auto space-y-1.5 border-t border-gray-100 pt-3 text-theme-xs">
+                  <p className="text-gray-500">{weekSalonSummary(m.id)}</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <Badge size="sm" color={ACCOUNT_TONE[m.account]}>
+                      {ACCOUNT_LABELS[m.account]}
+                    </Badge>
+                    <span className={m.active ? "text-gray-500" : "text-gray-400"}>
+                      {m.active ? "Actif" : "Inactif"}
+                    </span>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

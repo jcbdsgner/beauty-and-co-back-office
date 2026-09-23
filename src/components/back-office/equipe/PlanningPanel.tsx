@@ -114,6 +114,7 @@ export default function PlanningPanel({
             value={scope}
             onChange={setScope}
             aria-label="Filtrer par salon"
+            variant="tinted"
           />
         </div>
 

@@ -71,6 +71,7 @@ export type Conversation = {
   salon: SalonId;
   channels: Channel[]; // canaux présents dans le fil (filtres + pastille)
   events: ThreadEvent[]; // ordre chronologique croissant
+  clientId?: string; // référence vers `@/lib/mock/beautyandco::clients()` si le fil est celui d'une cliente connue
 };
 
 /* ------------------------------------------------------------------ */
@@ -94,6 +95,7 @@ export const conversations: Conversation[] = [
     name: "Awa Diop",
     phone: "+221 77 123 45 67",
     salon: "almadies",
+    clientId: "c01",
     channels: ["whatsapp", "call"],
     events: [
       { kind: "call", id: "awa-1", direction: "in", at: "2026-08-28T10:12", durationSec: 95, outcome: "answered" },
@@ -121,6 +123,7 @@ export const conversations: Conversation[] = [
     name: "Aïcha Ba",
     phone: "+221 76 402 19 88",
     salon: "almadies",
+    clientId: "c04",
     channels: ["sms"],
     events: [
       {
@@ -192,6 +195,7 @@ export const conversations: Conversation[] = [
     name: "Marième Sow",
     phone: "+221 76 555 21 09",
     salon: "almadies",
+    clientId: "c03",
     channels: ["whatsapp"],
     events: [
       {
@@ -277,6 +281,12 @@ export const initials = (name: string) =>
         .map((w) => w[0]!.toUpperCase())
         .join("")
     : "?";
+
+// Fil rattaché à une cliente connue — aligné sur `conversationByClientId` de
+// point-de-vente (`lib/data/conversations.ts`) : lien fiche cliente → messagerie,
+// absent jusqu'ici côté back-office (audit de parité 2026-09-22).
+export const conversationByClientId = (clientId: string): Conversation | undefined =>
+  conversations.find((c) => c.clientId === clientId);
 
 export const lastEvent = (c: Conversation) => c.events[c.events.length - 1];
 

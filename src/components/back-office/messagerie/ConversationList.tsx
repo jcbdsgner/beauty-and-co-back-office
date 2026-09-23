@@ -79,7 +79,7 @@ export default function ConversationList({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <ChatIcon className="h-5 w-5 text-brand-500" />
-            <h2 className="text-lg font-semibold text-gray-800">Messagerie</h2>
+            <h2 className="text-lg font-semibold text-gray-800">Conversations</h2>
           </div>
           <button
             type="button"

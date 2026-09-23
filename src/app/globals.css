@@ -148,18 +148,21 @@
   --color-error-900: #7a271a;
   --color-error-950: #55160c;
 
-  --color-warning-25: #fffcf5;
-  --color-warning-50: #fffaeb;
-  --color-warning-100: #fef0c7;
-  --color-warning-200: #fedf89;
-  --color-warning-300: #fec84b;
-  --color-warning-400: #fdb022;
-  --color-warning-500: #f79009;
-  --color-warning-600: #dc6803;
-  --color-warning-700: #b54708;
-  --color-warning-800: #93370d;
-  --color-warning-900: #7a2e0e;
-  --color-warning-950: #4e1d09;
+  /* Ocre chaud propre à la marque plutôt que l'amber Tailwind par défaut —
+     même usage sémantique (état "à traiter"), teinte alignée sur la famille
+     brand et error (voir CLAUDE.md, « Nettoyage hiérarchie visuelle »). */
+  --color-warning-25: #fcfaf7;
+  --color-warning-50: #f8f3ed;
+  --color-warning-100: #ede1d4;
+  --color-warning-200: #dec8af;
+  --color-warning-300: #cfa577;
+  --color-warning-400: #c2823d;
+  --color-warning-500: #9f6528;
+  --color-warning-600: #86521d;
+  --color-warning-700: #6e3f17;
+  --color-warning-800: #542f12;
+  --color-warning-900: #3d220f;
+  --color-warning-950: #23140b;
 
   --color-theme-pink-500: #ee46bc;
 

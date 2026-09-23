@@ -337,10 +337,7 @@ export default function DesignSystemPage() {
       <Section id="blocks" title="Layout blocks">
         <Row label="PageHeader" />
         <div className="mb-8 rounded-xl border border-dashed border-gray-300 p-4 dark:border-gray-700">
-          <PageHeader
-            title="Rendez-vous"
-            description="Tous les rendez-vous pris en salon et en ligne."
-          />
+          <PageHeader title="Rendez-vous" />
         </div>
         <Row label="ComponentCard" />
         <div className="mb-8 max-w-lg">

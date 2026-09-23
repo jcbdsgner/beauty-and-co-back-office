@@ -110,23 +110,18 @@ export default function Stock() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <PageHeader
-          title="Stock"
-          description="Niveaux par emplacement, consommation et projections de rupture pour les produits consommés en salon et vendus au détail."
-        />
-        <div className="flex items-center gap-2">
-          <span className="text-theme-xs font-medium uppercase tracking-wide text-gray-400">
-            Salon
-          </span>
+      <PageHeader
+        title="Stock"
+        actions={
           <SegmentedControl
             options={SALON_OPTIONS}
             value={scope}
             onChange={setScope}
             aria-label="Filtrer par salon"
+            variant="tinted"
           />
-        </div>
-      </div>
+        }
+      />
 
       {toReplenish > 0 && (
         <Alert

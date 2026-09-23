@@ -116,14 +116,6 @@ const SUB_TABS: Record<Section, Tab[]> = {
   ],
 };
 
-const SECTION_INTRO: Record<Section, string> = {
-  fidelite:
-    "Comment les clientes gagnent des points, les cartes de fidélité par palier et les récompenses échangeables.",
-  offres:
-    "Les offres proposées à la réservation : forfaits d'abonnement (récurrents) et packs prépayés (achat unique).",
-  abonnements:
-    "Le suivi des abonnements souscrits et des packs vendus : échéances à encaisser, révocations, consommation des prestations.",
-};
 
 export default function Fidelite() {
   const [section, setSection] = useState<Section>("fidelite");
@@ -148,8 +140,8 @@ export default function Fidelite() {
   const tabs = SUB_TABS[section];
 
   return (
-    <div className="space-y-6">
-      <PageHeader title="Fidélité & abonnements" description={SECTION_INTRO[section]} />
+    <div className="flex flex-col gap-6">
+      <PageHeader title="Fidélité & abonnements" />
 
       <SegmentedControl
         options={SECTIONS}

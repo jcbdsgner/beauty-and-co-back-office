@@ -238,23 +238,39 @@ export default function PaiementPanel() {
 
       <Divider />
 
-      {/* Paiement par PayPal ------------------------------------------- */}
+      {/* Paiement mobile ------------------------------------------------ */}
       <div className="space-y-5 p-6">
-        <h2 className="text-lg font-semibold text-gray-800">Paiement par PayPal</h2>
+        <h2 className="text-lg font-semibold text-gray-800">Paiement mobile</h2>
+        <p className="text-theme-sm text-gray-500">
+          Moyens de règlement de l&apos;acompte, en plus des espèces et de la carte au comptoir.
+        </p>
 
-        <Field
-          id="paypal-usd"
-          label="Montant débité en dollars"
-          suffix="USD"
-          value={String(draft.paypalUsd)}
-          onChange={(v) => set("paypalUsd", toPositiveInt(v))}
-          disabled={noDeposit}
-          hint={
-            noDeposit
-              ? "Sans acompte, aucun montant n'est débité — y compris par PayPal."
-              : "PayPal ne traite pas le franc CFA : les clientes qui règlent par PayPal sont débitées de ce montant en dollars, à la place de l'acompte en FCFA."
+        <SettingRow
+          title="Wave"
+          control={
+            <Toggle
+              checked={draft.waveEnabled}
+              onChange={(v) => set("waveEnabled", v)}
+              aria-label="Wave"
+            />
           }
         />
+        <SettingRow
+          title="Orange Money"
+          control={
+            <Toggle
+              checked={draft.orangeMoneyEnabled}
+              onChange={(v) => set("orangeMoneyEnabled", v)}
+              aria-label="Orange Money"
+            />
+          }
+        />
+
+        {noDeposit && (
+          <p className="text-theme-xs text-gray-500">
+            Sans acompte, aucun montant n&apos;est débité par ces moyens de paiement.
+          </p>
+        )}
       </div>
 
       {/* Enregistrer -------------------------------------------------------- */}

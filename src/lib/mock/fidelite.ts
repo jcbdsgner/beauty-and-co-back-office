@@ -32,12 +32,17 @@ export const ROUNDING_OPTIONS: { value: Rounding; label: string }[] = [
   { value: "nearest", label: "Au plus proche" },
 ];
 
+// Base d'accumulation par défaut alignée sur la règle réellement appliquée
+// côté point-de-vente (`confirmPayment`, `lib/store/app-store.ts`) : 10 points
+// par tranche de 1.000 FCFA dépensés, soit 1 point par tranche de 100 FCFA —
+// « par montant dépensé », pas « par visite ». Reste un réglage de session
+// modifiable depuis l'écran Fidélité, pas une règle figée.
 export const defaultSettings: LoyaltySettings = {
   enabled: true,
-  basis: "visit",
+  basis: "amount",
   rounding: "down",
   pointsPerVisit: 10,
-  fcfaPerPoint: 1000,
+  fcfaPerPoint: 100,
   guestsEligible: true,
   pointsExpire: false,
   minRedeemBalance: 0,
@@ -53,10 +58,14 @@ export type LoyaltyTier = {
   multiplierPct: number; // 150 → ×1,50 · 100 = taux de base
 };
 
+// Vocabulaire aligné sur `Cliente.tier` de point-de-vente (`"silver" | "gold" |
+// "vip"`, jamais calculé côté point-de-vente — un champ statique de seed) :
+// mêmes noms, mais back-office garde son mécanisme de seuils/multiplicateur
+// dérivé des points, plus riche que la simple étiquette figée de point-de-vente.
 export const defaultTiers: LoyaltyTier[] = [
-  { id: "tier-or", name: "Or", minPoints: 200, multiplierPct: 150 },
-  { id: "tier-platine", name: "Platine", minPoints: 500, multiplierPct: 200 },
-  { id: "tier-platine-plus", name: "Platine plus", minPoints: 1000, multiplierPct: 10 },
+  { id: "tier-argent", name: "Argent", minPoints: 200, multiplierPct: 150 },
+  { id: "tier-or", name: "Or", minPoints: 500, multiplierPct: 200 },
+  { id: "tier-vip", name: "VIP", minPoints: 1000, multiplierPct: 250 },
 ];
 
 /* ---------------------------------------------------------------- Récompenses */

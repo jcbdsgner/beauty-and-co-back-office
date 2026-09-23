@@ -12,7 +12,8 @@ export type PaymentSettings = {
   depositMode: DepositMode; // acompte demandé à la réservation
   depositFixed: number; // montant fixe en FCFA (mode « fixed »)
   depositPercent: number; // part du total en % (mode « percent »)
-  paypalUsd: number; // équivalent débité en USD pour un règlement PayPal
+  waveEnabled: boolean; // acompte réglable par Wave en plus des espèces/carte
+  orangeMoneyEnabled: boolean; // acompte réglable par Orange Money
 };
 
 export const DEPOSIT_MODE_OPTIONS: { value: DepositMode; label: string }[] = [
@@ -24,12 +25,18 @@ export const DEPOSIT_MODE_OPTIONS: { value: DepositMode; label: string }[] = [
 // Plancher imposé par le prestataire d'encaissement.
 export const DEPOSIT_MIN_FCFA = 100;
 
+// Wave et Orange Money remplacent l'ancien réglage PayPal (2026-09-22) : les
+// deux seuls modes de paiement mobile réellement utilisés au comptoir côté
+// point-de-vente (`lib/data/types.ts::PaymentMode`), en FCFA natif — pas de
+// conversion de devise à afficher, contrairement à PayPal qui n'existait dans
+// aucun des deux projets.
 export const defaultPaymentSettings: PaymentSettings = {
   liveMode: true,
   depositMode: "fixed",
   depositFixed: 5000,
   depositPercent: 30,
-  paypalUsd: 10,
+  waveEnabled: true,
+  orangeMoneyEnabled: true,
 };
 
 // Phrase de récapitulatif de la règle d'acompte active.

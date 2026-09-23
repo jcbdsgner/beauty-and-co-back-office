@@ -1,13 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import Badge from "@/components/ui/badge/Badge";
 import { groupThousands, type SalonScope } from "@/lib/mock/beautyandco";
 import { coverageTone, type StockRow } from "@/lib/mock/stock";
@@ -45,6 +38,10 @@ function CoverageBadge({ row }: { row: StockRow }) {
   );
 }
 
+// Grille de cartes produit — remplace l'ancien tableau `StockList` (2026-09-22,
+// passage listes → blocs demandé par l'utilisatrice, même grammaire que
+// `ClientCards`). Le niveau de stock reste le repère n°1 (mis en avant en
+// grand), seuil / conso / sparkline en pied de carte.
 export default function StockList({
   rows,
   scope,
@@ -107,81 +104,54 @@ export default function StockList({
         />
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
-        <div className="max-w-full overflow-x-auto">
-          <Table>
-            <TableHeader className="border-b border-gray-100">
-              <TableRow>
-                {["Produit", stockLabel, "Seuil", "Conso / sem.", "Couverture", "Tendance"].map(
-                  (h, i) => (
-                    <TableCell
-                      key={h}
-                      isHeader
-                      className={`px-5 py-3 font-medium text-gray-500 text-theme-xs ${
-                        i >= 1 && i <= 3 ? "text-end" : "text-start"
-                      }`}
-                    >
-                      {h}
-                    </TableCell>
-                  ),
-                )}
-              </TableRow>
-            </TableHeader>
-            <TableBody className="divide-y divide-gray-100">
-              {visible.length === 0 ? (
-                <TableRow>
-                  <TableCell className="px-5 py-10 text-center text-gray-500 text-theme-sm">
-                    Aucun produit ne correspond à ce filtre.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                visible.map((r) => (
-                  <TableRow key={r.product.id} className="hover:bg-gray-50">
-                    <TableCell className="px-5 py-4 text-theme-sm">
-                      <button
-                        type="button"
-                        onClick={() => onOpen(r.product.id)}
-                        className="text-left font-medium text-gray-800 hover:text-brand-600 hover:underline"
-                      >
-                        {r.product.name}
-                      </button>
-                    </TableCell>
-                    <TableCell className="px-5 py-4 text-end text-theme-sm text-gray-800">
-                      {r.onHand === null ? "—" : groupThousands(r.onHand)}
-                      {scope === "all" && r.reserve !== null && (
-                        <span className="block text-theme-xs font-normal text-gray-400">
-                          dont réserve {groupThousands(r.reserve)}
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell className="px-5 py-4 text-end text-theme-sm text-gray-500">
-                      {groupThousands(r.min)}
-                    </TableCell>
-                    <TableCell className="px-5 py-4 text-end text-theme-sm text-gray-500">
-                      {r.weekly > 0 ? groupThousands(Math.round(r.weekly)) : "—"}
-                    </TableCell>
-                    <TableCell className="px-5 py-4 text-theme-sm">
-                      <CoverageBadge row={r} />
-                    </TableCell>
-                    <TableCell className="px-5 py-4">
-                      <Sparkline
-                        points={r.spark}
-                        tone={
-                          r.status === "order"
-                            ? "error"
-                            : r.status === "low"
-                              ? "warning"
-                              : "neutral"
-                        }
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+      {visible.length === 0 ? (
+        <div className="rounded-2xl border border-gray-200 bg-white p-10 text-center">
+          <p className="text-theme-sm text-gray-500">Aucun produit ne correspond à ce filtre.</p>
         </div>
-      </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          {visible.map((r) => (
+            <button
+              key={r.product.id}
+              type="button"
+              onClick={() => onOpen(r.product.id)}
+              className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 text-left shadow-theme-xs transition hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-theme-sm"
+            >
+              <p className="line-clamp-2 font-medium text-gray-800">{r.product.name}</p>
+
+              <div>
+                <p className="text-theme-xs text-gray-400">{stockLabel}</p>
+                <p className="text-theme-xl font-semibold tabular-nums text-gray-800">
+                  {r.onHand === null ? "—" : groupThousands(r.onHand)}
+                </p>
+                {scope === "all" && r.reserve !== null && (
+                  <p className="text-theme-xs text-gray-400">
+                    dont réserve {groupThousands(r.reserve)}
+                  </p>
+                )}
+              </div>
+
+              <div className="mt-auto flex items-end justify-between gap-2 border-t border-gray-100 pt-3">
+                <div className="text-theme-xs text-gray-500">
+                  <p>Seuil {groupThousands(r.min)}</p>
+                  <p className="tabular-nums">
+                    {r.weekly > 0 ? `${groupThousands(Math.round(r.weekly))} / sem.` : "—"}
+                  </p>
+                </div>
+                <div className="flex shrink-0 flex-col items-end gap-1.5">
+                  <CoverageBadge row={r} />
+                  <Sparkline
+                    points={r.spark}
+                    tone={
+                      r.status === "order" ? "error" : r.status === "low" ? "warning" : "neutral"
+                    }
+                  />
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

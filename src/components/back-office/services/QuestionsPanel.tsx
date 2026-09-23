@@ -123,11 +123,11 @@ export default function QuestionsPanel({ serviceId, questions, onUpsert, onDelet
   return (
     <SectionCard
       title="Questions d'accueil"
-      description="Renseignées par la cliente au moment de la réservation d'une prestation de ce service."
+      description="Renseignées par la cliente au moment de la réservation d'une prestation de cette catégorie."
     >
       {questions.length === 0 && !creating ? (
         <p className="rounded-xl border border-dashed border-gray-200 px-4 py-10 text-center text-theme-sm text-gray-500">
-          Aucune question pour ce service.
+          Aucune question pour cette catégorie.
         </p>
       ) : (
         <ul className="space-y-2.5">

@@ -6,7 +6,7 @@ import {
   type SalonClosure,
   type SalonConfig,
 } from "@/lib/mock/beautyandco";
-import { nextClosure, posteSummary, salonOpenState, btnPrimary } from "./ui";
+import { nextClosure, posteSummary, salonOpenState } from "./ui";
 
 const TODAY_ISO = "2026-09-03";
 
@@ -20,24 +20,13 @@ export default function SalonsList({
   configs,
   closures,
   onOpen,
-  onAdd,
 }: {
   configs: SalonConfig[];
   closures: SalonClosure[];
   onOpen: (id: string) => void;
-  onAdd: () => void;
 }) {
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <button type="button" className={btnPrimary} onClick={onAdd}>
-          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-            <path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-          Ajouter un salon
-        </button>
-      </div>
-
       <ul className="grid gap-4">
         {configs.map((c) => {
           const state = salonOpenState(c, TODAY_ISO, closures);
@@ -65,8 +54,8 @@ export default function SalonsList({
                     </p>
                   )}
                 </div>
-                <span className="shrink-0 pt-1 text-theme-sm font-medium text-brand-600">
-                  Ouvrir →
+                <span className="inline-flex shrink-0 items-center justify-center rounded-lg border border-gray-200 px-3 py-1.5 text-theme-xs font-medium text-gray-700">
+                  Détails
                 </span>
               </button>
             </li>

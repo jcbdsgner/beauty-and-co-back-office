@@ -12,7 +12,10 @@
 // « Sans catégorie » = éléments orphelins (`serviceId === null`), à rattacher.
 //
 // Catégories : les 7 catégories réelles du catalogue point-de-vente (Mini&Co · Hair et
-// Mini&Co · Spa sont fusionnées ici en un seul service « Mini & Co »). « Brows / Lashes »
+// Mini&Co · Spa sont fusionnées ici en un seul service « Mini & Co » — **écart connu**,
+// audit de parité 2026-09-22 : `lib/data/menu.ts` garde en réalité les deux distinctes
+// via `subcategory: "Hair" | "Spa"`, fusion assumée ici plutôt que corrigée en
+// autonomie, cf. CLAUDE.md § « Audit de parité point-de-vente »). « Brows / Lashes »
 // (prestations fictives) a été retiré : absent du catalogue réel.
 //
 // Produits : le catalogue de consommables était fictif ; il est remplacé par le vrai
@@ -86,11 +89,14 @@ export const SERVICE_ICON_OPTIONS: { value: ServiceIconKey; label: string }[] = 
 // utilisé dans les recettes des prestations Coiffure) + boissons du bar (vendues
 // au détail, sans recette). `image` = photo produit réelle (sert de défaut à la
 // fiche Stock, remplaçable par une photo de session).
-// `priceFcfa` : prix de vente au détail — renseigné seulement pour les boissons
-// du bar (vendues telles quelles pendant une visite, cf. extras de rendez-vous
-// dans `@/lib/mock/rendezvous`). Aucune donnée de prix retail réelle n'existe
-// pour les produits Kérastase (catalogue de consommation, pas de vente au
-// détail dans ce projet) — laissé `undefined` pour eux.
+// `priceFcfa` : prix de vente au détail. Renseigné pour tous les produits
+// (2026-09-22, audit de parité point-de-vente — corrige une hypothèse fausse :
+// `lib/data/menu.ts::PRODUITS` de point-de-vente porte bien un prix réel sur
+// les 78 produits Kérastase/marques, pas seulement sur les boissons), mais
+// seules les 7 boissons du bar sont proposées en extra de rendez-vous
+// (`sellableExtras` ci-dessous, filtré par `productKind`) — un produit
+// Kérastase a un prix retail réel, mais n'est pas vendu à la volée pendant
+// une visite dans ce projet.
 export type Product = {
   id: string;
   name: string;
@@ -111,76 +117,76 @@ export const RECIPE_UNIT_OPTIONS: { value: RecipeUnit; label: string }[] = [
 ];
 
 export const products: Product[] = [
-  { id: "nutritive-8hmns-serum-90ml", name: "Nutritive 8HMNS Serum 90ml", defaultUnit: "ml", image: "/images/produits/nutritive-8hmns-serum-90ml.jpg" },
-  { id: "nutritive-bain-riche-250ml", name: "Nutritive Bain Riche 250ml", defaultUnit: "ml", image: "/images/produits/nutritive-bain-riche-250ml.jpg" },
-  { id: "nutritive-bain-satin-250ml", name: "Nutritive Bain Satin 250ml", defaultUnit: "ml", image: "/images/produits/nutritive-bain-satin-250ml.jpg" },
-  { id: "nutritive-lait-vital-200ml", name: "Nutritive Lait Vital 200ml", defaultUnit: "ml", image: "/images/produits/nutritive-lait-vital-200ml.jpg" },
-  { id: "nutritive-masque-riche-200ml", name: "Nutritive Masque Riche 200ml", defaultUnit: "ml", image: "/images/produits/nutritive-masque-riche-200ml.jpg" },
-  { id: "nutritive-masque-intense-200ml", name: "Nutritive Masque Intense 200ml", defaultUnit: "ml", image: "/images/produits/nutritive-masque-intense-200ml.jpg" },
-  { id: "nutritive-nectar-therm-150ml", name: "Nutritive Nectar Therm 150ml", defaultUnit: "ml", image: "/images/produits/nutritive-nectar-therm-150ml.jpg" },
-  { id: "nutritive-scalp-serum-90ml", name: "Nutritive Scalp Serum 90ml", defaultUnit: "ml", image: "/images/produits/nutritive-scalp-serum-90ml.jpg" },
-  { id: "nutritive-soin-150ml", name: "Nutritive Soin 150ml", defaultUnit: "ml", image: "/images/produits/nutritive-soin-150ml.jpg" },
-  { id: "genesis-bain-riche-250ml", name: "Genesis Bain Riche 250ml", defaultUnit: "ml", image: "/images/produits/genesis-bain-riche-250ml.jpg" },
-  { id: "genesis-cure-90ml", name: "Genesis Cure 90ml", defaultUnit: "ml", image: "/images/produits/genesis-cure-90ml.jpg" },
-  { id: "genesis-fluide-150ml", name: "Genesis Fluide 150ml", defaultUnit: "ml", image: "/images/produits/genesis-fluide-150ml.jpg" },
-  { id: "genesis-masque-200ml", name: "Genesis Masque 200ml", defaultUnit: "ml", image: "/images/produits/genesis-masque-200ml.jpg" },
-  { id: "gloss-absolu-bain-250ml", name: "Gloss Absolu Bain 250ml", defaultUnit: "ml", image: "/images/produits/gloss-absolu-bain-250ml.jpg" },
-  { id: "k-gloss-absolu-bain-riche-250ml", name: "K Gloss Absolu Bain Riche 250ml", defaultUnit: "ml", image: "/images/produits/k-gloss-absolu-bain-riche-250ml.jpg" },
-  { id: "k-gloss-absolu-fondant-250ml", name: "K Gloss Absolu Fondant 250ml", defaultUnit: "ml", image: "/images/produits/k-gloss-absolu-fondant-250ml.jpg" },
-  { id: "k-gloss-absolu-cream-250ml", name: "K Gloss Absolu Cream 250ml", defaultUnit: "ml", image: "/images/produits/k-gloss-absolu-cream-250ml.jpg" },
-  { id: "k-gloss-absolu-hair-mist-30ml", name: "K Gloss Absolu Hair Mist 30ml", defaultUnit: "ml", image: "/images/produits/k-gloss-absolu-hair-mist-30ml.jpg" },
-  { id: "k-gloss-absolu-masque-nutritive-200ml", name: "K Gloss Absolu Masque Nutritive 200ml", defaultUnit: "ml", image: "/images/produits/k-gloss-absolu-masque-nutritive-200ml.jpg" },
-  { id: "k-gloss-absolu-oil-45ml", name: "K Gloss Absolu Oil 45ml", defaultUnit: "ml", image: "/images/produits/k-gloss-absolu-oil-45ml.jpg" },
-  { id: "k-gloss-absolu-spray-190ml", name: "K Gloss Absolu Spray 190ml", defaultUnit: "ml", image: "/images/produits/k-gloss-absolu-spray-190ml.jpg" },
-  { id: "k-symbiose-bain-creme-250ml", name: "K Symbiose Bain Creme 250ml", defaultUnit: "ml", image: "/images/produits/k-symbiose-bain-creme-250ml.jpg" },
-  { id: "k-symbiose-bain-purete-250ml", name: "K Symbiose Bain Pureté 250ml", defaultUnit: "ml", image: "/images/produits/k-symbiose-bain-purete-250ml.jpg" },
-  { id: "k-symbiose-fondant-hydra-200ml", name: "K Symbiose Fondant Hydra 200ml", defaultUnit: "ml", image: "/images/produits/k-symbiose-fondant-hydra-200ml.jpg" },
-  { id: "k-symbiose-masque-200ml", name: "K Symbiose Masque 200ml", defaultUnit: "ml", image: "/images/produits/k-symbiose-masque-200ml.jpg" },
-  { id: "k-symbiose-micropeel-200ml", name: "K Symbiose Micropeel 200ml", defaultUnit: "ml", image: "/images/produits/k-symbiose-micropeel-200ml.jpg" },
-  { id: "k-symbiose-serum-90ml", name: "K Symbiose Serum 90ml", defaultUnit: "ml", image: "/images/produits/k-symbiose-serum-90ml.jpg" },
-  { id: "k-chroma-absolu-bain-lim-us-250ml", name: "K Chroma Absolu Bain Lim US 250ml", defaultUnit: "ml", image: "/images/produits/k-chroma-absolu-bain-lim-us-250ml.jpg" },
-  { id: "k-chroma-absolu-bain-opa-us-250ml", name: "K Chroma Absolu Bain OPA US 250ml", defaultUnit: "ml", image: "/images/produits/k-chroma-absolu-bain-opa-us-250ml.jpg" },
-  { id: "k-chroma-absolu-fluide-250ml", name: "K Chroma Absolu Fluide 250ml", defaultUnit: "ml", image: "/images/produits/k-chroma-absolu-fluide-250ml.jpg" },
-  { id: "k-chroma-absolu-fondant-200ml", name: "K Chroma Absolu Fondant 200ml", defaultUnit: "ml", image: "/images/produits/k-chroma-absolu-fondant-200ml.jpg" },
-  { id: "k-chroma-absolu-leave-in-150ml", name: "K Chroma Absolu Leave In 150ml", defaultUnit: "ml", image: "/images/produits/k-chroma-absolu-leave-in-150ml.jpg" },
-  { id: "k-chroma-absolu-mask-reco-200ml", name: "K Chroma Absolu Mask Reco 200ml", defaultUnit: "ml", image: "/images/produits/k-chroma-absolu-mask-reco-200ml.jpg" },
-  { id: "k-chroma-oil-75ml", name: "K Chroma Oil 75ml", defaultUnit: "ml", image: "/images/produits/k-chroma-oil-75ml.jpg" },
-  { id: "k-chroma-oil", name: "K Chroma Oil", defaultUnit: "application" },
-  { id: "k-blond-absolu-night-serum-90ml", name: "K Blond Absolu Night Serum 90ml", defaultUnit: "ml", image: "/images/produits/k-blond-absolu-night-serum-90ml.jpg" },
-  { id: "k-blond-oil-75ml", name: "K Blond Oil 75ml", defaultUnit: "ml" },
-  { id: "k-blond-oil-75ml-2", name: "K Blond Oil 75ml", defaultUnit: "ml", image: "/images/produits/k-blond-oil-75ml-2.jpg" },
-  { id: "ker-blond-bain-uviolet-250ml", name: "Ker Blond Bain Uviolet 250ml", defaultUnit: "ml", image: "/images/produits/ker-blond-bain-uviolet-250ml.jpg" },
-  { id: "ker-blond-cicaflash-250ml", name: "Ker Blond Cicaflash 250ml", defaultUnit: "ml", image: "/images/produits/ker-blond-cicaflash-250ml.jpg" },
-  { id: "ker-blond-cicaplasme-150ml", name: "Ker Blond Cicaplasme 150ml", defaultUnit: "ml", image: "/images/produits/ker-blond-cicaplasme-150ml.jpg" },
-  { id: "ker-blond-masque-ultravio", name: "Ker Blond Masque Ultravio", defaultUnit: "application", image: "/images/produits/ker-blond-masque-ultravio.jpg" },
-  { id: "k-chrono-oil-75ml", name: "K Chrono Oil 75ml", defaultUnit: "ml" },
-  { id: "k-chrono-oil-75ml-2", name: "K Chrono Oil 75ml", defaultUnit: "ml", image: "/images/produits/k-chrono-oil-75ml-2.jpg" },
-  { id: "k-chrono-bain-250ml", name: "K Chrono Bain 250ml", defaultUnit: "ml", image: "/images/produits/k-chrono-bain-250ml.jpg" },
-  { id: "k-chrono-masque-200ml", name: "K Chrono Masque 200ml", defaultUnit: "ml", image: "/images/produits/k-chrono-masque-200ml.jpg" },
-  { id: "k-chrono-pre-shampoing-200ml", name: "K Chrono Pre Shampoing 200ml", defaultUnit: "ml", image: "/images/produits/k-chrono-pre-shampoing-200ml.jpg" },
-  { id: "ks-chrono-thermique-150ml", name: "KS Chrono Thermique 150ml", defaultUnit: "ml", image: "/images/produits/ks-chrono-thermique-150ml.jpg" },
-  { id: "k-chrono-bain-250ml-2", name: "K Chrono Bain 250ml", defaultUnit: "ml", image: "/images/produits/k-chrono-bain-250ml-2.jpg" },
-  { id: "ker-res-masque-force-archi-200ml", name: "Ker Res Masque Force Archi 200ml", defaultUnit: "ml", image: "/images/produits/ker-res-masque-force-archi-200ml.jpg" },
-  { id: "ker-resist-bain-force-archi-250m", name: "Ker Resist Bain Force Archi 250m", defaultUnit: "application", image: "/images/produits/ker-resist-bain-force-archi-250m.jpg" },
-  { id: "ker-resisr-ciment-anti-usure-200ml", name: "Ker Resisr Ciment Anti Usure 200ml", defaultUnit: "ml", image: "/images/produits/ker-resisr-ciment-anti-usure-200ml.jpg" },
-  { id: "ker-res-serum-therapiste-2-15ml", name: "Ker Res Serum Therapiste 2*15ml", defaultUnit: "ml", image: "/images/produits/ker-res-serum-therapiste-2-15ml.jpg" },
-  { id: "ker-res-serum-bain-therapiste-250ml", name: "Ker Res Serum Bain Therapiste 250ml", defaultUnit: "ml", image: "/images/produits/ker-res-serum-bain-therapiste-250ml.jpg" },
-  { id: "bain-nourissant-curl-250ml", name: "Bain Nourissant Curl 250ml", defaultUnit: "ml", image: "/images/produits/bain-nourissant-curl-250ml.jpg" },
-  { id: "creme-curl-150ml", name: "Creme Curl 150ml", defaultUnit: "ml", image: "/images/produits/creme-curl-150ml.jpg" },
-  { id: "gelee-curl-150ml", name: "Gelee Curl 150ml", defaultUnit: "ml", image: "/images/produits/gelee-curl-150ml.jpg" },
-  { id: "curl-huile-50ml", name: "Curl Huile 50ml", defaultUnit: "ml", image: "/images/produits/curl-huile-50ml.jpg" },
-  { id: "lotion-refresher-curl-190ml", name: "Lotion Refresher Curl 190ml", defaultUnit: "ml", image: "/images/produits/lotion-refresher-curl-190ml.jpg" },
-  { id: "masque-curl-200ml", name: "Masque Curl 200ml", defaultUnit: "ml", image: "/images/produits/masque-curl-200ml.jpg" },
-  { id: "k-alpha-bain-renovateur-250ml", name: "K Alpha Bain Renovateur 250ml", defaultUnit: "ml", image: "/images/produits/k-alpha-bain-renovateur-250ml.jpg" },
-  { id: "k-alpha-fondant-fluidity-200ml", name: "K Alpha Fondant Fluidity 200ml", defaultUnit: "ml", image: "/images/produits/k-alpha-fondant-fluidity-200ml.jpg" },
-  { id: "k-alpha-huile-lumiere-30ml", name: "K Alpha Huile Lumiere 30ml", defaultUnit: "ml", image: "/images/produits/k-alpha-huile-lumiere-30ml.jpg" },
-  { id: "k-alpha-lotion-jelly-250ml", name: "K Alpha Lotion Jelly 250ml", defaultUnit: "ml", image: "/images/produits/k-alpha-lotion-jelly-250ml.jpg" },
-  { id: "k-alpha-masque-fill-force-200ml", name: "K Alpha Masque Fill Force 200ml", defaultUnit: "ml", image: "/images/produits/k-alpha-masque-fill-force-200ml.jpg" },
-  { id: "k-alpha-serum-fondamental-90ml", name: "K Alpha Serum Fondamental 90ml", defaultUnit: "ml", image: "/images/produits/k-alpha-serum-fondamental-90ml.jpg" },
-  { id: "k-elixir-oil-75ml", name: "K Elixir Oil 75ml", defaultUnit: "ml", image: "/images/produits/k-elixir-oil-75ml.jpg" },
-  { id: "k-elixir-oil-30ml", name: "K Elixir Oil 30ml", defaultUnit: "ml", image: "/images/produits/k-elixir-oil-30ml.jpg" },
-  { id: "ker-elixir-ult-bain-250ml", name: "Ker Elixir ULT Bain 250ml", defaultUnit: "ml", image: "/images/produits/ker-elixir-ult-bain-250ml.jpg" },
-  { id: "ker-elixir-ult-masque-200ml", name: "Ker Elixir ULT Masque 200ml", defaultUnit: "ml", image: "/images/produits/ker-elixir-ult-masque-200ml.jpg" },
+  { id: "nutritive-8hmns-serum-90ml", name: "Nutritive 8HMNS Serum 90ml", defaultUnit: "ml", image: "/images/produits/nutritive-8hmns-serum-90ml.jpg", priceFcfa: 42000 },
+  { id: "nutritive-bain-riche-250ml", name: "Nutritive Bain Riche 250ml", defaultUnit: "ml", image: "/images/produits/nutritive-bain-riche-250ml.jpg", priceFcfa: 23000 },
+  { id: "nutritive-bain-satin-250ml", name: "Nutritive Bain Satin 250ml", defaultUnit: "ml", image: "/images/produits/nutritive-bain-satin-250ml.jpg", priceFcfa: 23000 },
+  { id: "nutritive-lait-vital-200ml", name: "Nutritive Lait Vital 200ml", defaultUnit: "ml", image: "/images/produits/nutritive-lait-vital-200ml.jpg", priceFcfa: 32000 },
+  { id: "nutritive-masque-riche-200ml", name: "Nutritive Masque Riche 200ml", defaultUnit: "ml", image: "/images/produits/nutritive-masque-riche-200ml.jpg", priceFcfa: 42000 },
+  { id: "nutritive-masque-intense-200ml", name: "Nutritive Masque Intense 200ml", defaultUnit: "ml", image: "/images/produits/nutritive-masque-intense-200ml.jpg", priceFcfa: 42000 },
+  { id: "nutritive-nectar-therm-150ml", name: "Nutritive Nectar Therm 150ml", defaultUnit: "ml", image: "/images/produits/nutritive-nectar-therm-150ml.jpg", priceFcfa: 32000 },
+  { id: "nutritive-scalp-serum-90ml", name: "Nutritive Scalp Serum 90ml", defaultUnit: "ml", image: "/images/produits/nutritive-scalp-serum-90ml.jpg", priceFcfa: 42000 },
+  { id: "nutritive-soin-150ml", name: "Nutritive Soin 150ml", defaultUnit: "ml", image: "/images/produits/nutritive-soin-150ml.jpg", priceFcfa: 32000 },
+  { id: "genesis-bain-riche-250ml", name: "Genesis Bain Riche 250ml", defaultUnit: "ml", image: "/images/produits/genesis-bain-riche-250ml.jpg", priceFcfa: 24000 },
+  { id: "genesis-cure-90ml", name: "Genesis Cure 90ml", defaultUnit: "ml", image: "/images/produits/genesis-cure-90ml.jpg", priceFcfa: 42000 },
+  { id: "genesis-fluide-150ml", name: "Genesis Fluide 150ml", defaultUnit: "ml", image: "/images/produits/genesis-fluide-150ml.jpg", priceFcfa: 32000 },
+  { id: "genesis-masque-200ml", name: "Genesis Masque 200ml", defaultUnit: "ml", image: "/images/produits/genesis-masque-200ml.jpg", priceFcfa: 42000 },
+  { id: "gloss-absolu-bain-250ml", name: "Gloss Absolu Bain 250ml", defaultUnit: "ml", image: "/images/produits/gloss-absolu-bain-250ml.jpg", priceFcfa: 24000 },
+  { id: "k-gloss-absolu-bain-riche-250ml", name: "K Gloss Absolu Bain Riche 250ml", defaultUnit: "ml", image: "/images/produits/k-gloss-absolu-bain-riche-250ml.jpg", priceFcfa: 24000 },
+  { id: "k-gloss-absolu-fondant-250ml", name: "K Gloss Absolu Fondant 250ml", defaultUnit: "ml", image: "/images/produits/k-gloss-absolu-fondant-250ml.jpg", priceFcfa: 32000 },
+  { id: "k-gloss-absolu-cream-250ml", name: "K Gloss Absolu Cream 250ml", defaultUnit: "ml", image: "/images/produits/k-gloss-absolu-cream-250ml.jpg", priceFcfa: 39000 },
+  { id: "k-gloss-absolu-hair-mist-30ml", name: "K Gloss Absolu Hair Mist 30ml", defaultUnit: "ml", image: "/images/produits/k-gloss-absolu-hair-mist-30ml.jpg", priceFcfa: 32000 },
+  { id: "k-gloss-absolu-masque-nutritive-200ml", name: "K Gloss Absolu Masque Nutritive 200ml", defaultUnit: "ml", image: "/images/produits/k-gloss-absolu-masque-nutritive-200ml.jpg", priceFcfa: 42000 },
+  { id: "k-gloss-absolu-oil-45ml", name: "K Gloss Absolu Oil 45ml", defaultUnit: "ml", image: "/images/produits/k-gloss-absolu-oil-45ml.jpg", priceFcfa: 35000 },
+  { id: "k-gloss-absolu-spray-190ml", name: "K Gloss Absolu Spray 190ml", defaultUnit: "ml", image: "/images/produits/k-gloss-absolu-spray-190ml.jpg", priceFcfa: 33000 },
+  { id: "k-symbiose-bain-creme-250ml", name: "K Symbiose Bain Creme 250ml", defaultUnit: "ml", image: "/images/produits/k-symbiose-bain-creme-250ml.jpg", priceFcfa: 24000 },
+  { id: "k-symbiose-bain-purete-250ml", name: "K Symbiose Bain Pureté 250ml", defaultUnit: "ml", image: "/images/produits/k-symbiose-bain-purete-250ml.jpg", priceFcfa: 24000 },
+  { id: "k-symbiose-fondant-hydra-200ml", name: "K Symbiose Fondant Hydra 200ml", defaultUnit: "ml", image: "/images/produits/k-symbiose-fondant-hydra-200ml.jpg", priceFcfa: 32000 },
+  { id: "k-symbiose-masque-200ml", name: "K Symbiose Masque 200ml", defaultUnit: "ml", image: "/images/produits/k-symbiose-masque-200ml.jpg", priceFcfa: 42000 },
+  { id: "k-symbiose-micropeel-200ml", name: "K Symbiose Micropeel 200ml", defaultUnit: "ml", image: "/images/produits/k-symbiose-micropeel-200ml.jpg", priceFcfa: 39000 },
+  { id: "k-symbiose-serum-90ml", name: "K Symbiose Serum 90ml", defaultUnit: "ml", image: "/images/produits/k-symbiose-serum-90ml.jpg", priceFcfa: 42000 },
+  { id: "k-chroma-absolu-bain-lim-us-250ml", name: "K Chroma Absolu Bain Lim US 250ml", defaultUnit: "ml", image: "/images/produits/k-chroma-absolu-bain-lim-us-250ml.jpg", priceFcfa: 23000 },
+  { id: "k-chroma-absolu-bain-opa-us-250ml", name: "K Chroma Absolu Bain OPA US 250ml", defaultUnit: "ml", image: "/images/produits/k-chroma-absolu-bain-opa-us-250ml.jpg", priceFcfa: 23000 },
+  { id: "k-chroma-absolu-fluide-250ml", name: "K Chroma Absolu Fluide 250ml", defaultUnit: "ml", image: "/images/produits/k-chroma-absolu-fluide-250ml.jpg", priceFcfa: 27000 },
+  { id: "k-chroma-absolu-fondant-200ml", name: "K Chroma Absolu Fondant 200ml", defaultUnit: "ml", image: "/images/produits/k-chroma-absolu-fondant-200ml.jpg", priceFcfa: 32000 },
+  { id: "k-chroma-absolu-leave-in-150ml", name: "K Chroma Absolu Leave In 150ml", defaultUnit: "ml", image: "/images/produits/k-chroma-absolu-leave-in-150ml.jpg", priceFcfa: 28000 },
+  { id: "k-chroma-absolu-mask-reco-200ml", name: "K Chroma Absolu Mask Reco 200ml", defaultUnit: "ml", image: "/images/produits/k-chroma-absolu-mask-reco-200ml.jpg", priceFcfa: 42000 },
+  { id: "k-chroma-oil-75ml", name: "K Chroma Oil 75ml", defaultUnit: "ml", image: "/images/produits/k-chroma-oil-75ml.jpg", priceFcfa: 42000 },
+  { id: "k-chroma-oil", name: "K Chroma Oil", defaultUnit: "application", priceFcfa: 35000 },
+  { id: "k-blond-absolu-night-serum-90ml", name: "K Blond Absolu Night Serum 90ml", defaultUnit: "ml", image: "/images/produits/k-blond-absolu-night-serum-90ml.jpg", priceFcfa: 42000 },
+  { id: "k-blond-oil-75ml", name: "K Blond Oil 75ml", defaultUnit: "ml", priceFcfa: 35000 },
+  { id: "k-blond-oil-75ml-2", name: "K Blond Oil 75ml", defaultUnit: "ml", image: "/images/produits/k-blond-oil-75ml-2.jpg", priceFcfa: 42000 },
+  { id: "ker-blond-bain-uviolet-250ml", name: "Ker Blond Bain Uviolet 250ml", defaultUnit: "ml", image: "/images/produits/ker-blond-bain-uviolet-250ml.jpg", priceFcfa: 24000 },
+  { id: "ker-blond-cicaflash-250ml", name: "Ker Blond Cicaflash 250ml", defaultUnit: "ml", image: "/images/produits/ker-blond-cicaflash-250ml.jpg", priceFcfa: 32000 },
+  { id: "ker-blond-cicaplasme-150ml", name: "Ker Blond Cicaplasme 150ml", defaultUnit: "ml", image: "/images/produits/ker-blond-cicaplasme-150ml.jpg", priceFcfa: 26000 },
+  { id: "ker-blond-masque-ultravio", name: "Ker Blond Masque Ultravio", defaultUnit: "application", image: "/images/produits/ker-blond-masque-ultravio.jpg", priceFcfa: 42000 },
+  { id: "k-chrono-oil-75ml", name: "K Chrono Oil 75ml", defaultUnit: "ml", priceFcfa: 51000 },
+  { id: "k-chrono-oil-75ml-2", name: "K Chrono Oil 75ml", defaultUnit: "ml", image: "/images/produits/k-chrono-oil-75ml-2.jpg", priceFcfa: 66000 },
+  { id: "k-chrono-bain-250ml", name: "K Chrono Bain 250ml", defaultUnit: "ml", image: "/images/produits/k-chrono-bain-250ml.jpg", priceFcfa: 27000 },
+  { id: "k-chrono-masque-200ml", name: "K Chrono Masque 200ml", defaultUnit: "ml", image: "/images/produits/k-chrono-masque-200ml.jpg", priceFcfa: 47000 },
+  { id: "k-chrono-pre-shampoing-200ml", name: "K Chrono Pre Shampoing 200ml", defaultUnit: "ml", image: "/images/produits/k-chrono-pre-shampoing-200ml.jpg", priceFcfa: 27000 },
+  { id: "ks-chrono-thermique-150ml", name: "KS Chrono Thermique 150ml", defaultUnit: "ml", image: "/images/produits/ks-chrono-thermique-150ml.jpg", priceFcfa: 32000 },
+  { id: "k-chrono-bain-250ml-2", name: "K Chrono Bain 250ml", defaultUnit: "ml", image: "/images/produits/k-chrono-bain-250ml-2.jpg", priceFcfa: 29000 },
+  { id: "ker-res-masque-force-archi-200ml", name: "Ker Res Masque Force Archi 200ml", defaultUnit: "ml", image: "/images/produits/ker-res-masque-force-archi-200ml.jpg", priceFcfa: 38000 },
+  { id: "ker-resist-bain-force-archi-250m", name: "Ker Resist Bain Force Archi 250m", defaultUnit: "application", image: "/images/produits/ker-resist-bain-force-archi-250m.jpg", priceFcfa: 23000 },
+  { id: "ker-resisr-ciment-anti-usure-200ml", name: "Ker Resisr Ciment Anti Usure 200ml", defaultUnit: "ml", image: "/images/produits/ker-resisr-ciment-anti-usure-200ml.jpg", priceFcfa: 31000 },
+  { id: "ker-res-serum-therapiste-2-15ml", name: "Ker Res Serum Therapiste 2*15ml", defaultUnit: "ml", image: "/images/produits/ker-res-serum-therapiste-2-15ml.jpg", priceFcfa: 32000 },
+  { id: "ker-res-serum-bain-therapiste-250ml", name: "Ker Res Serum Bain Therapiste 250ml", defaultUnit: "ml", image: "/images/produits/ker-res-serum-bain-therapiste-250ml.jpg", priceFcfa: 24000 },
+  { id: "bain-nourissant-curl-250ml", name: "Bain Nourissant Curl 250ml", defaultUnit: "ml", image: "/images/produits/bain-nourissant-curl-250ml.jpg", priceFcfa: 24000 },
+  { id: "creme-curl-150ml", name: "Creme Curl 150ml", defaultUnit: "ml", image: "/images/produits/creme-curl-150ml.jpg", priceFcfa: 32000 },
+  { id: "gelee-curl-150ml", name: "Gelee Curl 150ml", defaultUnit: "ml", image: "/images/produits/gelee-curl-150ml.jpg", priceFcfa: 32000 },
+  { id: "curl-huile-50ml", name: "Curl Huile 50ml", defaultUnit: "ml", image: "/images/produits/curl-huile-50ml.jpg", priceFcfa: 41000 },
+  { id: "lotion-refresher-curl-190ml", name: "Lotion Refresher Curl 190ml", defaultUnit: "ml", image: "/images/produits/lotion-refresher-curl-190ml.jpg", priceFcfa: 33000 },
+  { id: "masque-curl-200ml", name: "Masque Curl 200ml", defaultUnit: "ml", image: "/images/produits/masque-curl-200ml.jpg", priceFcfa: 41000 },
+  { id: "k-alpha-bain-renovateur-250ml", name: "K Alpha Bain Renovateur 250ml", defaultUnit: "ml", image: "/images/produits/k-alpha-bain-renovateur-250ml.jpg", priceFcfa: 32000 },
+  { id: "k-alpha-fondant-fluidity-200ml", name: "K Alpha Fondant Fluidity 200ml", defaultUnit: "ml", image: "/images/produits/k-alpha-fondant-fluidity-200ml.jpg", priceFcfa: 41000 },
+  { id: "k-alpha-huile-lumiere-30ml", name: "K Alpha Huile Lumiere 30ml", defaultUnit: "ml", image: "/images/produits/k-alpha-huile-lumiere-30ml.jpg", priceFcfa: 41000 },
+  { id: "k-alpha-lotion-jelly-250ml", name: "K Alpha Lotion Jelly 250ml", defaultUnit: "ml", image: "/images/produits/k-alpha-lotion-jelly-250ml.jpg", priceFcfa: 58000 },
+  { id: "k-alpha-masque-fill-force-200ml", name: "K Alpha Masque Fill Force 200ml", defaultUnit: "ml", image: "/images/produits/k-alpha-masque-fill-force-200ml.jpg", priceFcfa: 53000 },
+  { id: "k-alpha-serum-fondamental-90ml", name: "K Alpha Serum Fondamental 90ml", defaultUnit: "ml", image: "/images/produits/k-alpha-serum-fondamental-90ml.jpg", priceFcfa: 48000 },
+  { id: "k-elixir-oil-75ml", name: "K Elixir Oil 75ml", defaultUnit: "ml", image: "/images/produits/k-elixir-oil-75ml.jpg", priceFcfa: 41000 },
+  { id: "k-elixir-oil-30ml", name: "K Elixir Oil 30ml", defaultUnit: "ml", image: "/images/produits/k-elixir-oil-30ml.jpg", priceFcfa: 26000 },
+  { id: "ker-elixir-ult-bain-250ml", name: "Ker Elixir ULT Bain 250ml", defaultUnit: "ml", image: "/images/produits/ker-elixir-ult-bain-250ml.jpg", priceFcfa: 23000 },
+  { id: "ker-elixir-ult-masque-200ml", name: "Ker Elixir ULT Masque 200ml", defaultUnit: "ml", image: "/images/produits/ker-elixir-ult-masque-200ml.jpg", priceFcfa: 42000 },
   // Boissons — bar Beauty & Co (données b&co lib/data/bar-beauty.ts), vendues au détail (pas de recette).
   // Prix retail plausibles (aucune donnée de prix réelle n'existe côté point-de-vente).
   { id: "boisson-pure-glow", name: "Pure Glow", defaultUnit: "pièce", image: "/images/boissons/pure-glow.jpg", priceFcfa: 2500 },
@@ -193,14 +199,14 @@ export const products: Product[] = [
   // Autres marques + accessoires — vendus au détail, sans recette (repris de
   // point-de-vente/lib/data/menu.ts, catégories Saryna Keys / Nefertiti / Beccy
   // Wave / Autres — absents de la synchronisation initiale du 2026-09-04).
-  { id: "antiseptique-saryna-keys", name: "Antisceptique Saryna Keys", defaultUnit: "pièce", image: "/images/produits/antiseptique-saryna-keys.jpg" },
-  { id: "damage-repair-oil-saryna-keys", name: "Damage Repair Oil Saryna Keys", defaultUnit: "pièce", image: "/images/produits/damage-repair-oil-saryna-keys.jpg" },
-  { id: "nefertiti-kinky-straight", name: "Nefertiti Kinky Straight", defaultUnit: "pièce", image: "/images/produits/nefertiti-kinky-straight.jpg" },
-  { id: "hd-lace-frontal-nefertiti-kinky-straight", name: "HD Lace Frontal Nefertiti Kinky Straight", defaultUnit: "pièce", image: "/images/produits/hd-lace-frontal-nefertiti-kinky-straight.jpg" },
-  { id: "ready-made-ponytail-beccy-wave", name: "Ready Made Ponytail Beccy Wave", defaultUnit: "pièce", image: "/images/produits/ready-made-ponytail-beccy-wave.jpg" },
-  { id: "becky-wave-raw-hair", name: "Becky Wave Raw Hair", defaultUnit: "pièce", image: "/images/produits/becky-wave-raw-hair.jpg" },
-  { id: "correcteur-fluide-swiss-perfection-haute-couvrance", name: "Correcteur Fluide « Swiss Perfection » – Haute Couvrance", defaultUnit: "pièce", image: "/images/produits/correcteur-fluide-swiss-perfection-haute-couvrance.jpg" },
-  { id: "peigne-bijou-eclat-de-mariee-finition-or-rose", name: "Peigne Bijou « Éclat de Mariée » – Finition Or Rose", defaultUnit: "pièce", image: "/images/produits/peigne-bijou-eclat-de-mariee-finition-or-rose.jpg" },
+  { id: "antiseptique-saryna-keys", name: "Antisceptique Saryna Keys", defaultUnit: "pièce", image: "/images/produits/antiseptique-saryna-keys.jpg", priceFcfa: 3000 },
+  { id: "damage-repair-oil-saryna-keys", name: "Damage Repair Oil Saryna Keys", defaultUnit: "pièce", image: "/images/produits/damage-repair-oil-saryna-keys.jpg", priceFcfa: 30000 },
+  { id: "nefertiti-kinky-straight", name: "Nefertiti Kinky Straight", defaultUnit: "pièce", image: "/images/produits/nefertiti-kinky-straight.jpg", priceFcfa: 125000 },
+  { id: "hd-lace-frontal-nefertiti-kinky-straight", name: "HD Lace Frontal Nefertiti Kinky Straight", defaultUnit: "pièce", image: "/images/produits/hd-lace-frontal-nefertiti-kinky-straight.jpg", priceFcfa: 210000 },
+  { id: "ready-made-ponytail-beccy-wave", name: "Ready Made Ponytail Beccy Wave", defaultUnit: "pièce", image: "/images/produits/ready-made-ponytail-beccy-wave.jpg", priceFcfa: 125000 },
+  { id: "becky-wave-raw-hair", name: "Becky Wave Raw Hair", defaultUnit: "pièce", image: "/images/produits/becky-wave-raw-hair.jpg", priceFcfa: 78900 },
+  { id: "correcteur-fluide-swiss-perfection-haute-couvrance", name: "Correcteur Fluide « Swiss Perfection » – Haute Couvrance", defaultUnit: "pièce", image: "/images/produits/correcteur-fluide-swiss-perfection-haute-couvrance.jpg", priceFcfa: 38500 },
+  { id: "peigne-bijou-eclat-de-mariee-finition-or-rose", name: "Peigne Bijou « Éclat de Mariée » – Finition Or Rose", defaultUnit: "pièce", image: "/images/produits/peigne-bijou-eclat-de-mariee-finition-or-rose.jpg", priceFcfa: 26000 },
 ];
 
 export const productName = (id: string) =>
@@ -213,9 +219,10 @@ export const productPrice = (id: string) => products.find((p) => p.id === id)?.p
 export const productKind = (id: string): "produit" | "boisson" =>
   id.startsWith("boisson-") ? "boisson" : "produit";
 
-// Boissons du bar, seules à porter un prix de vente au détail — alimentent le
-// sélecteur d'extras de `rendezvous/BookingDialog.tsx` (un produit Kérastase
-// n'a pas de prix retail connu, cf. commentaire sur `Product.priceFcfa`).
+// Boissons du bar, seules proposées en extra de rendez-vous — alimentent le
+// sélecteur de `rendezvous/BookingDialog.tsx`. Tous les produits ont un prix
+// (cf. `Product.priceFcfa`), mais seules les boissons se vendent à la volée
+// pendant une visite dans ce projet.
 export const sellableExtras = products.filter((p) => productKind(p.id) === "boisson");
 
 /* ------------------------------------------------------------------ */
@@ -229,9 +236,23 @@ export type RecipeItem = {
   unit: RecipeUnit;
 };
 
+// Sous-catégorie d'un service (catégorie) — regroupement optionnel des
+// prestations à l'intérieur d'une colonne du tableau Kanban (ex. Coiffure →
+// Défrisage / Extensions & tissages / Soins capillaires…). Un service sans
+// sous-catégorie affiche ses prestations à plat.
+export type Subcategory = {
+  id: string;
+  name: string;
+};
+
 export type Prestation = {
   id: string;
   serviceId: string | null; // null = sans catégorie
+  // Sous-catégorie du service parent — n'a de sens que si `serviceId` est non
+  // nul et référence une entrée de `Service.subcategories`. `null`/absent =
+  // regroupée dans « Autres » (ou à plat si le service n'a pas de
+  // sous-catégories).
+  subcategoryId?: string | null;
   name: string;
   priceFcfa: number;
   durationMin: number;
@@ -263,11 +284,25 @@ export type Service = {
   description: string;
   active: boolean;
   salonIds: SalonId[]; // salons où le service est proposé
+  // Sous-catégories éditables, dans l'ordre d'affichage des lanes du Kanban.
+  // `[]` = pas de sous-catégorisation, les prestations s'affichent à plat.
+  subcategories: Subcategory[];
 };
 
 /* ------------------------------------------------------------------ */
 /* Fixtures — catégories réelles (Mini&Co · Hair + Mini&Co · Spa fusionnées)*/
 /* ------------------------------------------------------------------ */
+
+// Sous-catégories du service Coiffure — seul service assez fourni (41
+// prestations) pour que le regroupement en lanes apporte quelque chose ;
+// les autres catégories n'en ont pas par défaut (`subcategories: []`), la
+// sous-catégorisation étant une fonctionnalité optionnelle, pas systématique.
+export const SUB_COIFFURE_DEFRISAGE = "sub-coiffure-defrisage";
+export const SUB_COIFFURE_EXTENSIONS = "sub-coiffure-extensions-tissages";
+export const SUB_COIFFURE_COIFFAGE = "sub-coiffure-coiffage-poses";
+export const SUB_COIFFURE_SHAMPOING = "sub-coiffure-shampoing-brushing";
+export const SUB_COIFFURE_SOINS = "sub-coiffure-soins";
+export const SUB_COIFFURE_SUPPLEMENTS = "sub-coiffure-supplements";
 
 export const serviceSeeds: Service[] = [
   {
@@ -277,6 +312,14 @@ export const serviceSeeds: Service[] = [
     description: "Coupes, brushings, tresses, tissages, lissages et soins capillaires.",
     active: true,
     salonIds: ["almadies", "seaplaza"],
+    subcategories: [
+      { id: SUB_COIFFURE_DEFRISAGE, name: "Défrisage" },
+      { id: SUB_COIFFURE_EXTENSIONS, name: "Extensions & tissages" },
+      { id: SUB_COIFFURE_COIFFAGE, name: "Coiffage & poses" },
+      { id: SUB_COIFFURE_SHAMPOING, name: "Shampoing & brushing" },
+      { id: SUB_COIFFURE_SOINS, name: "Soins capillaires" },
+      { id: SUB_COIFFURE_SUPPLEMENTS, name: "Suppléments" },
+    ],
   },
   {
     id: "s-manucure",
@@ -285,6 +328,7 @@ export const serviceSeeds: Service[] = [
     description: "Soin des mains et des pieds, manucure et pédicure.",
     active: true,
     salonIds: ["almadies", "seaplaza"],
+    subcategories: [],
   },
   {
     id: "s-onglerie",
@@ -293,6 +337,7 @@ export const serviceSeeds: Service[] = [
     description: "Capsules, gel, vernis permanent et nail art.",
     active: true,
     salonIds: ["almadies", "seaplaza"],
+    subcategories: [],
   },
   {
     id: "s-spa",
@@ -301,6 +346,7 @@ export const serviceSeeds: Service[] = [
     description: "Massages, soins du dos et rituels bien-être.",
     active: true,
     salonIds: ["almadies", "seaplaza"],
+    subcategories: [],
   },
   {
     id: "s-visage",
@@ -309,6 +355,7 @@ export const serviceSeeds: Service[] = [
     description: "Nettoyage de peau, soins hydratants et anti-âge.",
     active: true,
     salonIds: ["almadies", "seaplaza"],
+    subcategories: [],
   },
   {
     id: "s-epilation",
@@ -317,6 +364,7 @@ export const serviceSeeds: Service[] = [
     description: "Épilation à la cire, visage et corps.",
     active: true,
     salonIds: ["almadies", "seaplaza"],
+    subcategories: [],
   },
   {
     id: "s-mini",
@@ -325,6 +373,7 @@ export const serviceSeeds: Service[] = [
     description: "L'univers beauté des enfants — coiffure et spa.",
     active: true,
     salonIds: ["almadies", "seaplaza"],
+    subcategories: [],
   },
 ];
 
@@ -467,6 +516,14 @@ const rawPrestations: Omit<Prestation, "salonIds">[] = [
 // Prestations éligibles « à deux praticiennes » — rallonges/extensions longues
 // où un travail à deux mains en simultané est plausible (même esprit que le
 // seed « Tissage Versatile » de point-de-vente, temps de chaise divisé par 2).
+// **Écart connu avec point-de-vente** (audit de parité 2026-09-22) :
+// `twoPractitionersEligible` y est `true` sur 77 des 107 prestations (donnée
+// réelle, `lib/data/menu.ts`), contre 8 ici (choix éditorial restreint aux cas
+// les plus évidents). Pas remonté à 77 en autonomie : ça ajoute un 2ᵉ
+// sélecteur praticienne à des dizaines de prestations dans `BookingDialog`/
+// `EditRdvDialog`, une zone tout juste stabilisée par la parité RDV/Planning
+// (commit `0e286e3`) — à trancher par l'utilisatrice, cf. CLAUDE.md § « Audit
+// de parité point-de-vente ».
 const TWO_PRACTITIONER_IDS = new Set([
   "coiffure-hybrid-extensions",
   "coiffure-extensions-tapes-2-paquets-de-cheveux-soit-100-g-18-pouces-coiffage",
@@ -478,12 +535,72 @@ const TWO_PRACTITIONER_IDS = new Set([
   "coiffure-head-spa-ultimate-deep-relaxation",
 ]);
 
+// Répartition des 41 prestations Coiffure dans les 6 sous-catégories
+// ci-dessus (voir `serviceSeeds`) — regroupement éditorial par famille de
+// geste. **Écart connu avec point-de-vente** (audit de parité 2026-09-22,
+// voir CLAUDE.md § « Audit de parité point-de-vente ») : `lib/data/menu.ts`
+// y porte bien un champ `subcategory` réel, mais avec 11 valeurs plus fines
+// (Défrisage/Luxury Extensions/Perruques/Brushing/Lissage/Coupe/Tresses/Nos
+// Rituels Soins/Tissage/Coiffure/Head Spa) que les 6 lanes éditoriales
+// ci-dessous — pas remonté à 11 lanes en autonomie : le nombre de lanes du
+// Kanban a déjà été vérifié par capture d'écran, et 6 lanes plus larges vs 11
+// plus fines est un arbitrage UX à trancher par l'utilisatrice, pas un bug.
+const COIFFURE_SUBCATEGORY_BY_ID: Record<string, string> = {
+  "coiffure-defrisage-professionnel-beauty-and-co-texlax": SUB_COIFFURE_DEFRISAGE,
+  "coiffure-defrisage-professionnel-soin-fortifiant-anti-casse": SUB_COIFFURE_DEFRISAGE,
+
+  "coiffure-hybrid-extensions": SUB_COIFFURE_EXTENSIONS,
+  "coiffure-extensions-tapes-2-paquets-de-cheveux-soit-100-g-18-pouces-coiffage": SUB_COIFFURE_EXTENSIONS,
+  "coiffure-extensions-tapes-3-paquets-de-cheveux-soit-150g-18-pouces-coiffage": SUB_COIFFURE_EXTENSIONS,
+  "coiffure-extension-aux-fils-2-paquets": SUB_COIFFURE_EXTENSIONS,
+  "coiffure-extensions-aux-fils-1-paquet": SUB_COIFFURE_EXTENSIONS,
+  "coiffure-extensions-anneaux-haute-couture-2-paquets": SUB_COIFFURE_EXTENSIONS,
+  "coiffure-enlever-anneaux": SUB_COIFFURE_EXTENSIONS,
+  "coiffure-tissage-ouvert": SUB_COIFFURE_EXTENSIONS,
+  "coiffure-tissage-rajout": SUB_COIFFURE_EXTENSIONS,
+  "coiffure-tissage-versatile": SUB_COIFFURE_EXTENSIONS,
+  "coiffure-flip-over-sew-in-tissage-ferme": SUB_COIFFURE_EXTENSIONS,
+  "coiffure-tissage-closure-behind-the-hair-line-new": SUB_COIFFURE_EXTENSIONS,
+  "coiffure-shampoing-brushing-sur-extensions-tissages-shampoing-inclus-et-obligatoire": SUB_COIFFURE_EXTENSIONS,
+
+  "coiffure-pose-perruque": SUB_COIFFURE_COIFFAGE,
+  "coiffure-soin-perruque": SUB_COIFFURE_COIFFAGE,
+  "coiffure-pose-u-part-wig": SUB_COIFFURE_COIFFAGE,
+  "coiffure-tresses-cheveux": SUB_COIFFURE_COIFFAGE,
+  "coiffure-ponytail": SUB_COIFFURE_COIFFAGE,
+  "coiffure-pose-clips": SUB_COIFFURE_COIFFAGE,
+  "coiffure-half-up-half-down": SUB_COIFFURE_COIFFAGE,
+  "coiffure-coupe-transformation": SUB_COIFFURE_COIFFAGE,
+
+  "coiffure-shampoing-brushing-shampoing-inclus-et-obligatoire": SUB_COIFFURE_SHAMPOING,
+  "coiffure-shampoing-sechage": SUB_COIFFURE_SHAMPOING,
+  "coiffure-supplement-lisseur": SUB_COIFFURE_SHAMPOING,
+  "coiffure-supplement-coupe-pointes": SUB_COIFFURE_SHAMPOING,
+
+  "coiffure-soin-keratine": SUB_COIFFURE_SOINS,
+  "coiffure-soin-croisiere": SUB_COIFFURE_SOINS,
+  "coiffure-soin-botox-lissant": SUB_COIFFURE_SOINS,
+  "coiffure-soin-complet": SUB_COIFFURE_SOINS,
+  "coiffure-soin-detox": SUB_COIFFURE_SOINS,
+  "coiffure-soin-botox-reparateur-non-lissant": SUB_COIFFURE_SOINS,
+  "coiffure-soin-lissant-tanin": SUB_COIFFURE_SOINS,
+  "coiffure-silk-press": SUB_COIFFURE_SOINS,
+  "coiffure-soin-croisiere-head-spa": SUB_COIFFURE_SOINS,
+  "coiffure-head-spa-ultimate-deep-relaxation": SUB_COIFFURE_SOINS,
+  "coiffure-soin-vip": SUB_COIFFURE_SOINS,
+  "coiffure-soin-reparateur-olapex-new-in": SUB_COIFFURE_SOINS,
+
+  "coiffure-supplement-hand-feet-massage-massage-pieds-mains": SUB_COIFFURE_SUPPLEMENTS,
+  "coiffure-supplement-express-floral-facial-soin-du-visage-relaxant": SUB_COIFFURE_SUPPLEMENTS,
+};
+
 // `salonIds: []` = héritée du service parent (aucune restriction propre à la
 // prestation) — le catalogue réel ne distingue pas les prestations par salon.
 export const prestationSeeds: Prestation[] = rawPrestations.map((p) => ({
   ...p,
   salonIds: [],
   twoPractitioners: TWO_PRACTITIONER_IDS.has(p.id),
+  subcategoryId: COIFFURE_SUBCATEGORY_BY_ID[p.id] ?? null,
 }));
 
 export const questionSeeds: ServiceQuestion[] = [
@@ -577,6 +694,37 @@ export const orphanPrestations = (prestations: Prestation[]) =>
 
 export const orphanQuestions = (questions: ServiceQuestion[]) =>
   questions.filter((q) => q.serviceId === null);
+
+// Lane d'un tableau Kanban catégorie : soit une vraie sous-catégorie, soit
+// « Autres » (`subcategory: null`) pour les prestations qui n'en ont pas ou
+// qui référencent une sous-catégorie supprimée depuis.
+export type SubcategoryGroup = {
+  subcategory: Subcategory | null;
+  prestations: Prestation[];
+};
+
+// Regroupe les prestations d'un service par sous-catégorie, dans l'ordre des
+// sous-catégories du service, suivi d'un groupe « Autres » s'il reste des
+// prestations non classées. Un service sans sous-catégorie renvoie un seul
+// groupe à plat (`subcategory: null`), affiché sans en-tête de lane par
+// l'écran Services.
+export function groupPrestationsBySubcategory(
+  service: Service,
+  prestations: Prestation[],
+): SubcategoryGroup[] {
+  const own = prestations.filter((p) => p.serviceId === service.id);
+  if (service.subcategories.length === 0) {
+    return own.length > 0 ? [{ subcategory: null, prestations: own }] : [];
+  }
+  const groups: SubcategoryGroup[] = service.subcategories.map((subcategory) => ({
+    subcategory,
+    prestations: own.filter((p) => p.subcategoryId === subcategory.id),
+  }));
+  const knownIds = new Set(service.subcategories.map((s) => s.id));
+  const rest = own.filter((p) => !p.subcategoryId || !knownIds.has(p.subcategoryId));
+  if (rest.length > 0) groups.push({ subcategory: null, prestations: rest });
+  return groups;
+}
 
 let seq = 0;
 export const newId = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${seq++}`;

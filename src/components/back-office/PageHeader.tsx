@@ -1,30 +1,21 @@
-import Link from "next/link";
 import React from "react";
 
 type Props = {
   title: string;
-  description?: string;
-  backHref?: string;
-  backLabel?: string;
+  // Contenu aligné à droite du titre : filtre salon, action primaire...
+  // (ex. Dashboard : filtre salon + « Nouveau RDV »).
+  actions?: React.ReactNode;
 };
 
-export default function PageHeader({ title, description, backHref, backLabel }: Props) {
+// Bandeau de titre commun à tous les écrans — carte bordée reprise du Figma
+// « Tableau de bord » (2026-09-21, ex-`dashboard/DashboardHeader`), étendue à
+// l'ensemble des écrans pour qu'un seul vocabulaire visuel de titre traverse
+// l'app. Pas de sous-titre explicatif : le titre seul suffit.
+export default function PageHeader({ title, actions }: Props) {
   return (
-    <div className="mb-6">
-      {backHref && (
-        <Link
-          href={backHref}
-          className="mb-3 inline-flex items-center gap-1.5 text-theme-sm text-gray-500 hover:text-gray-700"
-        >
-          ← {backLabel ?? "Retour"}
-        </Link>
-      )}
-      <div>
-        <h1 className="text-title-sm font-bold text-gray-900">{title}</h1>
-        {description && (
-          <p className="mt-1.5 max-w-2xl text-theme-sm text-gray-500">{description}</p>
-        )}
-      </div>
+    <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[#efe9e8] bg-white/95 px-6 py-4 shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]">
+      <h1 className="text-title-sm font-bold text-[#2d2626]">{title}</h1>
+      {actions && <div className="flex flex-wrap items-center gap-3">{actions}</div>}
     </div>
   );
 }

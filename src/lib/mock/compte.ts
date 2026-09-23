@@ -17,7 +17,8 @@ export type OwnerAccount = {
   role: string; // « Propriétaire » — affiché partout, non modifiable (compte unique)
   email: string;
   phone: string;
-  avatarUrl: string; // photo affichée dans le header ; pas d'import réel (front-end)
+  avatarUrl: string; // photo de session (import fonctionnel, cf. `Compte.tsx`), "" = pas de photo
+  password: string; // mot de passe de session — jamais persisté, sert juste à valider le champ « actuel »
   notify: NotifyChannels;
 };
 
@@ -26,7 +27,8 @@ export const defaultAccount: OwnerAccount = {
   role: "Propriétaire",
   email: "sokhna.ndour@beautyandco.sn",
   phone: "+221 77 402 15 60",
-  avatarUrl: "/images/avatar.png",
+  avatarUrl: "",
+  password: "beautyco2026",
   notify: { email: true, sms: true, whatsapp: false },
 };
 
@@ -53,14 +55,19 @@ export const isValidPhone = (v: string): boolean => {
 export const PASSWORD_MIN = 8;
 
 // Contrôle du changement de mot de passe. Renvoie le premier problème rencontré
-// (ordre : champ actuel → longueur → différence → confirmation), ou null si tout
-// est bon.
+// (ordre : champ actuel → correspondance réelle → longueur → différence →
+// confirmation), ou null si tout est bon. `actual` = mot de passe de session
+// réellement en vigueur (`OwnerAccount.password`) — le champ « actuel » doit y
+// correspondre, comme côté point-de-vente (`verifyPassword`), pas juste être
+// non vide.
 export function passwordError(
+  actual: string,
   current: string,
   next: string,
   confirm: string,
 ): string | null {
   if (!current) return "Saisissez votre mot de passe actuel.";
+  if (current !== actual) return "Mot de passe actuel incorrect.";
   if (next.length < PASSWORD_MIN)
     return `Le nouveau mot de passe doit faire au moins ${PASSWORD_MIN} caractères.`;
   if (next === current)

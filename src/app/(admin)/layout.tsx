@@ -5,6 +5,7 @@ import { LocationProvider } from "@/context/LocationContext";
 import { AccountProvider } from "@/context/AccountContext";
 import { NotificationsProvider } from "@/context/NotificationsContext";
 import { PlanningProvider } from "@/context/PlanningContext";
+import { ClientsProvider } from "@/context/ClientsContext";
 import AppHeader from "@/layout/AppHeader";
 import AppSidebar from "@/layout/AppSidebar";
 import Backdrop from "@/layout/Backdrop";
@@ -31,23 +32,25 @@ export default function AdminLayout({
       <AccountProvider>
         <NotificationsProvider>
           <PlanningProvider>
-            <div className="min-h-screen xl:flex">
-              {/* Sidebar and Backdrop */}
-              <AppSidebar />
-              <Backdrop />
-              {/* Main Content Area */}
-              <div
-                className={`flex-1 transition-all  duration-300 ease-in-out print:!ml-0 ${mainContentMargin}`}
-              >
-                {/* Header */}
-                <AppHeader />
-                {/* Page Content */}
-                <div className="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6 print:p-0">
-                  {children}
+            <ClientsProvider>
+              <div className="min-h-screen xl:flex">
+                {/* Sidebar and Backdrop */}
+                <AppSidebar />
+                <Backdrop />
+                {/* Main Content Area */}
+                <div
+                  className={`flex-1 transition-all  duration-300 ease-in-out print:!ml-0 ${mainContentMargin}`}
+                >
+                  {/* Header */}
+                  <AppHeader />
+                  {/* Page Content */}
+                  <div className="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6 print:p-0">
+                    {children}
+                  </div>
                 </div>
               </div>
-            </div>
-            {modal}
+              {modal}
+            </ClientsProvider>
           </PlanningProvider>
         </NotificationsProvider>
       </AccountProvider>

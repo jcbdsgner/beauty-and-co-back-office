@@ -5,6 +5,7 @@ import React, { useState } from "react";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import { useAccount } from "@/context/AccountContext";
+import { accountInitials } from "@/lib/mock/compte";
 
 export default function UserDropdown() {
   const { account } = useAccount();
@@ -25,8 +26,19 @@ export default function UserDropdown() {
         onClick={toggleDropdown}
         className="dropdown-toggle flex items-center rounded-full text-gray-700 transition-colors hover:bg-gray-50"
       >
-        <span className="mr-3 h-11 w-11 overflow-hidden rounded-full ring-2 ring-brand-100">
-          <Image width={44} height={44} src={account.avatarUrl} alt={account.name} />
+        <span className="mr-3 flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-100 text-sm font-semibold text-brand-700 ring-2 ring-brand-100">
+          {account.avatarUrl ? (
+            <Image
+              width={44}
+              height={44}
+              src={account.avatarUrl}
+              alt={account.name}
+              unoptimized
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            accountInitials(account.name)
+          )}
         </span>
         <span className="mr-1 block text-theme-sm font-medium">{account.name}</span>
         <svg

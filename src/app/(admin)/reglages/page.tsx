@@ -5,7 +5,7 @@ import Reglages from "@/components/back-office/Reglages";
 export const metadata: Metadata = {
   title: "Réglages",
   description:
-    "Réglages Beauty & Co — paiement (encaissement, acompte, PayPal) et modèles d'email. Démo front-end, données fictives.",
+    "Réglages Beauty & Co — paiement (encaissement, acompte, Wave, Orange Money) et modèles d'email. Démo front-end, données fictives.",
 };
 
 export default function ReglagesPage() {

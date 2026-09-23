@@ -74,13 +74,23 @@ export default function Salons() {
     <div className="space-y-6">
       <PageHeader
         title="Salons"
-        description="Coordonnées, capacité par type de poste, heures d'ouverture et fermetures exceptionnelles de chaque salon."
+        actions={
+          <button
+            type="button"
+            onClick={() => setView({ kind: "new" })}
+            className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-theme-sm font-medium text-white transition hover:bg-brand-600"
+          >
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            Ajouter un salon
+          </button>
+        }
       />
       <SalonsList
         configs={configs}
         closures={closures}
         onOpen={(id) => setView({ kind: "detail", id })}
-        onAdd={() => setView({ kind: "new" })}
       />
     </div>
   );

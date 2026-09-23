@@ -1383,6 +1383,14 @@ export function clients(scope: SalonScope): ClientRow[] {
   return CLIENT_SEEDS.filter((c) => scope === "all" || c.salon === scope).map(toClientRow);
 }
 
+// Cliente créée il y a ≤ 30 jours — filtre « Nouvelles » de /clients, aligné
+// sur le filtre équivalent de point-de-vente (`FILTERS`, `repertoire-view.tsx`).
+export const isNewClient = (row: ClientRow): boolean => daysSinceIso(row.since) <= 30;
+
+// Identifiant d'une cliente créée en session (même convention que
+// `newStaffId`/`newRequestId`/`newAbsenceId` dans les autres modules mock).
+export const newClientId = () => `c-${Date.now().toString(36)}`;
+
 // Répartition des rendez-vous par statut, pour la fiche cliente.
 export type ClientVisitStats = {
   total: number;

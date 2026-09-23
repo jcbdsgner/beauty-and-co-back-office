@@ -1,43 +1,38 @@
 "use client";
 
-import { Sparkles } from "lucide-react";
-import { groupThousands, popularServices, type SalonScope } from "@/lib/mock/beautyandco";
+import { popularServices, type SalonScope } from "@/lib/mock/beautyandco";
 
+// Restylé sur le Figma node 286:249 : bandeau titre + sous-titre + pastille
+// « Tendances du mois », barres pleine largeur (pas de rang numéroté ni de
+// compteur brut — juste le nom et le %, cf. mock). Données réelles inchangées
+// (`popularServices(scope)`), seule la mise en forme change.
 export default function PopularServices({ scope }: { scope: SalonScope }) {
-  const { total, caption, items } = popularServices(scope);
-  const max = Math.max(...items.map((s) => s.count));
+  const { items } = popularServices(scope);
 
   return (
-    <div className="h-full rounded-2xl border border-gray-100 bg-white px-5 pt-5 pb-6 shadow-[var(--shadow-card)] sm:px-6 sm:pt-6">
-      <div className="flex items-start gap-3">
-        <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-500">
-          <Sparkles className="h-[18px] w-[18px]" />
-        </span>
-        <div>
-          <h3 className="text-lg font-semibold text-gray-800">Prestations populaires</h3>
-          <p className="mt-1 text-theme-sm text-gray-500">
-            {groupThousands(total)} {caption}
-          </p>
-        </div>
+    <div className="rounded-xl border border-[#efe9e8] bg-white p-6 shadow-[0px_2px_8px_-2px_rgba(90,66,66,0.04),0px_1px_3px_0px_rgba(90,66,66,0.02)]">
+      <div>
+        <h3 className="text-[18px] font-semibold text-[#2d2626]">Prestations Populaires</h3>
+        <p className="mt-0.5 text-[13px] text-[#6a6060]">
+          Répartition des demandes sur les 30 derniers jours
+        </p>
       </div>
 
-      <div className="mt-6 space-y-5">
-        {items.map((service, i) => (
+      <div className="mt-5 flex flex-col gap-4">
+        {items.map((service) => (
           <div key={service.name}>
-            <div className="flex items-center gap-3 text-theme-sm">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-50 text-theme-xs font-semibold text-brand-700">
-                {i + 1}
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[12px] font-semibold tracking-wide text-[#2d2626]">
+                {service.name}
               </span>
-              <span className="flex-1 truncate font-medium text-gray-700">{service.name}</span>
-              <span className="shrink-0 text-gray-500">
-                {service.count}
-                <span className="ml-1 text-gray-400">({service.share} %)</span>
+              <span className="shrink-0 text-[12px] font-bold tracking-wide text-[#5a4242]">
+                {service.share}&nbsp;%
               </span>
             </div>
-            <div className="mt-2 ml-9 h-2 w-[calc(100%-2.25rem)] rounded-full bg-brand-50">
+            <div className="mt-1.5 h-2.5 overflow-hidden rounded-full bg-[#eee]">
               <div
-                className="h-2 rounded-full bg-brand-500"
-                style={{ width: `${Math.round((service.count / max) * 100)}%` }}
+                className="h-full rounded-full bg-brand-500"
+                style={{ width: `${service.share}%` }}
               />
             </div>
           </div>

@@ -28,13 +28,6 @@ const SECTION_OPTIONS: SegmentedOption<Section>[] = [
   { value: "emails", label: "Emails" },
 ];
 
-const SECTION_DESCRIPTIONS: Record<Section, string> = {
-  paiement:
-    "Encaissement en ligne des réservations, acompte demandé à la cliente et règlement PayPal.",
-  emails:
-    "Le texte des emails envoyés aux clientes et le réglage de leurs envois.",
-};
-
 export default function Reglages() {
   const searchParams = useSearchParams();
   const initialSection: Section =
@@ -56,7 +49,7 @@ export default function Reglages() {
   return (
     <div className="space-y-6">
       <div>
-        <PageHeader title="Réglages" description={SECTION_DESCRIPTIONS[section]} />
+        <PageHeader title="Réglages" />
         <SegmentedControl
           options={SECTION_OPTIONS}
           value={section}
