@@ -51,13 +51,6 @@ import HorizontaLDots from "./horizontal-dots.svg";
 import ChatIcon from "./chat.svg";
 import MoreDotIcon from "./more-dot.svg";
 import BellIcon from "./bell.svg";
-import ServiceCoiffureIcon from "./service-coiffure.svg";
-import ServiceManucurePedicureIcon from "./service-manucure-pedicure.svg";
-import ServiceOnglerieIcon from "./service-onglerie.svg";
-import ServiceSpaIcon from "./service-spa.svg";
-import ServiceVisageIcon from "./service-visage.svg";
-import ServiceEpilationIcon from "./service-epilation.svg";
-import ServiceMiniIcon from "./service-mini.svg";
 
 export {
   DownloadIcon,
@@ -113,11 +106,4 @@ export {
   HorizontaLDots,
   ChevronUpIcon,
   ChatIcon,
-  ServiceCoiffureIcon,
-  ServiceManucurePedicureIcon,
-  ServiceOnglerieIcon,
-  ServiceSpaIcon,
-  ServiceVisageIcon,
-  ServiceEpilationIcon,
-  ServiceMiniIcon,
 };

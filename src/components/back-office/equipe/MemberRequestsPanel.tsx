@@ -102,7 +102,7 @@ function PendingCard({
       : 0;
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-warning-200 bg-warning-50">
+    <div className="overflow-hidden rounded-box border border-warning-200 bg-warning-50">
       <div className="flex items-stretch gap-6 p-5">
         {/* Contenu de la demande */}
         <div className="min-w-0 flex-1">
@@ -111,10 +111,10 @@ function PendingCard({
               <KindIcon kind={request.kind} />
             </span>
             <div className="min-w-0">
-              <p className="text-base font-semibold text-gray-900">
+              <p className="text-base font-semibold text-base-content">
                 {requestTitle(request.kind)}
               </p>
-              <p className="mt-0.5 flex items-center gap-2 text-theme-xs text-gray-500">
+              <p className="mt-0.5 flex items-center gap-2 text-xs text-base-content/60">
                 <Badge size="sm" variant="solid" color="warning">
                   En attente
                 </Badge>
@@ -125,34 +125,34 @@ function PendingCard({
 
           {/* Le chiffre de la décision : montant, ou dates + durée */}
           <div className="mt-4 flex items-baseline gap-2.5">
-            <span className="text-2xl font-bold tabular-nums text-gray-900">
+            <span className="text-2xl font-bold tabular-nums text-base-content">
               {isLeave && hasRange
                 ? leaveRange(request.from!, request.to!)
                 : fcfa(request.amountFcfa ?? 0)}
             </span>
             {isLeave && hasRange && (
-              <span className="rounded-md bg-warning-100 px-1.5 py-0.5 text-theme-xs font-medium text-warning-700">
+              <span className="rounded-md bg-warning-100 px-1.5 py-0.5 text-xs font-medium text-warning-700">
                 {days} jour{days > 1 ? "s" : ""}
               </span>
             )}
           </div>
 
           {request.note && (
-            <p className="mt-3.5 rounded-lg border border-warning-100 bg-white px-3.5 py-2.5 text-theme-sm text-gray-600">
+            <p className="mt-3.5 rounded-lg border border-warning-100 bg-white px-3.5 py-2.5 text-sm text-base-content/70">
               <span className="italic">«&nbsp;{request.note}&nbsp;»</span>
-              <span className="text-gray-400"> — {memberFirstName}</span>
+              <span className="text-base-content/45"> — {memberFirstName}</span>
             </p>
           )}
 
           {conflicts > 0 && (
-            <p className="mt-3 flex items-start gap-2 rounded-lg border border-warning-200 bg-white px-3.5 py-2.5 text-theme-xs text-warning-800">
+            <p className="mt-3 flex items-start gap-2 rounded-lg border border-warning-200 bg-white px-3.5 py-2.5 text-xs text-warning-800">
               <AlertIcon className="mt-px h-4 w-4 shrink-0" />
               <span>
                 {memberFirstName} a déjà {conflicts} rendez-vous programmé
                 {conflicts > 1 ? "s" : ""} sur cette période.{" "}
                 <Link
                   href="/rendez-vous"
-                  className="font-semibold text-brand-600 underline hover:text-brand-700"
+                  className="font-semibold text-brand-600 underline hover:text-secondary"
                 >
                   Voir les rendez-vous
                 </Link>
@@ -165,10 +165,10 @@ function PendingCard({
         <div className="flex w-44 shrink-0 flex-col justify-center gap-2 border-l border-warning-200 pl-6">
           {confirmRefuse ? (
             <>
-              <p className="text-theme-xs font-medium text-gray-600">
+              <p className="text-xs font-medium text-base-content/70">
                 Refuser cette demande&nbsp;?
               </p>
-              <div className="flex items-center gap-3 text-theme-sm">
+              <div className="flex items-center gap-3 text-sm">
                 <button
                   type="button"
                   onClick={() => {
@@ -182,7 +182,7 @@ function PendingCard({
                 <button
                   type="button"
                   onClick={() => setConfirmRefuse(false)}
-                  className="font-medium text-gray-500 hover:underline"
+                  className="font-medium text-base-content/60 hover:underline"
                 >
                   Annuler
                 </button>
@@ -193,14 +193,14 @@ function PendingCard({
               <button
                 type="button"
                 onClick={() => onDecide(request.id, "acceptee")}
-                className="w-full rounded-lg bg-brand-500 px-4 py-2.5 text-center text-theme-sm font-medium text-white transition hover:bg-brand-600"
+                className="btn btn-primary btn-sm normal-case text-[15px] font-semibold active:scale-[0.97] disabled:!bg-base-200 disabled:!text-base-content/40 w-full"
               >
                 Accepter
               </button>
               <button
                 type="button"
                 onClick={() => setConfirmRefuse(true)}
-                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-center text-theme-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                className="btn btn-outline btn-sm normal-case text-[15px] font-semibold border-base-300 text-secondary hover:!bg-base-200 hover:!border-base-300 hover:!text-secondary active:scale-[0.97] w-full"
               >
                 Refuser
               </button>
@@ -237,29 +237,29 @@ export default function MemberRequestsPanel({
           {sorted.map((r) => (
             <li
               key={r.id}
-              className="flex items-start gap-4 rounded-xl border border-gray-200 px-4 py-3.5"
+              className="flex items-start gap-4 rounded-xl border border-base-300 px-4 py-3.5"
             >
-              <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-500 [&_svg]:h-4 [&_svg]:w-4">
+              <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-base-content/60 [&_svg]:h-4 [&_svg]:w-4">
                 <KindIcon kind={r.kind} />
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-sm font-semibold text-gray-800">
+                  <p className="text-sm font-semibold text-base-content">
                     {STAFF_REQUEST_LABELS[r.kind]}
                   </p>
                   <Badge size="sm" color={STATUS_TONE[r.status]}>
                     {STAFF_REQUEST_STATUS_LABELS[r.status]}
                   </Badge>
                 </div>
-                <p className="mt-0.5 text-theme-sm text-gray-600">
+                <p className="mt-0.5 text-sm text-base-content/70">
                   {requestSummary(r)}
                 </p>
                 {r.note && (
-                  <p className="mt-1.5 text-theme-xs italic text-gray-500">
+                  <p className="mt-1.5 text-xs italic text-base-content/60">
                     «&nbsp;{r.note}&nbsp;»
                   </p>
                 )}
-                <p className="mt-1.5 text-theme-xs text-gray-400">
+                <p className="mt-1.5 text-xs text-base-content/45">
                   Déposée le {frLongDate(r.submittedAt.slice(0, 10))}
                   {r.decidedAt
                     ? ` · ${

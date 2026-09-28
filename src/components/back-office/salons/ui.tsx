@@ -17,6 +17,7 @@ export {
   btnPrimary,
   btnGhost,
 } from "../fidelite/ui";
+import { BackButton as SharedBackButton } from "../fidelite/ui";
 
 export function BackButton({
   onClick,
@@ -25,19 +26,11 @@ export function BackButton({
   onClick: () => void;
   label?: string;
 }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="mb-3 inline-flex items-center gap-1.5 text-theme-sm text-gray-500 transition hover:text-gray-700"
-    >
-      ← {label}
-    </button>
-  );
+  return <SharedBackButton onClick={onClick} label={label} />;
 }
 
 export const timeFieldClass =
-  "h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10";
+  "input input-sm w-auto bg-base-100 text-sm";
 
 const WEEKDAY_BY_JS_DAY: Weekday[] = ["dim", "lun", "mar", "mer", "jeu", "ven", "sam"];
 

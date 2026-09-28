@@ -1,7 +1,20 @@
 "use client";
 
 import React from "react";
-import { ChevronDownIcon, TrashBinIcon } from "@/icons";
+import { ChevronLeft } from "lucide-react";
+import { TrashBinIcon } from "@/icons";
+import { Card } from "@/components/ui/atoms/card";
+import { Switch } from "@/components/ui/atoms/switch";
+import { TextInput as PdvTextInput } from "@/components/ui/atoms/text-input";
+import { Select } from "@/components/ui/atoms/select";
+import { Field } from "@/components/ui/molecules/field";
+import { buttonVariants } from "@/components/ui/atoms/button";
+import { cn } from "@/lib/utils";
+
+// Primitives de formulaire / liste éditable partagées par Fidélité, Services,
+// Équipe, Stock et Salons. Depuis le 2026-09-27, bâties sur les composants de
+// point-de-vente (`@/components/ui/atoms|molecules`) — mêmes API qu'avant pour
+// les consommateurs.
 
 /* -------------------------------------------------------------- carte de section */
 
@@ -15,22 +28,24 @@ export function SectionCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white">
-      <div className="border-b border-gray-100 px-6 py-5">
-        <h2 className="text-lg font-semibold text-gray-800">{title}</h2>
+    <Card>
+      <div className="border-b border-base-300 px-6 py-5">
+        <h2 className="text-lg font-semibold text-base-content">{title}</h2>
         {description && (
-          <p className="mt-1 max-w-xl text-theme-sm text-gray-500">{description}</p>
+          <p className="mt-1 max-w-xl text-sm text-base-content/60">{description}</p>
         )}
       </div>
       <div className="p-6">{children}</div>
-    </div>
+    </Card>
   );
 }
 
-export const Divider = () => <div className="-mx-6 border-t border-gray-100" />;
+export const Divider = () => <div className="-mx-6 border-t border-base-300" />;
 
 /* ------------------------------------------------------------------- interrupteur */
 
+// `Switch` de point-de-vente ; sa zone de clic de 56px (caisse tactile) est
+// ramenée à la piste elle-même (`size-auto`), poste desktop à la souris.
 export function Toggle({
   checked,
   onChange,
@@ -43,23 +58,13 @@ export function Toggle({
   "aria-label"?: string;
 }) {
   return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={ariaLabel}
+    <Switch
+      checked={checked}
+      onChange={onChange}
       disabled={disabled}
-      onClick={() => onChange(!checked)}
-      className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
-        checked ? "bg-brand-500" : "bg-gray-200"
-      } ${disabled ? "cursor-not-allowed opacity-50" : ""}`}
-    >
-      <span
-        className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-theme-xs transition-all ${
-          checked ? "left-[22px]" : "left-0.5"
-        }`}
+      label={ariaLabel ?? ""}
+      className="size-auto"
       />
-    </button>
   );
 }
 
@@ -77,9 +82,9 @@ export function SettingRow({
   return (
     <div className="flex items-start justify-between gap-6">
       <div className="min-w-0">
-        <p className="text-sm font-medium text-gray-800">{title}</p>
+        <p className="text-sm font-medium text-base-content">{title}</p>
         {description && (
-          <p className="mt-0.5 text-theme-xs text-gray-500">{description}</p>
+          <p className="mt-0.5 text-xs text-base-content/55">{description}</p>
         )}
       </div>
       <div className="shrink-0 pt-0.5">{control}</div>
@@ -88,9 +93,6 @@ export function SettingRow({
 }
 
 /* ----------------------------------------------------------------------- champs */
-
-const fieldClass =
-  "h-11 w-full rounded-lg border border-gray-300 bg-white px-4 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10";
 
 export function TextInput({
   label,
@@ -112,29 +114,29 @@ export function TextInput({
   const autoId = id ?? `f-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
   return (
     <div>
-      <label htmlFor={autoId} className="mb-1.5 block text-sm font-medium text-gray-800">
-        {label}
-      </label>
-      <input
+      <Field label={label}>
+        <PdvTextInput
         id={autoId}
         type="text"
         inputMode={inputMode}
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className={fieldClass}
       />
-      {hint && <p className="mt-1.5 text-theme-xs text-gray-500">{hint}</p>}
+      </Field>
+      {hint && <p className="mt-1.5 text-xs text-base-content/55">{hint}</p>}
     </div>
   );
 }
+
+// Radix Select refuse `value=""` : une option vide passe par une sentinelle.
+const EMPTY = "__vide__";
 
 export function SelectField<T extends string>({
   label,
   value,
   onChange,
   options,
-  id,
 }: {
   label: string;
   value: T;
@@ -142,38 +144,47 @@ export function SelectField<T extends string>({
   options: { value: T; label: string }[];
   id?: string;
 }) {
-  const autoId = id ?? `s-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
   return (
-    <div>
-      <label htmlFor={autoId} className="mb-1.5 block text-sm font-medium text-gray-800">
-        {label}
-      </label>
-      <div className="relative">
-        <select
-          id={autoId}
-          value={value}
-          onChange={(e) => onChange(e.target.value as T)}
-          className={`${fieldClass} appearance-none pr-10`}
-        >
-          {options.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
-        <ChevronDownIcon className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
-      </div>
-    </div>
+    <Field label={label}>
+      <Select
+        value={value === "" ? EMPTY : value}
+        onChange={(v) => onChange((v === EMPTY ? "" : v) as T)}
+        options={options.map((o) => ({ value: o.value === "" ? EMPTY : o.value, label: o.label }))}
+      />
+    </Field>
   );
 }
 
 /* ---------------------------------------------------------------------- boutons */
 
-export const btnPrimary =
-  "inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-theme-sm font-medium text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:bg-brand-300";
+// Classes du `Button` de point-de-vente (daisyUI `btn`), pour les `<button>` /
+// `<Link>` écrits à la main.
+export const btnPrimary = buttonVariants({ variant: "brand", size: "sm" });
 
-export const btnGhost =
-  "inline-flex items-center rounded-lg px-4 py-2.5 text-theme-sm font-medium text-gray-600 transition hover:bg-gray-50 hover:text-gray-900";
+export const btnGhost = cn(
+  "btn btn-ghost btn-sm normal-case text-[15px] font-semibold text-base-content/70 hover:text-base-content",
+  "disabled:!bg-transparent disabled:!text-base-content/40",
+  );
+
+// Bouton secondaire bordé — `Button variant="outline"` de point-de-vente.
+export const btnOutline = buttonVariants({ variant: "outline", size: "sm" });
+
+/* --------------------------------------------------------- retour (flux pleine page) */
+
+// Pastille bordée de point-de-vente (`BoardHeader` → `backHref`) : le libellé
+// nomme la destination (« Équipe », « Stock »…), jamais un « Retour » générique.
+export function BackButton({ onClick, label }: { onClick: () => void; label: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="mb-4 flex h-10 w-fit shrink-0 items-center gap-1.5 rounded-field border border-base-300 bg-white px-3.5 text-sm font-medium text-base-content/60 transition hover:bg-base-200 active:scale-[0.97]"
+    >
+      <ChevronLeft aria-hidden className="size-4" />
+        {label}
+    </button>
+  );
+}
 
 /* -------------------------------- ligne d'une liste éditable (palier / récompense) */
 
@@ -197,14 +208,14 @@ export function EditableRow({
   deleteLabel: string;
 }) {
   return (
-    <li className="flex items-center gap-4 rounded-xl border border-gray-200 px-4 py-3.5">
+    <li className="flex items-center gap-4 rounded-box border border-base-300 bg-base-100 px-4 py-3.5">
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-gray-800">{title}</p>
-        <p className="mt-0.5 text-theme-xs text-gray-500">{subtitle}</p>
+        <p className="truncate text-sm font-semibold text-base-content">{title}</p>
+        <p className="mt-0.5 text-xs text-base-content/55">{subtitle}</p>
       </div>
       {confirming ? (
-        <span className="flex shrink-0 items-center gap-2 text-theme-xs">
-          <span className="text-gray-500">Supprimer&nbsp;?</span>
+        <span className="flex shrink-0 items-center gap-2 text-xs">
+          <span className="text-base-content/60">Supprimer&nbsp;?</span>
           <button
             type="button"
             onClick={onConfirmDelete}
@@ -215,7 +226,7 @@ export function EditableRow({
           <button
             type="button"
             onClick={onCancelDelete}
-            className="font-medium text-gray-500 hover:underline"
+            className="font-medium text-base-content/60 hover:underline"
           >
             Non
           </button>
@@ -225,7 +236,7 @@ export function EditableRow({
           <button
             type="button"
             onClick={onEdit}
-            className="rounded-lg px-2.5 py-1.5 text-theme-xs font-medium text-gray-600 transition hover:bg-gray-50 hover:text-gray-900"
+            className="btn btn-ghost btn-sm normal-case font-semibold text-base-content/70"
           >
             Modifier
           </button>
@@ -233,7 +244,7 @@ export function EditableRow({
             type="button"
             onClick={onAskDelete}
             aria-label={deleteLabel}
-            className="rounded-lg p-1.5 text-gray-400 transition hover:bg-error-50 hover:text-error-600"
+            className="btn btn-ghost btn-sm btn-square text-base-content/45 hover:bg-error/10 hover:text-error"
           >
             <TrashBinIcon className="size-4" />
           </button>
@@ -247,7 +258,7 @@ export function EditableRow({
 
 export function EmptyList({ children }: { children: React.ReactNode }) {
   return (
-    <p className="rounded-xl border border-dashed border-gray-200 px-4 py-10 text-center text-theme-sm text-gray-500">
+    <p className="rounded-box border-2 border-dashed border-base-300 px-4 py-10 text-center text-sm text-base-content/55">
       {children}
     </p>
   );

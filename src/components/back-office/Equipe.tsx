@@ -1,32 +1,19 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import PageHeader from "@/components/back-office/PageHeader";
-import SegmentedControl, {
-  type SegmentedOption,
-} from "@/components/ui/segmented/SegmentedControl";
+import PageTabs from "@/components/back-office/PageTabs";
 import { PlusIcon } from "@/icons";
 import { useLocation } from "@/context/LocationContext";
-import { usePlanningData } from "@/context/PlanningContext";
-import {
-  members as memberSeeds,
-  type Member,
-  type StaffRole,
-} from "@/lib/mock/staff";
+import { useAutorisations } from "@/context/AutorisationsContext";
+import { members as memberSeeds, type Member } from "@/lib/mock/staff";
 import { rdvCountByStaffDay } from "@/lib/mock/rendezvous";
-import { staffRequests as requestSeeds, type StaffRequest } from "@/lib/mock/rh";
-import {
-  applyCapability,
-  defaultAutorisations,
-  type Autorisations,
-  type Capability,
-} from "@/lib/mock/autorisations";
 import EquipeList from "./equipe/EquipeList";
 import MemberDetail from "./equipe/MemberDetail";
 import AddMemberFlow from "./equipe/AddMemberFlow";
-import RolePermissions from "./equipe/RolePermissions";
-import PlanningPanel from "./equipe/PlanningPanel";
+import PlanningBoard from "./equipe/planning-board/PlanningBoard";
+import { useEquipeData } from "./equipe/EquipeData";
 import { BackButton } from "./equipe/ui";
 
 // Écran « Équipe » — le domicile des personnes qui font tourner les salons.
@@ -42,31 +29,25 @@ import { BackButton } from "./equipe/ui";
 //    prestation → alerte ; recherche sans résultat → message ; désactivation →
 //    confirmation, l'historique est gardé.
 
-type Tab = "membres" | "planning" | "autorisations";
+//
+// Deux onglets, deux routes (2026-09-27) : Membres = `/equipe`, Planning =
+// `/equipe/planning` (`?vue=planning` redirige). La matrice des autorisations
+// par rôle est partie dans Réglages › Autorisations (configuration, pas travail
+// quotidien) ; l'état membres / demandes vit dans `equipe/EquipeData`.
 
-const TAB_OPTIONS: SegmentedOption<Tab>[] = [
-  { value: "membres", label: "Membres" },
-  { value: "planning", label: "Planning" },
-  { value: "autorisations", label: "Autorisations" },
-];
+export type EquipeTab = "membres" | "planning";
 
 type View = { kind: "list" } | { kind: "detail"; id: string } | { kind: "new" };
 
-export default function Equipe() {
+export default function Equipe({ tab }: { tab: EquipeTab }) {
   const { scope } = useLocation();
+  const router = useRouter();
   const searchParams = useSearchParams();
 
   // Aucun backend : tout est édité en mémoire de session (comme Services / Fidélité).
-  const [members, setMembers] = useState<Member[]>(memberSeeds);
-  const [requests, setRequests] = useState<StaffRequest[]>(requestSeeds);
-  const [autorisations, setAutorisations] =
-    useState<Autorisations>(defaultAutorisations);
-  // Onglet Planning : état partagé via `PlanningContext` (pas local à cet
-  // écran) — l'action rapide « marquer absente aujourd'hui » de l'agenda
-  // `/rendez-vous` doit voir et modifier la même donnée.
-  const { absences, setAbsences, overrides, setOverrides } = usePlanningData();
+  const { members, setMembers, requests, setRequests } = useEquipeData();
+  const { autorisations } = useAutorisations();
   const [view, setView] = useState<View>({ kind: "list" });
-  const [tab, setTab] = useState<Tab>("membres");
 
   // Arrivée depuis une notification « demande en attente » : ?membre=<id> ouvre
   // directement la fiche — y compris si la propriétaire est déjà sur /equipe et
@@ -79,19 +60,6 @@ export default function Equipe() {
     setLastMemberParam(memberParam);
     if (memberParam && memberSeeds.some((m) => m.id === memberParam)) {
       setView({ kind: "detail", id: memberParam });
-    }
-  }
-
-  // Arrivée depuis un lien externe (ex. Journal, fiche membre) avec
-  // ?vue=planning : ouvre directement l'onglet Planning, même motif que
-  // `?membre=` ci-dessus.
-  const vueParam = searchParams.get("vue");
-  const [lastVueParam, setLastVueParam] = useState<string | null>(null);
-  if (vueParam !== lastVueParam) {
-    setLastVueParam(vueParam);
-    if (vueParam === "planning") {
-      setTab("planning");
-      setView({ kind: "list" });
     }
   }
 
@@ -114,25 +82,8 @@ export default function Equipe() {
       ),
     );
 
-  // Autorisations par rôle — éditées en mémoire de session. `applyCapability`
-  // propage la cascade des prérequis (cocher un dérivé coche son prérequis,
-  // décocher un prérequis décoche ses dérivés).
-  const setRoleCapability = (role: StaffRole, cap: Capability, value: boolean) =>
-    setAutorisations((current) => ({
-      ...current,
-      [role]: applyCapability(current[role], cap, value),
-    }));
-
-  const resetRole = (role: StaffRole) =>
-    setAutorisations((current) => ({
-      ...current,
-      [role]: { ...defaultAutorisations[role] },
-    }));
-
-  const openPermissions = () => {
-    setTab("autorisations");
-    setView({ kind: "list" });
-  };
+  // La matrice vit dans Réglages depuis le 2026-09-27.
+  const openPermissions = () => router.push("/reglages?section=autorisations");
 
   const selected =
     view.kind === "detail" ? members.find((m) => m.id === view.id) ?? null : null;
@@ -190,30 +141,29 @@ export default function Equipe() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <PageHeader
-          title="Équipe"
-          actions={
-            tab === "membres" ? (
-              <button
-                type="button"
-                onClick={() => setView({ kind: "new" })}
-                className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-theme-sm font-semibold text-white transition-colors hover:bg-brand-600"
-              >
-                <PlusIcon className="size-4" />
-                Ajouter un membre
-              </button>
-            ) : undefined
-          }
-        />
-        <SegmentedControl
-          options={TAB_OPTIONS}
-          value={tab}
-          onChange={setTab}
-          aria-label="Membres, planning ou autorisations"
-        />
-      </div>
+    <div>
+      <PageHeader
+        title="Équipe"
+        actions={
+          tab === "membres" ? (
+            <button
+              type="button"
+              onClick={() => setView({ kind: "new" })}
+              className="btn btn-primary btn-sm normal-case text-[15px] font-semibold active:scale-[0.97] disabled:!bg-base-200 disabled:!text-base-content/40 gap-2"
+            >
+              <PlusIcon className="size-4" />
+              Ajouter un membre
+            </button>
+          ) : undefined
+        }
+      />
+      <PageTabs
+        label="Sections de l'équipe"
+        tabs={[
+          { href: "/equipe", label: "Membres", active: tab === "membres" },
+          { href: "/equipe/planning", label: "Planning", active: tab === "planning" },
+        ]}
+      />
 
       {tab === "membres" ? (
         <EquipeList
@@ -221,19 +171,8 @@ export default function Equipe() {
           requests={requests}
           onOpen={(id) => setView({ kind: "detail", id })}
         />
-      ) : tab === "planning" ? (
-        <PlanningPanel
-          absences={absences}
-          setAbsences={setAbsences}
-          overrides={overrides}
-          setOverrides={setOverrides}
-        />
       ) : (
-        <RolePermissions
-          autorisations={autorisations}
-          onChange={setRoleCapability}
-          onReset={resetRole}
-        />
+        <PlanningBoard />
       )}
     </div>
   );

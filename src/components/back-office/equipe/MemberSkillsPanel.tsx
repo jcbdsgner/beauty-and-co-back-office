@@ -79,17 +79,17 @@ export default function MemberSkillsPanel({ member, allMembers, onChange }: Prop
         />
       )}
 
-      <div className="rounded-2xl border border-gray-200 bg-white">
-        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-          <h2 className="text-sm font-semibold text-gray-800">Prestations réalisées</h2>
-          <span className="text-theme-xs font-medium text-gray-500">
+      <div className="rounded-box border border-base-300 bg-white">
+        <div className="flex items-center justify-between border-b border-base-300 px-6 py-4">
+          <h2 className="text-sm font-semibold text-base-content">Prestations réalisées</h2>
+          <span className="text-xs font-medium text-base-content/60">
             {member.skills.length} sur {TOTAL}
           </span>
         </div>
-        <div className="divide-y divide-gray-100">
+        <div className="divide-y divide-base-300">
           {GROUPS.map((g) => (
             <div key={g.id} className="px-6 py-4">
-              <p className="mb-3 text-theme-xs font-semibold uppercase tracking-wide text-gray-400">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-base-content/45">
                 {g.label}
               </p>
               <div className="flex flex-wrap gap-2">
@@ -101,7 +101,7 @@ export default function MemberSkillsPanel({ member, allMembers, onChange }: Prop
                   >
                     <span>
                       {p.name}
-                      <span className="ml-1.5 font-normal text-gray-400">
+                      <span className="ml-1.5 font-normal text-base-content/45">
                         {fcfa(p.priceFcfa)} · {durationLabel(p.durationMin)}
                       </span>
                     </span>

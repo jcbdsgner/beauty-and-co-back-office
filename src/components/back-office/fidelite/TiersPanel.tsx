@@ -1,19 +1,21 @@
 "use client";
 
 import { useState } from "react";
+import { Plus } from "lucide-react";
+import { Badge } from "@/components/ui/atoms/badge";
+import { multiplier, points as fmtPoints, type LoyaltyTier } from "@/lib/mock/fidelite";
+import { TextInput } from "./ui";
 import {
-  multiplier,
-  points as fmtPoints,
-  type LoyaltyTier,
-} from "@/lib/mock/fidelite";
-import {
-  SectionCard,
-  TextInput,
-  EditableRow,
-  EmptyList,
-  btnPrimary,
-  btnGhost,
-} from "./ui";
+  EditorPanel,
+  EmptyRow,
+  ItemHeader,
+  ItemRow,
+  SettingsGroup,
+  btnOutline,
+} from "../reglages/kit";
+
+// Réglages › Programme de fidélité › paliers : liste triée par seuil, ajout et
+// modification en panneau latéral.
 
 let seq = 0;
 const uid = () => `tier-${Date.now()}-${seq++}`;
@@ -30,117 +32,107 @@ export default function TiersPanel({
   tiers: LoyaltyTier[];
   onChange: (next: LoyaltyTier[]) => void;
 }) {
+  // `undefined` = panneau fermé, `null` = création, id = modification.
+  const [editing, setEditing] = useState<string | null | undefined>(undefined);
   const [form, setForm] = useState<FormState>(EMPTY);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [confirmId, setConfirmId] = useState<string | null>(null);
 
   const sorted = [...tiers].sort((a, b) => a.minPoints - b.minPoints);
+  const valid = form.name.trim().length > 0 && isInt(form.minPoints) && isInt(form.multiplierPct);
 
-  const valid =
-    form.name.trim().length > 0 && isInt(form.minPoints) && isInt(form.multiplierPct);
-
-  const resetForm = () => {
-    setForm(EMPTY);
-    setEditingId(null);
+  const open = (t?: LoyaltyTier) => {
+    setEditing(t ? t.id : null);
+    setForm(
+      t ? { name: t.name, minPoints: String(t.minPoints), multiplierPct: String(t.multiplierPct) } : EMPTY,
+    );
   };
 
   const submit = () => {
     if (!valid) return;
     const next: LoyaltyTier = {
-      id: editingId ?? uid(),
+      id: editing ?? uid(),
       name: form.name.trim(),
       minPoints: Number(form.minPoints),
       multiplierPct: Number(form.multiplierPct),
+      // Garde la teinte de badge d'un palier existant (paliers de point-de-vente).
+      badge: tiers.find((t) => t.id === editing)?.badge,
     };
-    onChange(
-      editingId ? tiers.map((t) => (t.id === editingId ? next : t)) : [...tiers, next],
-    );
-    resetForm();
+    onChange(editing ? tiers.map((t) => (t.id === editing ? next : t)) : [...tiers, next]);
+    setEditing(undefined);
   };
 
-  const startEdit = (t: LoyaltyTier) => {
-    setConfirmId(null);
-    setEditingId(t.id);
-    setForm({
-      name: t.name,
-      minPoints: String(t.minPoints),
-      multiplierPct: String(t.multiplierPct),
-    });
-  };
-
-  const remove = (id: string) => {
-    onChange(tiers.filter((t) => t.id !== id));
-    setConfirmId(null);
-    if (editingId === id) resetForm();
-  };
+  const pct = Number(form.multiplierPct);
 
   return (
-    <SectionCard
+    <SettingsGroup
       title="Paliers"
-      description="Carte de fidélité : chaque palier applique un multiplicateur de points à partir d'un total cumulé. En dessous du premier palier, l'accumulation se fait au taux de base (×1,00)."
+      description="Chaque palier multiplie les points gagnés à partir d'un total cumulé. En dessous du premier, les clientes cumulent au taux de base."
+      action={
+        <button type="button" onClick={() => open()} className={`${btnOutline} gap-1.5`}>
+          <Plus className="size-4" aria-hidden />
+          Ajouter un palier
+        </button>
+      }
     >
       {sorted.length === 0 ? (
-        <EmptyList>
-          Aucun palier pour l&apos;instant. Toutes les clientes accumulent au taux de base.
-        </EmptyList>
+        <EmptyRow>Aucun palier : toutes les clientes cumulent au taux de base (×1,00).</EmptyRow>
       ) : (
-        <ul className="space-y-2.5">
+        <>
+          <ItemHeader label="Palier" columns={["À partir de", "Multiplicateur"]} />
           {sorted.map((t) => (
-            <EditableRow
+            <ItemRow
               key={t.id}
-              title={t.name}
-              subtitle={`À partir de ${fmtPoints(t.minPoints)} · ${multiplier(t.multiplierPct)}`}
-              confirming={confirmId === t.id}
-              onEdit={() => startEdit(t)}
-              onAskDelete={() => setConfirmId(t.id)}
-              onConfirmDelete={() => remove(t.id)}
-              onCancelDelete={() => setConfirmId(null)}
+              title={
+                t.badge ? (
+                  <Badge variant={t.badge} className="align-middle">
+                    {t.name}
+                  </Badge>
+                ) : (
+                  t.name
+                )
+              }
+              columns={[fmtPoints(t.minPoints), multiplier(t.multiplierPct)]}
+              onEdit={() => open(t)}
+              onDelete={() => onChange(tiers.filter((x) => x.id !== t.id))}
               deleteLabel={`Supprimer le palier ${t.name}`}
             />
           ))}
-        </ul>
+        </>
       )}
 
-      <div className="mt-6 border-t border-gray-100 pt-6">
-        <h3 className="text-theme-sm font-semibold text-gray-800">
-          {editingId ? "Modifier le palier" : "Ajouter un palier"}
-        </h3>
-        <div className="mt-4 grid grid-cols-[minmax(0,1fr)_150px_150px] items-start gap-3">
-          <TextInput
-            label="Nom"
-            placeholder="Argent"
-            value={form.name}
-            onChange={(v) => setForm((f) => ({ ...f, name: v }))}
-          />
-          <TextInput
-            label="Points min."
-            inputMode="numeric"
-            placeholder="0"
-            value={form.minPoints}
-            onChange={(v) => setForm((f) => ({ ...f, minPoints: v }))}
-          />
-          <TextInput
-            label="Multiplicateur %"
-            inputMode="numeric"
-            placeholder="100"
-            value={form.multiplierPct}
-            onChange={(v) => setForm((f) => ({ ...f, multiplierPct: v }))}
-          />
-        </div>
-        <p className="mt-2 text-theme-xs text-gray-500">
-          Multiplicateur en pourcentage du taux de base : 100 = ×1,00, 150 = ×1,50.
-        </p>
-        <div className="mt-4 flex items-center gap-2">
-          <button type="button" onClick={submit} disabled={!valid} className={btnPrimary}>
-            {editingId ? "Enregistrer" : "Ajouter le palier"}
-          </button>
-          {editingId && (
-            <button type="button" onClick={resetForm} className={btnGhost}>
-              Annuler
-            </button>
-          )}
-        </div>
-      </div>
-    </SectionCard>
+      <EditorPanel
+        open={editing !== undefined}
+        title={editing ? "Modifier le palier" : "Nouveau palier"}
+        onClose={() => setEditing(undefined)}
+        onSubmit={submit}
+        submitLabel={editing ? "Enregistrer" : "Ajouter le palier"}
+        canSubmit={valid}
+      >
+        <TextInput
+          label="Nom"
+          placeholder="Gold"
+          value={form.name}
+          onChange={(v) => setForm((f) => ({ ...f, name: v }))}
+        />
+        <TextInput
+          label="À partir de (points cumulés)"
+          inputMode="numeric"
+          placeholder="500"
+          value={form.minPoints}
+          onChange={(v) => setForm((f) => ({ ...f, minPoints: v }))}
+        />
+        <TextInput
+          label="Multiplicateur (%)"
+          inputMode="numeric"
+          placeholder="150"
+          value={form.multiplierPct}
+          onChange={(v) => setForm((f) => ({ ...f, multiplierPct: v }))}
+          hint={
+            isInt(form.multiplierPct)
+              ? `Les clientes de ce palier gagnent ${multiplier(pct)} les points de base.`
+              : "100 = ×1,00 (taux de base), 150 = ×1,50."
+          }
+        />
+      </EditorPanel>
+    </SettingsGroup>
   );
 }

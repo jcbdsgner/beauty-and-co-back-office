@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Badge from "@/components/ui/badge/Badge";
 import { groupThousands, type SalonScope } from "@/lib/mock/beautyandco";
 import { coverageTone, type StockRow } from "@/lib/mock/stock";
+import { PRODUCT_BRANDS, type ProductBrand } from "@/lib/mock/services";
 import Sparkline from "./Sparkline";
 
 type FilterId = "all" | "below" | "order";
@@ -53,16 +54,19 @@ export default function StockList({
 }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<FilterId>("all");
+  // Marque (catégorie produit de point-de-vente) — « all » = toutes.
+  const [brand, setBrand] = useState<ProductBrand | "all">("all");
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     return rows.filter((r) => {
       if (q && !r.product.name.toLowerCase().includes(q)) return false;
+      if (brand !== "all" && r.product.brand !== brand) return false;
       if (filter === "below") return r.onHand !== null && r.onHand < r.min;
       if (filter === "order") return r.status === "order";
       return true;
     });
-  }, [rows, query, filter]);
+  }, [rows, query, filter, brand]);
 
   const stockLabel = scope === "all" ? "Stock entreprise" : "Stock du salon";
 
@@ -72,7 +76,7 @@ export default function StockList({
         <div
           role="tablist"
           aria-label="Filtrer les produits"
-          className="inline-flex items-center gap-1 rounded-xl bg-gray-100 p-1"
+          className="inline-flex items-center gap-1 rounded-xl bg-muted p-1"
         >
           {FILTERS.map((f) => {
             const active = f.id === filter;
@@ -83,10 +87,10 @@ export default function StockList({
                 role="tab"
                 aria-selected={active}
                 onClick={() => setFilter(f.id)}
-                className={`rounded-lg px-3.5 py-1.5 text-theme-sm font-medium transition-colors ${
+                className={`rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors ${
                   active
-                    ? "bg-white text-gray-900 shadow-theme-xs"
-                    : "text-gray-500 hover:text-gray-800"
+                    ? "bg-white text-base-content"
+                    : "text-base-content/60 hover:text-base-content"
                 }`}
               >
                 {f.label}
@@ -94,19 +98,34 @@ export default function StockList({
             );
           })}
         </div>
+        <div className="flex items-center gap-3">
+        <select
+          value={brand}
+          onChange={(e) => setBrand(e.target.value as ProductBrand | "all")}
+          aria-label="Filtrer par marque"
+          className="select select-sm w-auto bg-base-100 text-sm"
+        >
+          <option value="all">Toutes les marques</option>
+          {PRODUCT_BRANDS.map((b) => (
+            <option key={b.id} value={b.id}>
+              {b.name} · {rows.filter((r) => r.product.brand === b.id).length}
+            </option>
+          ))}
+        </select>
         <input
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Rechercher un produit"
           aria-label="Rechercher un produit"
-          className="h-10 w-64 rounded-lg border border-gray-300 bg-white px-3.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10"
+          className="h-10 w-64 rounded-field border border-base-300 bg-white px-3.5 text-sm text-base-content placeholder:text-base-content/40 focus:outline-2 focus:outline-offset-2 focus:outline-[#fdcfca]"
         />
+        </div>
       </div>
 
       {visible.length === 0 ? (
-        <div className="rounded-2xl border border-gray-200 bg-white p-10 text-center">
-          <p className="text-theme-sm text-gray-500">Aucun produit ne correspond à ce filtre.</p>
+        <div className="rounded-box border border-base-300 bg-white p-10 text-center">
+          <p className="text-sm text-base-content/60">Aucun produit ne correspond à ce filtre.</p>
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
@@ -115,24 +134,30 @@ export default function StockList({
               key={r.product.id}
               type="button"
               onClick={() => onOpen(r.product.id)}
-              className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 text-left shadow-theme-xs transition hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-theme-sm"
+              className="flex flex-col gap-3 rounded-xl border border-base-300 bg-white p-4 text-left transition hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-theme-sm"
             >
-              <p className="line-clamp-2 font-medium text-gray-800">{r.product.name}</p>
+              <div>
+                <p className="line-clamp-2 font-medium text-base-content">{r.product.name}</p>
+                <p className="mt-0.5 text-xs text-base-content/45">
+                  {PRODUCT_BRANDS.find((b) => b.id === r.product.brand)?.name}
+                  {r.product.gamme && ` · ${r.product.gamme}`}
+                </p>
+              </div>
 
               <div>
-                <p className="text-theme-xs text-gray-400">{stockLabel}</p>
-                <p className="text-theme-xl font-semibold tabular-nums text-gray-800">
+                <p className="text-xs text-base-content/45">{stockLabel}</p>
+                <p className="text-theme-xl font-semibold tabular-nums text-base-content">
                   {r.onHand === null ? "—" : groupThousands(r.onHand)}
                 </p>
                 {scope === "all" && r.reserve !== null && (
-                  <p className="text-theme-xs text-gray-400">
+                  <p className="text-xs text-base-content/45">
                     dont réserve {groupThousands(r.reserve)}
                   </p>
                 )}
               </div>
 
-              <div className="mt-auto flex items-end justify-between gap-2 border-t border-gray-100 pt-3">
-                <div className="text-theme-xs text-gray-500">
+              <div className="mt-auto flex items-end justify-between gap-2 border-t border-base-300 pt-3">
+                <div className="text-xs text-base-content/60">
                   <p>Seuil {groupThousands(r.min)}</p>
                   <p className="tabular-nums">
                     {r.weekly > 0 ? `${groupThousands(Math.round(r.weekly))} / sem.` : "—"}

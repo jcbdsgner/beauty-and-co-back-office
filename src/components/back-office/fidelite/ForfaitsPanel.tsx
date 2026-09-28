@@ -8,15 +8,16 @@ import {
   newForfaitId,
   type Forfait,
 } from "@/lib/mock/forfaits";
+import { Plus } from "lucide-react";
+import { TextInput, SelectField } from "./ui";
 import {
-  SectionCard,
-  TextInput,
-  SelectField,
-  EditableRow,
-  EmptyList,
-  btnPrimary,
-  btnGhost,
-} from "./ui";
+  EditorPanel,
+  EmptyRow,
+  ItemHeader,
+  ItemRow,
+  SettingsGroup,
+  btnOutline,
+} from "../reglages/kit";
 import PrestationPicker from "./PrestationPicker";
 
 type FormState = {
@@ -53,8 +54,8 @@ export default function ForfaitsPanel({
   onChange: (next: Forfait[]) => void;
 }) {
   const [form, setForm] = useState<FormState>(EMPTY);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [confirmId, setConfirmId] = useState<string | null>(null);
+  // `undefined` = panneau fermé, `null` = création, id = modification.
+  const [editingId, setEditingId] = useState<string | null | undefined>(undefined);
 
   const isCustomCycle = form.cyclePreset === "custom";
   const valid =
@@ -65,7 +66,7 @@ export default function ForfaitsPanel({
 
   const resetForm = () => {
     setForm(EMPTY);
-    setEditingId(null);
+    setEditingId(undefined);
   };
 
   const pickCycle = (value: string) => {
@@ -102,7 +103,6 @@ export default function ForfaitsPanel({
   };
 
   const startEdit = (f: Forfait) => {
-    setConfirmId(null);
     setEditingId(f.id);
     const matchPreset = CYCLE_PRESETS.find(
       (c) => c.days === f.cycleDays && c.label === f.cycleLabel,
@@ -117,101 +117,96 @@ export default function ForfaitsPanel({
     });
   };
 
-  const remove = (id: string) => {
-    onChange(forfaits.filter((f) => f.id !== id));
-    setConfirmId(null);
-    if (editingId === id) resetForm();
-  };
+  const remove = (id: string) => onChange(forfaits.filter((f) => f.id !== id));
 
   return (
-    <SectionCard
+    <SettingsGroup
       title="Forfaits d'abonnement"
-      description="Un forfait : une liste fixe de prestations rechargée à chaque cycle, à un prix libre que vous décidez (jamais calculé sur la somme des prestations)."
+      description="Des prestations rechargées à chaque cycle, à un prix que vous fixez librement."
+      action={
+        <button
+          type="button"
+          onClick={() => {
+            setForm(EMPTY);
+            setEditingId(null);
+          }}
+          className={`${btnOutline} gap-1.5`}
+        >
+          <Plus className="size-4" aria-hidden />
+          Ajouter un forfait
+        </button>
+      }
     >
       {forfaits.length === 0 ? (
-        <EmptyList>Aucun forfait. Les clientes ne peuvent souscrire à rien.</EmptyList>
+        <EmptyRow>Aucun forfait : les clientes ne peuvent souscrire à aucun abonnement.</EmptyRow>
       ) : (
-        <ul className="space-y-2.5">
-          {forfaits.map((f) => {
-            const pres = getForfaitPrestations(f);
-            return (
-              <EditableRow
-                key={f.id}
-                title={`${f.label} · ${fcfa(f.priceFcfa)}`}
-                subtitle={`${f.cycleLabel} · ${pres.map((p) => p.label).join(", ")}`}
-                confirming={confirmId === f.id}
-                onEdit={() => startEdit(f)}
-                onAskDelete={() => setConfirmId(f.id)}
-                onConfirmDelete={() => remove(f.id)}
-                onCancelDelete={() => setConfirmId(null)}
-                deleteLabel={`Supprimer le forfait ${f.label}`}
-              />
-            );
-          })}
-        </ul>
+        <>
+          <ItemHeader label="Forfait" columns={["Cycle", "Prix"]} />
+          {forfaits.map((f) => (
+            <ItemRow
+              key={f.id}
+              title={f.label}
+              meta={getForfaitPrestations(f)
+                .map((p) => p.label)
+                .join(" · ")}
+              columns={[f.cycleLabel, fcfa(f.priceFcfa)]}
+              onEdit={() => startEdit(f)}
+              onDelete={() => remove(f.id)}
+              deleteLabel={`Supprimer le forfait ${f.label}`}
+            />
+          ))}
+        </>
       )}
 
-      <div className="mt-6 border-t border-gray-100 pt-6">
-        <h3 className="text-theme-sm font-semibold text-gray-800">
-          {editingId ? "Modifier le forfait" : "Ajouter un forfait"}
-        </h3>
-
-        <div className="mt-4 space-y-3">
-          <TextInput
-            label="Nom"
-            placeholder="Abonnement Éclat Mensuel"
-            value={form.label}
-            onChange={(v) => setForm((f) => ({ ...f, label: v }))}
+      <EditorPanel
+        open={editingId !== undefined}
+        title={editingId ? "Modifier le forfait" : "Nouveau forfait"}
+        onClose={resetForm}
+        onSubmit={submit}
+        submitLabel={editingId ? "Enregistrer" : "Ajouter le forfait"}
+        canSubmit={valid}
+      >
+        <TextInput
+          label="Nom"
+          placeholder="Abonnement Éclat Mensuel"
+          value={form.label}
+          onChange={(v) => setForm((f) => ({ ...f, label: v }))}
+        />
+        <TextInput
+          label="Description"
+          placeholder="Ce que la cliente retient de l'offre"
+          value={form.description}
+          onChange={(v) => setForm((f) => ({ ...f, description: v }))}
+        />
+        <TextInput
+          label="Prix (FCFA)"
+          inputMode="numeric"
+          placeholder="65000"
+          hint="Prix libre, jamais calculé sur la somme des prestations."
+          value={form.priceFcfa}
+          onChange={(v) => setForm((f) => ({ ...f, priceFcfa: v }))}
+        />
+        <div className="grid grid-cols-[minmax(0,1fr)_140px] items-start gap-3">
+          <SelectField
+            label="Cycle de facturation"
+            value={isCustomCycle ? "custom" : form.cyclePreset}
+            onChange={pickCycle}
+            options={CYCLE_OPTIONS}
           />
           <TextInput
-            label="Description"
-            placeholder="Ce que la cliente retient de l'offre"
-            value={form.description}
-            onChange={(v) => setForm((f) => ({ ...f, description: v }))}
-          />
-
-          <div className="grid grid-cols-[200px_minmax(0,1fr)_140px] items-start gap-3">
-            <TextInput
-              label="Prix du forfait (FCFA)"
-              inputMode="numeric"
-              placeholder="65000"
-              hint="Prix libre"
-              value={form.priceFcfa}
-              onChange={(v) => setForm((f) => ({ ...f, priceFcfa: v }))}
-            />
-            <SelectField
-              label="Cycle de facturation"
-              value={isCustomCycle ? "custom" : form.cyclePreset}
-              onChange={pickCycle}
-              options={CYCLE_OPTIONS}
-            />
-            <TextInput
-              label="Durée (jours)"
-              inputMode="numeric"
-              placeholder="30"
-              value={form.cycleDays}
-              onChange={(v) => setForm((f) => ({ ...f, cycleDays: v }))}
-            />
-          </div>
-
-          <PrestationPicker
-            selected={form.prestationIds}
-            onChange={(ids) => setForm((f) => ({ ...f, prestationIds: ids }))}
-            showPricing={false}
+            label="Durée (jours)"
+            inputMode="numeric"
+            placeholder="30"
+            value={form.cycleDays}
+            onChange={(v) => setForm((f) => ({ ...f, cycleDays: v }))}
           />
         </div>
-
-        <div className="mt-4 flex items-center gap-2">
-          <button type="button" onClick={submit} disabled={!valid} className={btnPrimary}>
-            {editingId ? "Enregistrer" : "Ajouter le forfait"}
-          </button>
-          {editingId && (
-            <button type="button" onClick={resetForm} className={btnGhost}>
-              Annuler
-            </button>
-          )}
-        </div>
-      </div>
-    </SectionCard>
+        <PrestationPicker
+          selected={form.prestationIds}
+          onChange={(ids) => setForm((f) => ({ ...f, prestationIds: ids }))}
+          showPricing={false}
+        />
+      </EditorPanel>
+    </SettingsGroup>
   );
 }

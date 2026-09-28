@@ -115,11 +115,11 @@ export default function Messagerie() {
             onSend={handleSend}
           />
         ) : (
-          <div className="flex h-full min-w-0 flex-1 flex-col items-center justify-center rounded-2xl border border-gray-200 bg-white text-center">
-            <p className="text-theme-sm font-medium text-gray-700">
+          <div className="flex h-full min-w-0 flex-1 flex-col items-center justify-center rounded-box border border-base-300 bg-white text-center">
+            <p className="text-sm font-medium text-base-content/80">
               Aucune conversation sélectionnée
             </p>
-            <p className="mt-1 text-theme-xs text-gray-400">
+            <p className="mt-1 text-xs text-base-content/45">
               Choisissez une conversation dans la liste pour l&apos;afficher ici.
             </p>
           </div>

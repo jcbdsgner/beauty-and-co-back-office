@@ -1,11 +1,14 @@
-// Tuile de statistique compacte pour les rangées de résumé des fiches détail
-// (repris de l'ancienne fiche cliente, partagé avec la fiche rendez-vous).
+import { StatTile as PdvStatTile } from "@/components/ui/molecules/stat-tile";
 
+// Tuile de statistique compacte pour les rangées de résumé des fiches détail —
+// `StatTile` de point-de-vente depuis le 2026-09-27 (libellé en capitales
+// espacées, chiffre tabulaire en tête), en version resserrée pour les fiches.
 export default function StatTile({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-4">
-      <p className="text-theme-sm text-gray-500">{label}</p>
-      <p className="mt-2 text-title-sm font-bold leading-none text-gray-800">{value}</p>
-    </div>
+    <PdvStatTile
+      label={label}
+      value={<span className="text-[1.75rem]">{value}</span>}
+      className="p-4"
+    />
   );
 }

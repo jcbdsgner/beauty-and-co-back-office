@@ -1,68 +1,19 @@
 "use client";
 import UserDropdown from "@/components/header/UserDropdown";
-import { useSidebar } from "@/context/SidebarContext";
-import Link from "next/link";
 import React from "react";
 
-const AppHeader: React.FC = () => {
-  const { isMobileOpen, toggleSidebar, toggleMobileSidebar } = useSidebar();
-
-  const handleToggle = () => {
-    if (window.innerWidth >= 1024) {
-      toggleSidebar();
-    } else {
-      toggleMobileSidebar();
-    }
-  };
-
-  return (
-    <header className="sticky top-0 z-40 w-full border-b border-gray-100 bg-white/95 backdrop-blur-sm print:hidden">
-      <div className="flex items-center gap-3 px-3 py-3 sm:gap-4 lg:px-6 lg:py-3">
-        {/* Zone gauche : bascule sidebar + logo mobile */}
-        <div className="flex flex-1 items-center gap-3">
-          <button
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-700 lg:h-11 lg:w-11"
-            onClick={handleToggle}
-            aria-label="Basculer la barre latérale"
-          >
-            {isMobileOpen ? (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path
-                  fillRule="evenodd"
-                  clipRule="evenodd"
-                  d="M6.21967 7.28131C5.92678 6.98841 5.92678 6.51354 6.21967 6.22065C6.51256 5.92775 6.98744 5.92775 7.28033 6.22065L11.999 10.9393L16.7176 6.22078C17.0105 5.92789 17.4854 5.92788 17.7782 6.22078C18.0711 6.51367 18.0711 6.98855 17.7782 7.28144L13.0597 12L17.7782 16.7186C18.0711 17.0115 18.0711 17.4863 17.7782 17.7792C17.4854 18.0721 17.0105 18.0721 16.7176 17.7792L11.999 13.0607L7.28033 17.7794C6.98744 18.0722 6.51256 18.0722 6.21967 17.7794C5.92678 17.4865 5.92678 17.0116 6.21967 16.7187L10.9384 12L6.21967 7.28131Z"
-                  fill="currentColor"
-                />
-              </svg>
-            ) : (
-              <svg width="16" height="12" viewBox="0 0 16 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path
-                  fillRule="evenodd"
-                  clipRule="evenodd"
-                  d="M0.583252 1C0.583252 0.585788 0.919038 0.25 1.33325 0.25H14.6666C15.0808 0.25 15.4166 0.585786 15.4166 1C15.4166 1.41421 15.0808 1.75 14.6666 1.75L1.33325 1.75C0.919038 1.75 0.583252 1.41422 0.583252 1ZM0.583252 11C0.583252 10.5858 0.919038 10.25 1.33325 10.25L14.6666 10.25C15.0808 10.25 15.4166 10.5858 15.4166 11C15.4166 11.4142 15.0808 11.75 14.6666 11.75L1.33325 11.75C0.919038 11.75 0.583252 11.4142 0.583252 11ZM1.33325 5.25C0.919038 5.25 0.583252 5.58579 0.583252 6C0.583252 6.41421 0.919038 6.75 1.33325 6.75L7.99992 6.75C8.41413 6.75 8.74992 6.41421 8.74992 6C8.74992 5.58579 8.41413 5.25 7.99992 5.25L1.33325 5.25Z"
-                  fill="currentColor"
-                />
-              </svg>
-            )}
-          </button>
-
-          <Link href="/" className="flex items-center gap-2 lg:hidden">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-500 text-xs font-bold text-white">
-              B&amp;C
-            </span>
-            <span className="text-base font-bold text-gray-900">
-              Beauty<span className="text-brand-500">AndCo</span>
-            </span>
-          </Link>
-        </div>
-
-        {/* Zone droite : compte — notifications déplacées sur le tableau de bord */}
-        <div className="flex flex-1 items-center justify-end gap-3">
-          <UserDropdown />
-        </div>
-      </div>
-    </header>
-  );
-};
+// Barre du haut réduite au menu compte (2026-09-27). Point-de-vente n'a pas de
+// barre du haut (compte en pied de rail), mais la propriétaire a demandé de
+// garder « Sokhna Ndour » visible en haut à droite (refonte Figma du
+// 2026-09-21) — on garde donc cette seule rangée, sans bascule de sidebar (le
+// rail est fixe). Fond blanc (demande du 2026-09-27) plutôt que fondu dans le
+// crème de la page : un filet bas le détache du contenu qui défile dessous.
+const AppHeader: React.FC = () => (
+  <header className="sticky top-0 z-40 w-full border-b border-base-300 bg-base-100 print:hidden">
+    <div className="mx-auto flex max-w-[1440px] items-center justify-end px-8 py-3">
+      <UserDropdown />
+    </div>
+  </header>
+);
 
 export default AppHeader;

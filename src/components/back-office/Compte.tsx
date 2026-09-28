@@ -36,15 +36,15 @@ import {
 /* --------------------------------------------------------------- primitives */
 
 const fieldClass =
-  "h-11 w-full rounded-lg border border-gray-300 bg-white px-4 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10";
+  "h-11 w-full rounded-field border border-base-300 bg-white px-4 text-sm text-base-content placeholder:text-base-content/40 focus:outline-2 focus:outline-offset-2 focus:outline-[#fdcfca]";
 
 const btnPrimary =
-  "inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-theme-sm font-medium text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:bg-brand-300";
+  "btn btn-primary btn-sm normal-case text-[15px] font-semibold active:scale-[0.97] disabled:!bg-base-200 disabled:!text-base-content/40 gap-2";
 
 const btnGhost =
-  "inline-flex items-center rounded-lg px-4 py-2.5 text-theme-sm font-medium text-gray-600 transition hover:bg-gray-50 hover:text-gray-900";
+  "btn btn-ghost btn-sm normal-case text-[15px] font-semibold text-base-content/70";
 
-const Divider = () => <div className="-mx-6 border-t border-gray-100" />;
+const Divider = () => <div className="-mx-6 border-t border-base-300" />;
 
 function Toggle({
   checked,
@@ -63,11 +63,11 @@ function Toggle({
       aria-label={ariaLabel}
       onClick={() => onChange(!checked)}
       className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
-        checked ? "bg-brand-500" : "bg-gray-200"
+        checked ? "bg-brand-500" : "bg-base-300"
       }`}
     >
       <span
-        className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-theme-xs transition-all ${
+        className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${
           checked ? "left-[22px]" : "left-0.5"
         }`}
       />
@@ -87,8 +87,8 @@ function SettingRow({
   return (
     <div className="flex items-start justify-between gap-6">
       <div className="min-w-0">
-        <p className="text-sm font-medium text-gray-800">{title}</p>
-        {description && <p className="mt-0.5 text-theme-xs text-gray-500">{description}</p>}
+        <p className="text-sm font-medium text-base-content">{title}</p>
+        {description && <p className="mt-0.5 text-xs text-base-content/60">{description}</p>}
       </div>
       <div className="shrink-0 pt-0.5">{control}</div>
     </div>
@@ -118,7 +118,7 @@ function TextField({
 }) {
   return (
     <div>
-      <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-gray-800">
+      <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-base-content">
         {label}
       </label>
       <input
@@ -134,9 +134,9 @@ function TextField({
         }`}
       />
       {error ? (
-        <p className="mt-1.5 text-theme-xs text-error-600">{error}</p>
+        <p className="mt-1.5 text-xs text-error-600">{error}</p>
       ) : hint ? (
-        <p className="mt-1.5 text-theme-xs text-gray-500">{hint}</p>
+        <p className="mt-1.5 text-xs text-base-content/60">{hint}</p>
       ) : null}
     </div>
   );
@@ -222,13 +222,13 @@ export default function Compte() {
     <div className="space-y-6">
       <PageHeader title="Mon compte" />
 
-      <div className="max-w-3xl rounded-2xl border border-gray-200 bg-white">
+      <div className="max-w-3xl rounded-box border border-base-300 bg-white">
         {/* Identité ------------------------------------------------------- */}
         <div className="space-y-5 p-6">
-          <h2 className="text-lg font-semibold text-gray-800">Identité</h2>
+          <h2 className="text-lg font-semibold text-base-content">Identité</h2>
 
           <div className="flex items-center gap-4">
-            <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-100 text-lg font-semibold text-brand-700">
+            <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-100 text-lg font-semibold text-secondary">
               {account.avatarUrl ? (
                 <Image
                   src={account.avatarUrl}
@@ -247,7 +247,7 @@ export default function Compte() {
                 <button
                   type="button"
                   onClick={() => photoInputRef.current?.click()}
-                  className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-3 py-2 text-theme-sm font-medium text-gray-700 hover:bg-gray-50"
+                  className="btn btn-outline btn-sm normal-case text-[15px] font-semibold border-base-300 text-secondary hover:!bg-base-200 hover:!border-base-300 hover:!text-secondary active:scale-[0.97]"
                 >
                   {account.avatarUrl ? "Changer la photo" : "Ajouter une photo"}
                 </button>
@@ -255,13 +255,13 @@ export default function Compte() {
                   <button
                     type="button"
                     onClick={() => updateAccount({ avatarUrl: "" })}
-                    className="text-theme-xs font-medium text-gray-400 hover:text-error-600 hover:underline"
+                    className="text-xs font-medium text-base-content/45 hover:text-error-600 hover:underline"
                   >
                     Retirer
                   </button>
                 )}
               </div>
-              <p className="mt-1.5 text-theme-xs text-gray-500">JPG ou PNG, gardée pour cette session.</p>
+              <p className="mt-1.5 text-xs text-base-content/60">JPG ou PNG, gardée pour cette session.</p>
               <input
                 ref={photoInputRef}
                 type="file"
@@ -292,8 +292,8 @@ export default function Compte() {
               error={attempted && nameBad ? "Indiquez votre nom." : undefined}
             />
             <div>
-              <span className="mb-1.5 block text-sm font-medium text-gray-800">Fonction</span>
-              <p className="flex h-11 items-center rounded-lg bg-gray-50 px-4 text-sm text-gray-500">
+              <span className="mb-1.5 block text-sm font-medium text-base-content">Fonction</span>
+              <p className="flex h-11 items-center rounded-lg bg-base-200 px-4 text-sm text-base-content/60">
                 {account.role}
               </p>
             </div>
@@ -324,7 +324,7 @@ export default function Compte() {
 
         {/* Connexion --------------------------------------------------- */}
         <div className="space-y-5 p-6">
-          <h2 className="text-lg font-semibold text-gray-800">Connexion</h2>
+          <h2 className="text-lg font-semibold text-base-content">Connexion</h2>
 
           <div className="sm:max-w-[360px]">
             <TextField
@@ -343,10 +343,10 @@ export default function Compte() {
           </div>
 
           {!pwOpen ? (
-            <div className="flex items-center justify-between gap-4 rounded-xl border border-gray-200 px-4 py-3.5">
+            <div className="flex items-center justify-between gap-4 rounded-xl border border-base-300 px-4 py-3.5">
               <div>
-                <p className="text-sm font-medium text-gray-800">Mot de passe</p>
-                <p className="mt-0.5 text-theme-xs text-gray-500">
+                <p className="text-sm font-medium text-base-content">Mot de passe</p>
+                <p className="mt-0.5 text-xs text-base-content/60">
                   {pwJustSaved ? "Mis à jour à l'instant." : "••••••••••"}
                 </p>
               </div>
@@ -356,19 +356,19 @@ export default function Compte() {
                   setPwOpen(true);
                   setPwJustSaved(false);
                 }}
-                className="shrink-0 rounded-lg border border-gray-300 bg-white px-3 py-2 text-theme-sm font-medium text-gray-700 hover:bg-gray-50"
+                className="btn btn-outline btn-sm normal-case text-[15px] font-semibold border-base-300 text-secondary hover:!bg-base-200 hover:!border-base-300 hover:!text-secondary active:scale-[0.97] shrink-0"
               >
                 Changer le mot de passe
               </button>
             </div>
           ) : (
-            <div className="space-y-4 rounded-xl border border-gray-200 p-4">
+            <div className="space-y-4 rounded-xl border border-base-300 p-4">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-gray-800">Changer le mot de passe</p>
+                <p className="text-sm font-medium text-base-content">Changer le mot de passe</p>
                 <button
                   type="button"
                   onClick={() => setPwShow((s) => !s)}
-                  className="inline-flex items-center gap-1.5 text-theme-xs font-medium text-gray-500 hover:text-gray-800"
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-base-content/60 hover:text-base-content"
                 >
                   {pwShow ? <EyeCloseIcon className="size-4" /> : <EyeIcon className="size-4" />}
                   {pwShow ? "Masquer" : "Afficher"}
@@ -400,7 +400,7 @@ export default function Compte() {
                 autoComplete="new-password"
               />
               {pwAttempted && pwErr && (
-                <p className="text-theme-xs text-error-600">{pwErr}</p>
+                <p className="text-xs text-error-600">{pwErr}</p>
               )}
               <div className="flex items-center gap-2">
                 <button type="button" onClick={submitPw} className={btnPrimary}>
@@ -418,8 +418,8 @@ export default function Compte() {
 
         {/* Notifications --------------------------------------------- */}
         <div className="space-y-5 p-6">
-          <h2 className="text-lg font-semibold text-gray-800">Comment vous prévenir</h2>
-          <p className="text-theme-sm text-gray-500">
+          <h2 className="text-lg font-semibold text-base-content">Comment vous prévenir</h2>
+          <p className="text-sm text-base-content/60">
             Choisissez par quels canaux recevoir les alertes importantes : nouveau rendez-vous,
             annulation, demande de l&apos;équipe, stock bas.
           </p>
@@ -442,7 +442,7 @@ export default function Compte() {
             ))}
           </div>
           {noChannel && (
-            <p className="text-theme-xs text-warning-600">
+            <p className="text-xs text-warning-600">
               Aucun canal actif : vous ne serez prévenue que par la cloche de notifications dans
               l&apos;outil.
             </p>
@@ -450,7 +450,7 @@ export default function Compte() {
         </div>
 
         {/* Enregistrer ------------------------------------------------ */}
-        <div className="flex items-center gap-3 border-t border-gray-100 px-6 py-4">
+        <div className="flex items-center gap-3 border-t border-base-300 px-6 py-4">
           <button
             type="button"
             onClick={save}
@@ -460,12 +460,12 @@ export default function Compte() {
             Enregistrer
           </button>
           {attempted && invalid && (
-            <span className="text-theme-sm text-error-600">
+            <span className="text-sm text-error-600">
               Corrigez les champs signalés avant d&apos;enregistrer.
             </span>
           )}
           {justSaved && !dirty && (
-            <span className="inline-flex items-center gap-1.5 text-theme-sm font-medium text-success-600">
+            <span className="inline-flex items-center gap-1.5 text-sm font-medium text-success-600">
               <CheckCircleIcon className="size-4" />
               Modifications enregistrées
             </span>

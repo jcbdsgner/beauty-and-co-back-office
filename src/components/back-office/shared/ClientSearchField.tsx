@@ -141,7 +141,7 @@ export default function ClientSearchField({
   return (
     <div ref={containerRef} className="relative">
       {label && (
-        <label className="mb-1.5 block text-sm font-medium text-gray-700">{label}</label>
+        <label className="mb-1.5 block text-sm font-medium text-base-content/80">{label}</label>
       )}
       <input
         ref={inputRef}
@@ -159,23 +159,23 @@ export default function ClientSearchField({
         onFocus={() => setOpen(true)}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
-        className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-theme-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10"
+        className="h-10 w-full rounded-field border border-base-300 bg-white px-3 text-sm text-base-content focus:outline-2 focus:outline-offset-2 focus:outline-[#fdcfca]"
       />
 
       {open && (
         <div
           id="client-search-listbox"
           role="listbox"
-          className="absolute left-0 right-0 top-full z-50 mt-2 max-h-80 overflow-auto rounded-xl border border-gray-200 bg-white py-1 shadow-theme-lg"
+          className="absolute left-0 right-0 top-full z-50 mt-2 max-h-80 overflow-auto rounded-xl border border-base-300 bg-white py-1 shadow-theme-lg"
         >
           {trimmed === "" ? (
             all.length > 0 && (
-              <p className="px-3 py-2 text-theme-xs text-gray-400">
+              <p className="px-3 py-2 text-xs text-base-content/45">
                 {all.length} {all.length > 1 ? "clientes" : "cliente"} au répertoire.
               </p>
             )
           ) : results.length === 0 ? (
-            <p className="px-4 py-6 text-center text-theme-sm text-gray-500">
+            <p className="px-4 py-6 text-center text-sm text-base-content/60">
               Aucune cliente trouvée.
             </p>
           ) : (
@@ -187,7 +187,7 @@ export default function ClientSearchField({
                 aria-selected={activeIndex === i}
                 onMouseEnter={() => setActiveIndex(i)}
                 onClick={() => selectExisting(c)}
-                className={`block w-full text-left ${activeIndex === i ? "bg-gray-50" : ""}`}
+                className={`block w-full text-left ${activeIndex === i ? "bg-base-200" : ""}`}
               >
                 <PersonCard
                   name={c.name}
@@ -205,8 +205,8 @@ export default function ClientSearchField({
             aria-selected={activeIndex === createIndex}
             onMouseEnter={() => setActiveIndex(createIndex)}
             onClick={selectCreate}
-            className={`flex w-full items-center gap-2 border-t border-gray-100 px-3 py-2.5 text-left text-theme-sm font-medium text-brand-600 ${
-              activeIndex === createIndex ? "bg-gray-50" : ""
+            className={`flex w-full items-center gap-2 border-t border-base-300 px-3 py-2.5 text-left text-sm font-medium text-brand-600 ${
+              activeIndex === createIndex ? "bg-base-200" : ""
             }`}
           >
             <PlusIcon className="h-4 w-4 shrink-0" />

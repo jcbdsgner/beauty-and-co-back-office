@@ -1,245 +1,173 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import DetailModal from "@/components/back-office/detail/DetailModal";
-import DetailIdentityHeader, {
-  DetailAvatar,
-} from "@/components/back-office/detail/DetailIdentityHeader";
-import StatTile from "@/components/back-office/detail/StatTile";
-import Badge from "@/components/ui/badge/Badge";
-import Alert from "@/components/ui/alert/Alert";
+import {
+  Baby,
+  CalendarClock,
+  Coffee,
+  Feather,
+  Flower2,
+  Gift,
+  Hand,
+  PackageCheck,
+  Scissors,
+  ShoppingBag,
+  SlidersHorizontal,
+  Sparkles,
+  Star,
+  User,
+  UserRound,
+  Users,
+} from "lucide-react";
+import { Dialog } from "@/components/ui/molecules/dialog";
+import { Field } from "@/components/ui/molecules/field";
+import { Alert } from "@/components/ui/molecules/alert";
+import { CloseButton } from "@/components/ui/atoms/icon-button";
+import { Avatar } from "@/components/ui/atoms/avatar";
+import { Badge } from "@/components/ui/atoms/badge";
+import { Button } from "@/components/ui/atoms/button";
+import { Textarea } from "@/components/ui/atoms/textarea";
+import { cn } from "@/lib/utils";
 import { fullName } from "@/lib/mock/staff";
-import { presentPractitioners, presentPractitionersForPrestation, type PlanningData } from "@/lib/mock/planning";
-import { clientDetail, PREFERENCE_GROUPS } from "@/lib/mock/beautyandco";
-import { prestationSeeds, productName } from "@/lib/mock/services";
+import { presentPractitioners, type PlanningData } from "@/lib/mock/planning";
+import { preferenceLines } from "@/lib/mock/preferences";
+import { TIER_LABEL, type ClientDetail } from "@/lib/mock/beautyandco";
+import { useClientsData } from "@/context/ClientsContext";
+import { usePreferenceConfig } from "@/context/PreferencesContext";
+import { prestationSeeds, productKind, productName } from "@/lib/mock/services";
+import { ABONNEMENT_STATUS_META, forfaitById, packById } from "@/lib/mock/abonnements";
 import {
-  BoxCubeIcon,
-  BoxIcon,
-  CalenderIcon,
-  ChatIcon,
-  DollarLineIcon,
-  EnvelopeIcon,
-  GroupIcon,
-  PageIcon,
-  PlusIcon,
-  ShootingStarIcon,
-  TimeIcon,
-  UserCircleIcon,
-} from "@/icons";
-import {
-  RDV_STATUS_META,
-  advantageLabel,
-  durationLabel,
+  allRendezvous,
+  availablePractitioners,
+  beneficiaryKey,
+  beneficiaryKindOf,
   extraPrice,
   fcfa,
-  frFullDate,
   frLongDate,
-  groupThousands,
-  rdvDuration,
-  rdvEnd,
-  rdvTotal,
-  type RdvAdvantage,
+  rdvEndTime,
+  rdvStartTime,
+  reservationComposition,
+  timeToMinutes,
+  type BeneficiaryKind,
   type RdvDetail,
   type RdvPrestation,
   type RdvStatus,
 } from "@/lib/mock/rendezvous";
 import EditRdvDialog from "./rendezvous/EditRdvDialog";
+import { initialsOf } from "./shared/PersonCard";
+import { Legend } from "./shared/board";
 import {
-  ABONNEMENT_STATUS_META,
-  abonnementSeeds,
-  abonnementStatus,
-  availablePrestationIds,
-  computeNextDueDate,
-  forfaitById,
-  packById,
-  packPurchaseSeeds,
-  packRemainingIds,
-} from "@/lib/mock/abonnements";
-import { getForfaitPrestations } from "@/lib/mock/forfaits";
-import { getPackPrestations } from "@/lib/mock/packs";
+  AvantageChip,
+  clientAbonnements,
+  clientGiftCard,
+  clientPacks,
+  packRemaining,
+  rdvCoverage,
+  statusOf,
+} from "./shared/ClientAdvantages";
 
-const FIRST_AVAILABLE = "__any__";
-
-// Fiche rendez-vous — présentée en modal centré (inspiré d'un gabarit « fiche
-// employé » : bandeau identité + grille d'infos, cartes de résumé, tableau) au
-// lieu d'une page dédiée. closeMode "back" : ouverte par navigation depuis une
-// autre page de l'admin (route interceptée) → referme sur l'écran d'origine.
-// "list" : accès direct (URL tapée, rechargement) → referme vers /rendez-vous.
+// Fiche rendez-vous — le panneau latéral de réservation de point-de-vente,
+// qui fait autorité (`components/planning/appointment-detail-sheet.tsx`,
+// ADR 0023) : en tête la référence de la réservation, son créneau et « Réservé
+// pour 1 femme + 1 enfant » ; puis la payeuse (palier, « Fiche », puces
+// d'avantages, préférences toujours visibles, dernière note) ; puis les
+// prestations groupées par bénéficiaire (lien vers sa fiche, Homme / Enfant,
+// sous-total, ses préférences), chacune avec sa praticienne et, si un pack /
+// abonnement la couvre, « Couverte · <offre> » et le prix barré ; les extras ;
+// le Total ; « Modifier » et « Annuler la réservation » (motif facultatif).
 //
-// 1. Où en est la propriétaire ? Elle ouvre la fiche avant l'arrivée d'une
-//    cliente (qui, quand, quelles prestations, combien, qui s'en occupe, quel
-//    avantage mobiliser) ou pour gérer un imprévu (annulation, réaffectation).
-//    Pressée, souvent debout entre deux clientes.
-// 2. Ce qui doit sauter aux yeux : la cliente, puis date/heure + salon + statut,
-//    puis le total, puis les avantages disponibles.
-// 3. Quand ça se passe mal : id inconnu → 404 (côté page) ; RDV annulé / absence
-//    → bandeau + actions réduites ; collaboratrice non assignée → « À affecter »
-//    visible ; question sans réponse → « Sans réponse » ; aucun avantage → phrase
-//    explicite plutôt qu'un vide.
+// Écarts back-office : pas d'« Encaisser » ; l'intervenante de chaque
+// prestation à venir se change ici (sélecteur limité aux praticiennes
+// compétentes, présentes et libres — `availablePractitioners` ; plus aucun
+// « à affecter », cf. affectation automatique) ; une réservation annulée se
+// rétablit ; l'historique de la réservation en pied.
 //
-// Un rendez-vous n'a pas d'étape de confirmation. L'acompte demandé à la
-// réservation est le même pour toutes (réglé dans Paiement) : la fiche n'affiche
-// que le total des prestations.
+// closeMode "back" : ouverte depuis l'admin (route interceptée) → referme sur
+// l'écran d'origine. "list" : accès direct → referme vers /rendez-vous.
 
-const badgeColor = {
-  "à venir": "info",
-  terminé: "light",
-  annulé: "error",
-  absence: "warning",
-} as const;
+const CATEGORY_ICON: { match: string; Icon: typeof Scissors }[] = [
+  { match: "Mini & Co", Icon: Baby },
+  { match: "Coiffure", Icon: Scissors },
+  { match: "Manucure", Icon: Hand },
+  { match: "Onglerie", Icon: Hand },
+  { match: "Soin du visage", Icon: Sparkles },
+  { match: "Spa", Icon: Flower2 },
+  { match: "Épilation", Icon: Feather },
+];
+const categoryIcon = (category: string) => CATEGORY_ICON.find((c) => category.startsWith(c.match))?.Icon ?? Sparkles;
 
-/* --- primitives locales ------------------------------------------------ */
-
-function SectionCard({
-  icon,
-  title,
-  aside,
-  children,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  aside?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="rounded-2xl border border-gray-200 bg-white">
-      <header className="flex items-center gap-3 border-b border-gray-100 px-5 py-4">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-500 [&_svg]:h-5 [&_svg]:w-5">
-          {icon}
-        </span>
-        <h2 className="flex-1 text-base font-semibold text-gray-800">{title}</h2>
-        {aside}
-      </header>
-      <div className="p-5">{children}</div>
-    </section>
-  );
+// « Jeu. 3 sept » — jour court pour la ligne de créneau.
+function formatShortDay(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  const label = new Date(y, m - 1, d)
+    .toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })
+    .replace(/\.$/, "");
+  return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+/** Préférences d'une fiche, toujours visibles (lecture compacte, comme la caisse). */
+function PreferencesCompact({ detail, className }: { detail: ClientDetail; className?: string }) {
+  const { questions } = usePreferenceConfig();
+  const lines = preferenceLines(detail.preferences, questions);
   return (
-    <div>
-      <dt className="text-theme-xs font-medium uppercase tracking-wide text-gray-400">{label}</dt>
-      <dd className="mt-1 text-theme-sm font-medium text-gray-800">{children}</dd>
-    </div>
-  );
-}
-
-const inertBtn =
-  "inline-flex cursor-default items-center gap-2 rounded-lg px-4 py-2.5 text-theme-sm font-medium transition-colors";
-
-/* --- avantages -------------------------------------------------------- */
-
-function AdvantageItem({ advantage }: { advantage: RdvAdvantage }) {
-  if (advantage.kind === "abonnement") {
-    const ab = abonnementSeeds.find((a) => a.id === advantage.abonnementId);
-    const forfait = ab ? forfaitById(ab.forfaitId) : undefined;
-    if (!ab || !forfait) return null;
-
-    const status = abonnementStatus(ab, forfait.cycleDays);
-    const meta = ABONNEMENT_STATUS_META[status];
-    const resolved = getForfaitPrestations(forfait);
-    const availableIds = availablePrestationIds(
-      forfait.prestationIds,
-      ab.redeemedPrestationIds,
-    );
-    const availableNames = resolved
-      .filter((p) => availableIds.includes(p.id))
-      .map((p) => p.label);
-
-    return (
-      <div className="flex gap-3">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-700 [&_svg]:h-5 [&_svg]:w-5">
-          <ShootingStarIcon />
-        </span>
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="font-medium text-gray-800">{forfait.label}</p>
-            <Badge size="sm" color={meta.tone}>
-              {meta.label}
-            </Badge>
-          </div>
-          <p className="text-theme-xs text-gray-500">
-            {advantageLabel.abonnement} · {forfait.cycleLabel.toLowerCase()}
-          </p>
-          <p className="mt-2 text-theme-sm text-gray-700">
-            <span className="text-gray-500">Disponible ce cycle : </span>
-            {status !== "current"
-              ? "aucune prestation — échéance à régler"
-              : availableNames.length > 0
-                ? availableNames.join(", ")
-                : "toutes les prestations sont déjà consommées"}
-          </p>
-          <p className="mt-1 text-theme-xs text-gray-400">
-            Reconduction le {frLongDate(computeNextDueDate(ab, forfait.cycleDays))}
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (advantage.kind === "pack") {
-    const purchase = packPurchaseSeeds.find((p) => p.id === advantage.packPurchaseId);
-    const pack = purchase ? packById(purchase.packId) : undefined;
-    if (!purchase || !pack) return null;
-
-    const total = pack.prestationIds.length;
-    const remainingIds = packRemainingIds(purchase, pack);
-    const remaining = remainingIds.length;
-    const pct = total > 0 ? Math.round((remaining / total) * 100) : 0;
-    const coveredNames = getPackPrestations(pack).map((p) => p.label);
-
-    return (
-      <div className="flex gap-3">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-700 [&_svg]:h-5 [&_svg]:w-5">
-          <BoxCubeIcon />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="font-medium text-gray-800">{pack.label}</p>
-          <p className="text-theme-xs text-gray-500">{advantageLabel.pack}</p>
-          <div className="mt-2 flex items-center gap-3">
-            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-100">
-              <div className="h-full rounded-full bg-brand-500" style={{ width: `${pct}%` }} />
+    <div className={cn("rounded-box bg-base-200 px-3 py-2", className)}>
+      <p className="text-[11px] font-semibold tracking-[0.08em] text-base-content/55 uppercase">Préférences</p>
+      {lines.length > 0 ? (
+        <dl className="mt-1 grid grid-cols-[max-content_1fr] items-baseline gap-x-3 gap-y-2">
+          {lines.map((pref) => (
+            <div key={pref.label} className="contents">
+              <dt className="text-xs text-base-content/55">{pref.label}</dt>
+              <dd className="flex flex-col gap-0.5 text-sm leading-snug text-base-content">
+                {pref.notes.map((note) => (
+                  <span key={note}>{note}</span>
+                ))}
+              </dd>
             </div>
-            <span className="shrink-0 text-theme-xs font-medium tabular-nums text-gray-600">
-              {remaining} / {total} prestation{total > 1 ? "s" : ""}
-            </span>
-          </div>
-          <p className="mt-2 text-theme-sm text-gray-700">
-            <span className="text-gray-500">Couvre : </span>
-            {coveredNames.join(", ")}
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex gap-3">
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-700 [&_svg]:h-5 [&_svg]:w-5">
-        <DollarLineIcon />
-      </span>
-      <div className="min-w-0">
-        <p className="font-medium text-gray-800">{advantageLabel["carte-cadeau"]}</p>
-        <p className="text-theme-xs text-gray-500">Code {advantage.code}</p>
-        <p className="mt-2 text-theme-sm text-gray-500">Solde disponible</p>
-        <p className="text-theme-xl font-bold tabular-nums text-gray-800">
-          {groupThousands(advantage.balance)}{" "}
-          <span className="text-base font-semibold text-gray-400">FCFA</span>
-        </p>
-      </div>
+          ))}
+        </dl>
+      ) : (
+        <p className="mt-1 text-xs text-base-content/55">Aucune préférence notée</p>
+      )}
     </div>
   );
 }
 
-/* --- composant principal -------------------------------------------- */
+type Group = {
+  key: string;
+  label: string;
+  href: string | null;
+  kind: BeneficiaryKind;
+  clientId: string | null;
+  lines: RdvPrestation[];
+};
+
+function beneficiaryGroups(r: RdvDetail): Group[] {
+  const groups = new Map<string, Group>();
+  for (const p of r.prestations) {
+    const key = beneficiaryKey(p, r.client.name);
+    if (!groups.has(key)) {
+      const clientId = key === "__payer__" ? r.client.id : (p.beneficiaryClientId ?? null);
+      // Le nom de la payeuse plutôt qu'un générique ; pour un bénéficiaire sans
+      // fiche, son prénom sans la précision entre parenthèses (« 7 ans »).
+      const label = key === "__payer__" ? r.client.name : p.beneficiaryName.replace(/\s*\([^)]*\)\s*$/, "");
+      groups.set(key, {
+        key,
+        label,
+        href: clientId ? `/clients/${clientId}` : null,
+        kind: beneficiaryKindOf(p),
+        clientId,
+        lines: [],
+      });
+    }
+    groups.get(key)!.lines.push(p);
+  }
+  return [...groups.values()].sort(
+    (a, b) =>
+      Math.min(...a.lines.map((p) => timeToMinutes(p.start))) - Math.min(...b.lines.map((p) => timeToMinutes(p.start))),
+  );
+}
 
 export default function RendezVousDetail({
   detail,
@@ -247,558 +175,416 @@ export default function RendezVousDetail({
   onClose,
   onAssign,
   onStatusChange,
-  onDelete,
   rdvs,
   onUpdatePrestation,
   onAddPrestation,
   onRemovePrestation,
   onCancelWithReason,
-  onOpenBooking,
   planningData,
 }: {
   detail: RdvDetail;
   closeMode: "back" | "list";
-  // Présente cette fiche « branchée » sur un état de session partagé (écran
-  // Rendez-vous : liste + agenda) au lieu du mode autonome par défaut (route
-  // dédiée / modal interceptée, sans liste à tenir à jour derrière).
+  // Présente cette fiche « branchée » sur l'état de session de l'écran
+  // Rendez-vous ; sans ces props (route dédiée / interceptée), elle reste
+  // autonome et ses changements sont locaux.
   onClose?: () => void;
-  onAssign?: (prestationId: string, staff: string | null) => void;
+  onAssign?: (prestationId: string, staff: string) => void;
   onStatusChange?: (status: RdvStatus) => void;
-  onDelete?: () => void;
-  // Édition (« Modifier ») — tous facultatifs, seulement fournis quand la
-  // fiche est ouverte depuis l'écran Rendez-vous (accès à l'état de session
-  // complet, nécessaire pour valider les créneaux d'une modification).
   rdvs?: RdvDetail[];
   onUpdatePrestation?: (prestationId: string, patch: Partial<RdvPrestation>) => void;
   onAddPrestation?: (line: RdvPrestation) => void;
   onRemovePrestation?: (prestationId: string) => void;
   onCancelWithReason?: (reason: string) => void;
-  onOpenBooking?: () => void;
   planningData?: PlanningData;
 }) {
   const router = useRouter();
-  const close = () =>
-    onClose ? onClose() : closeMode === "back" ? router.back() : router.push("/rendez-vous");
+  const titleId = useId();
+  const close = () => (onClose ? onClose() : closeMode === "back" ? router.back() : router.push("/rendez-vous"));
   const day = detail.date.slice(0, 10);
+  const { getDetail, notesFor } = useClientsData();
 
   const [status, setStatusState] = useState<RdvStatus>(detail.status);
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [cancelReason, setCancelReason] = useState(detail.cancelReason ?? "");
+  const [editOpen, setEditOpen] = useState(false);
+  // Changement d'intervenante fait depuis cette fiche en mode autonome.
+  const [perStaff, setPerStaff] = useState<Record<string, string>>({});
+  const staffOf = (p: RdvPrestation) => perStaff[p.id] ?? p.staff;
+  const sessionList = useMemo(() => rdvs ?? allRendezvous(), [rdvs]);
+
   const setStatus = (next: RdvStatus) => {
     setStatusState(next);
     onStatusChange?.(next);
   };
-  const [notice, setNotice] = useState<string | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
 
-  const meta = RDV_STATUS_META[status];
-  const total = rdvTotal(detail);
+  const cancelled = status === "annulé";
+  const upcoming = status === "à venir";
+  const payer = getDetail(detail.client.id);
+  const lastNote = notesFor(detail.client.id)[0];
+  const extras = detail.extras ?? [];
+  const coverage = useMemo(() => rdvCoverage(detail.client.id, detail.prestations), [detail]);
+  const billable = (p: RdvPrestation) => !coverage.has(p.id);
+  const total =
+    detail.prestations.filter(billable).reduce((s, p) => s + p.price, 0) + extras.reduce((s, e) => s + extraPrice(e), 0);
+  const groups = beneficiaryGroups(detail);
 
-  // Praticiennes présentes ce jour-là dans le salon (pour « assigner tout le RDV »).
-  const presentRoster = useMemo(
-    () => presentPractitioners(detail.salon, day, planningData),
-    [detail.salon, day, planningData],
-  );
-
-  // Affectation par prestation : nom de la praticienne, ou FIRST_AVAILABLE.
-  const [perStaff, setPerStaff] = useState<Record<string, string>>(() =>
-    Object.fromEntries(
-      detail.prestations.map((p) => [p.id, p.staff ?? FIRST_AVAILABLE]),
-    ),
-  );
-
-  const setEveryone = (name: string) => {
-    setPerStaff(Object.fromEntries(detail.prestations.map((p) => [p.id, name])));
-    const staff = name === FIRST_AVAILABLE ? null : name;
-    detail.prestations.forEach((p) => onAssign?.(p.id, staff));
-  };
-
-  const staffOf = (pid: string) => {
-    const v = perStaff[pid];
-    return v && v !== FIRST_AVAILABLE ? v : null;
-  };
+  // Avantages de la payeuse — puces de la ligne de résumé.
+  const gift = detail.advantages.find((a) => a.kind === "carte-cadeau") ?? null;
+  const giftCard = gift && gift.kind === "carte-cadeau" ? gift : clientGiftCard(detail.client.id);
+  const abonnements = clientAbonnements(detail.client.id).filter((ab) => statusOf(ab) !== "revoked");
+  const packs = clientPacks(detail.client.id).filter((pp) => packRemaining(pp).length > 0);
+  const points = payer?.row.loyaltyPoints ?? detail.client.loyaltyPoints;
+  const hasAvantages = points > 0 || Boolean(giftCard) || abonnements.length > 0 || packs.length > 0;
 
   // Praticienne demandée par la cliente mais absente ce jour-là.
-  const requestedAbsent = useMemo(
-    () =>
-      [
-        ...new Set(
-          detail.prestations
-            .map((p) => p.requestedStaff)
-            .filter((n): n is string => Boolean(n)),
-        ),
-      ].filter((name) => !presentRoster.some((m) => fullName(m) === name)),
-    [detail.prestations, presentRoster],
-  );
+  const presentRoster = useMemo(() => presentPractitioners(detail.salon, day, planningData), [detail.salon, day, planningData]);
+  const requestedAbsent = [
+    ...new Set(detail.prestations.map((p) => p.requestedStaff).filter((n): n is string => Boolean(n))),
+  ].filter((name) => !presentRoster.some((m) => fullName(m) === name));
 
-  // Prestations regroupées par bénéficiaire (visible seulement si le rendez-vous
-  // vise plus d'une personne), puis par catégorie du catalogue au sein de
-  // chaque groupe.
-  const byBeneficiary = useMemo(() => {
-    const map = new Map<string, typeof detail.prestations>();
-    for (const p of detail.prestations) {
-      (map.get(p.beneficiaryName) ?? map.set(p.beneficiaryName, []).get(p.beneficiaryName)!).push(p);
-    }
-    return [...map.entries()];
-  }, [detail]);
-  const multiBeneficiary = byBeneficiary.length > 1;
-
-  const byCategory = (items: typeof detail.prestations) =>
-    items.reduce<Record<string, typeof detail.prestations>>((acc, p) => {
-      (acc[p.category] ??= []).push(p);
-      return acc;
-    }, {});
-
-  const extras = detail.extras ?? [];
-
-  const clientPrefs = useMemo(() => clientDetail(detail.client.id), [detail.client.id]);
-  const preferenceLines = clientPrefs
-    ? PREFERENCE_GROUPS.map((g) => ({ label: g.label, items: clientPrefs.preferences[g.key] })).filter(
-        (g) => g.items.length > 0,
-      )
-    : [];
-
-  const flash = (msg: string) => setNotice(msg);
+  const staffLabel = (p: RdvPrestation) => {
+    const first = staffOf(p);
+    if (!first) return null;
+    const first1 = first.split(" ")[0];
+    return p.secondStaff ? `${first1} + ${p.secondStaff.split(" ")[0]} · à 2` : first1;
+  };
 
   return (
-    <DetailModal title="Fiche rendez-vous" onClose={close} widthClassName="max-w-4xl">
-      <div className="space-y-6">
-        <DetailIdentityHeader
-          avatar={
-            <DetailAvatar>
-              <CalenderIcon />
-            </DetailAvatar>
-          }
-          name={detail.client.name}
-          subtitle={`Rendez-vous ${detail.ref}`}
-          badges={
-            <Badge size="sm" color={badgeColor[status]}>
-              {meta.label}
-            </Badge>
-          }
-          fields={[
-            { label: "Date", value: frFullDate(detail.date) },
-            {
-              label: "Créneau",
-              value: `${detail.date.slice(11, 16)} → ${rdvEnd(detail).slice(11, 16)}`,
-            },
-            { label: "Salon", value: detail.salonLabel },
-            { label: "Durée", value: durationLabel(rdvDuration(detail)) },
-          ]}
-        />
+    <>
+      <Dialog open variant="side" onClose={close} labelledBy={titleId} className="relative flex max-w-xl flex-col p-0">
+        <CloseButton onClick={close} />
 
-        {notice && (
-          <p className="rounded-lg bg-gray-900 px-4 py-2.5 text-theme-sm font-medium text-white">
-            {notice}
-          </p>
-        )}
-
-        {meta.closed && status !== "terminé" && (
-          <p
-            className={`rounded-lg px-4 py-3 text-theme-sm ${
-              status === "annulé"
-                ? "bg-error-50 text-error-600"
-                : "bg-warning-50 text-warning-600"
-            }`}
-          >
-            {status === "annulé"
-              ? `Ce rendez-vous a été annulé${detail.cancelReason ? ` — ${detail.cancelReason}` : ""}. Il reste consultable pour l'historique.`
-              : "La cliente ne s'est pas présentée. Vous pouvez la recontacter pour reprogrammer."}
-          </p>
-        )}
-
-        {requestedAbsent.length > 0 && !meta.closed && (
-          <Alert
-            variant="warning"
-            title="Praticienne demandée absente ce jour-là"
-            message={`La cliente a demandé ${requestedAbsent.join(
-              ", ",
-            )}. Affectez une autre praticienne ci-dessous, ou proposez un autre créneau.`}
-          />
-        )}
-
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-          <StatTile label="Total à payer" value={fcfa(total)} />
-          <StatTile
-            label="Prestations"
-            value={`${detail.prestations.length}`}
-          />
-          <StatTile
-            label="Avantages mobilisés"
-            value={detail.advantages.length > 0 ? `${detail.advantages.length}` : "Aucun"}
-          />
+        <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-base-300 bg-base-100 py-4 pr-16 pl-6">
+          {/* Référence de la réservation plutôt que le nom de la payeuse — son nom est juste en dessous. */}
+          <h2 id={titleId} className="text-xl font-semibold tabular-nums text-base-content">
+            {detail.id}
+          </h2>
+          {cancelled && <Badge variant="neutral">Annulé</Badge>}
+          {status === "terminé" && <Badge variant="success">Terminé</Badge>}
+          {status === "absence" && <Badge variant="warning">Absence</Badge>}
+          <span className="w-full text-xs text-base-content/55">
+            {formatShortDay(day)} · {rdvStartTime(detail)} – {rdvEndTime(detail)} · {detail.salonLabel} · Réservé pour{" "}
+            {reservationComposition(detail)}
+          </span>
         </div>
 
-        <div className="space-y-6">
-          <SectionCard
-            icon={<PageIcon />}
-            title="Prestations réservées"
-            aside={
-              <span className="text-theme-xs text-gray-400">
-                {detail.prestations.length} prestation
-                {detail.prestations.length > 1 ? "s" : ""} · {durationLabel(rdvDuration(detail))}
-              </span>
-            }
-          >
-            <div className="space-y-6">
-              {byBeneficiary.map(([beneficiaryName, benPrestations]) => (
-                <div key={beneficiaryName}>
-                  {multiBeneficiary && (
-                    <div className="mb-2 flex items-center justify-between">
-                      <p className="text-theme-sm font-semibold text-gray-800">{beneficiaryName}</p>
-                      <span className="text-theme-xs font-medium tabular-nums text-gray-500">
-                        {fcfa(benPrestations.reduce((sum, p) => sum + p.price, 0))}
-                      </span>
-                    </div>
-                  )}
-                  <div className="space-y-5">
-                    {Object.entries(byCategory(benPrestations)).map(([category, items]) => (
-                      <div key={category}>
-                        <p className="text-theme-xs font-semibold uppercase tracking-wide text-gray-400">
-                          {category}
-                        </p>
-                        <ul className="mt-2 divide-y divide-gray-100">
-                          {items.map((p) => (
-                            <li key={p.id} className="flex items-center justify-between gap-4 py-3">
-                              <div className="min-w-0">
-                                <p className="font-medium text-gray-800">
-                                  {p.name}
-                                  {p.secondStaff && (
-                                    <span className="ml-1.5 text-theme-xs font-normal text-gray-400">
-                                      (à deux)
-                                    </span>
-                                  )}
-                                </p>
-                                <p className="text-theme-xs text-gray-500">
-                                  {p.start} · {durationLabel(p.durationMin)} ·{" "}
-                                  {staffOf(p.id) ? (
-                                    <>
-                                      {staffOf(p.id)}
-                                      {p.secondStaff ? ` + ${p.secondStaff}` : ""}
-                                    </>
-                                  ) : meta.closed ? (
-                                    <span className="text-gray-400">praticienne non précisée</span>
-                                  ) : (
-                                    <span className="text-warning-600">à affecter</span>
-                                  )}
-                                </p>
-                              </div>
-                              <span className="shrink-0 text-theme-sm font-semibold tabular-nums text-gray-800">
-                                {fcfa(p.price)}
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {/* La payeuse */}
+          <div className="border-b border-base-300 px-6 py-4">
+            <div className="flex items-center gap-3">
+              <Avatar initial={initialsOf(detail.client.name)} size={48} className="bg-accent text-base font-semibold text-primary" />
+              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+                <span className="truncate text-sm font-semibold text-base-content">{detail.client.name}</span>
+                {payer?.row.tier && <Badge variant={payer.row.tier}>{TIER_LABEL[payer.row.tier]}</Badge>}
+              </div>
+              <Button href={`/clients/${detail.client.id}`} variant="outline" size="sm" icon={<UserRound className="size-4" />} className="shrink-0">
+                Fiche
+              </Button>
             </div>
 
-            {extras.length > 0 && (
-              <div className="mt-5 border-t border-gray-100 pt-5">
-                <div className="flex items-center gap-2">
-                  <BoxIcon className="h-4 w-4 text-gray-400" />
-                  <p className="text-theme-xs font-semibold uppercase tracking-wide text-gray-400">
-                    Boissons &amp; produits
-                  </p>
-                </div>
-                <ul className="mt-3 divide-y divide-gray-100">
-                  {extras.map((e) => (
-                    <li key={e.id} className="flex items-center justify-between gap-4 py-2.5">
-                      <span className="text-theme-sm text-gray-700">
-                        {e.qty}× {productName(e.productId)}
-                      </span>
-                      <span className="shrink-0 text-theme-sm font-medium tabular-nums text-gray-700">
-                        {fcfa(extraPrice(e))}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+            {hasAvantages && (
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {points > 0 && <AvantageChip icon={<Star className="size-3.5" />}>{points} pts</AvantageChip>}
+                {giftCard && (
+                  <AvantageChip icon={<Gift className="size-3.5" />}>Carte cadeau · {fcfa(giftCard.balance)}</AvantageChip>
+                )}
+                {packs.map((pp) => {
+                  const pack = packById(pp.packId);
+                  if (!pack) return null;
+                  const remaining = packRemaining(pp).length;
+                  return (
+                    <AvantageChip key={pp.id} icon={<PackageCheck className="size-3.5" />}>
+                      {pack.label} · {remaining} restante{remaining > 1 ? "s" : ""} sur {pack.prestationIds.length}
+                    </AvantageChip>
+                  );
+                })}
+                {abonnements.map((ab) => {
+                  const forfait = forfaitById(ab.forfaitId);
+                  if (!forfait) return null;
+                  const s = statusOf(ab);
+                  return (
+                    <AvantageChip
+                      key={ab.id}
+                      icon={<CalendarClock className="size-3.5" />}
+                      badge={{ label: ABONNEMENT_STATUS_META[s].label, warning: s === "due" }}
+                    >
+                      {forfait.label}
+                    </AvantageChip>
+                  );
+                })}
               </div>
             )}
 
-            {detail.questions.length > 0 && (
-              <div className="mt-5 border-t border-gray-100 pt-5">
-                <div className="flex items-center gap-2">
-                  <ChatIcon className="h-4 w-4 text-gray-400" />
-                  <p className="text-theme-xs font-semibold uppercase tracking-wide text-gray-400">
-                    Questionnaire d&apos;accueil
-                  </p>
+            {/* Préférences toujours visibles, jamais derrière un dépliage. */}
+            <div className="mt-3 flex flex-col gap-3">
+              {payer && <PreferencesCompact detail={payer} />}
+              {lastNote && (
+                <div className="rounded-lg bg-base-200 px-3 py-2">
+                  <Legend className="text-base-content/55">
+                    Dernière note · {new Date(lastNote.at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                  </Legend>
+                  <p className="mt-1 text-xs leading-snug text-base-content/70">{lastNote.text}</p>
                 </div>
-                <ol className="mt-3 space-y-3">
-                  {detail.questions.map((q, i) => (
-                    <li key={q.id} className="text-theme-sm">
-                      <p className="text-gray-500">
-                        <span className="font-medium text-gray-400">{i + 1}.</span> {q.question}
-                      </p>
-                      <p
-                        className={`mt-0.5 font-medium ${
-                          q.answer ? "text-gray-800" : "text-gray-400 italic"
-                        }`}
-                      >
-                        {q.answer ?? "Sans réponse"}
-                      </p>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            )}
-          </SectionCard>
+              )}
+            </div>
+          </div>
 
-          {status === "à venir" && (
-          <SectionCard
-            icon={<GroupIcon />}
-            title="Affectation"
-            aside={
-              <span className="text-theme-xs text-gray-400">
-                Praticiennes présentes le {frLongDate(detail.date)}
-              </span>
-            }
-          >
-            <label className="block">
-              <span className="text-theme-xs font-medium uppercase tracking-wide text-gray-400">
-                Assigner tout le rendez-vous à
-              </span>
-              <select
-                defaultValue=""
-                onChange={(e) => e.target.value && setEveryone(e.target.value)}
-                className="mt-1.5 h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-theme-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10"
-              >
-                <option value="">Choisir une praticienne…</option>
-                <option value={FIRST_AVAILABLE}>Première praticienne disponible</option>
-                {presentRoster.map((m) => (
-                  <option key={m.id} value={fullName(m)}>
-                    {fullName(m)}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <ul className="mt-4 space-y-3 border-t border-gray-100 pt-4">
-              {detail.prestations.map((p) => {
-                const options = presentPractitionersForPrestation(
-                  p.prestationId,
-                  detail.salon,
-                  day,
-                  planningData,
-                );
-                const twoPractitioners = prestationSeeds.find((x) => x.id === p.prestationId)?.twoPractitioners;
-                const currentStaff = staffOf(p.id);
-                return (
-                  <li key={p.id} className="flex items-center justify-between gap-4">
-                    <span className="min-w-0 flex-1 truncate text-theme-sm text-gray-700">
-                      {p.name}
-                    </span>
-                    <div className="shrink-0 space-y-1.5">
-                      <select
-                        value={perStaff[p.id] ?? FIRST_AVAILABLE}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          setPerStaff((prev) => ({ ...prev, [p.id]: value }));
-                          onAssign?.(p.id, value === FIRST_AVAILABLE ? null : value);
-                        }}
-                        className="h-9 w-56 rounded-lg border border-gray-200 bg-white px-3 text-theme-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10"
-                      >
-                        <option value={FIRST_AVAILABLE}>Première disponible</option>
-                        {options.map((m) => (
-                          <option key={m.id} value={fullName(m)}>
-                            {fullName(m)}
-                          </option>
-                        ))}
-                      </select>
-                      {options.length === 0 && (
-                        <p className="w-56 text-theme-xs text-warning-700">
-                          Aucune praticienne compétente et présente.
-                        </p>
-                      )}
-                      {twoPractitioners && currentStaff && (
-                        <select
-                          value={p.secondStaff ?? "__none__"}
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            onUpdatePrestation?.(p.id, { secondStaff: v === "__none__" ? null : v });
-                          }}
-                          className="h-9 w-56 rounded-lg border border-gray-200 bg-white px-3 text-theme-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10"
-                        >
-                          <option value="__none__">Seule</option>
-                          {options
-                            .filter((m) => fullName(m) !== currentStaff)
-                            .map((m) => (
-                              <option key={m.id} value={fullName(m)}>
-                                2ᵉ praticienne : {fullName(m)}
-                              </option>
-                            ))}
-                        </select>
-                      )}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </SectionCard>
+          {requestedAbsent.length > 0 && upcoming && (
+            <div className="border-b border-base-300 px-6 py-4">
+              <Alert
+                tone="warning"
+                title="Praticienne demandée absente ce jour-là"
+                description={`La cliente a demandé ${requestedAbsent.join(", ")}. Une autre praticienne lui a été affectée.`}
+              />
+            </div>
           )}
 
-          <SectionCard icon={<ShootingStarIcon />} title="Avantages">
-            {detail.advantages.length === 0 ? (
-              <p className="text-theme-sm text-gray-500">
-                Aucun avantage mobilisé sur ce rendez-vous.
-              </p>
-            ) : (
-              <div className="space-y-5">
-                {detail.advantages.map((a, i) => (
-                  <AdvantageItem key={i} advantage={a} />
-                ))}
-              </div>
-            )}
-          </SectionCard>
+          {/* Prestations, groupées par bénéficiaire */}
+          {groups.map((group) => {
+            const groupTotal = group.lines.filter(billable).reduce((s, p) => s + p.price, 0);
+            const other = group.clientId && group.clientId !== detail.client.id ? getDetail(group.clientId) : null;
+            return (
+              <div key={group.key} className="border-b border-base-300 px-6 py-4">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="inline-flex items-center gap-1.5">
+                    {group.href ? (
+                      <Link
+                        href={group.href}
+                        className="text-sm font-semibold text-base-content underline decoration-base-300 decoration-1 underline-offset-2 transition hover:decoration-primary"
+                      >
+                        {group.label}
+                      </Link>
+                    ) : (
+                      <span className="text-sm font-semibold text-base-content">{group.label}</span>
+                    )}
+                    {group.kind !== "femme" && (
+                      <span className="rounded-sm bg-accent px-2 py-0.5 text-xs font-semibold tracking-wide text-primary uppercase">
+                        {group.kind === "homme" ? "Homme" : "Enfant"}
+                      </span>
+                    )}
+                  </span>
+                  {group.lines.length > 1 && (
+                    <span className="text-xs font-semibold tabular-nums text-base-content/55">{fcfa(groupTotal)}</span>
+                  )}
+                </div>
 
-          <SectionCard icon={<UserCircleIcon />} title="Coordonnées client">
-            <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Field label="Email">
-                <a href={`mailto:${detail.client.email}`} className="text-brand-500 hover:underline">
-                  {detail.client.email}
-                </a>
-              </Field>
-              <Field label="Téléphone">
-                <span className="tabular-nums">{detail.client.phone}</span>
-              </Field>
-              <Field label="WhatsApp">
-                {detail.client.whatsapp ? (
-                  <span className="tabular-nums">{detail.client.whatsapp}</span>
-                ) : (
-                  <span className="text-gray-400">Non renseigné</span>
-                )}
-              </Field>
-              <Field label="Points de fidélité">
-                {groupThousands(detail.client.loyaltyPoints)} points
-              </Field>
-            </dl>
-            {preferenceLines.length > 0 && (
-              <div className="mt-4 border-t border-gray-100 pt-4">
-                <p className="text-theme-xs font-semibold uppercase tracking-wide text-gray-400">
-                  Préférences
-                </p>
-                <dl className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {preferenceLines.map((g) => (
-                    <div key={g.label}>
-                      <dt className="text-theme-xs text-gray-400">{g.label}</dt>
-                      <dd className="text-theme-sm text-gray-700">{g.items.join(", ")}</dd>
+                {other && <PreferencesCompact detail={other} className="mt-2" />}
+
+                <div className="mt-2 flex flex-col divide-y divide-base-300">
+                  {group.lines.map((p) => {
+                    const Icon = categoryIcon(p.category);
+                    const covered = coverage.get(p.id);
+                    const label = staffLabel(p);
+                    const current = staffOf(p);
+                    const free = upcoming
+                      ? availablePractitioners(sessionList, p.prestationId, detail.salon, day, timeToMinutes(p.start), p.durationMin, {
+                          data: planningData,
+                          excludeRdvId: detail.id,
+                        })
+                      : [];
+                    const options = current && !free.includes(current) ? [current, ...free] : free;
+                    const twoPractitioners = prestationSeeds.find((x) => x.id === p.prestationId)?.twoPractitioners;
+                    const seconds = free.filter((n) => n !== current);
+                    return (
+                      <div key={p.id} className="flex items-start gap-3 py-2.5">
+                        <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-accent text-primary">
+                          <Icon className="size-4" />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-base-content">{p.name}</p>
+                          <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-base-content/55">
+                            <span className="tabular-nums">{p.start}</span>
+                            {label ? (
+                              <span className="inline-flex items-center gap-1">
+                                {p.secondStaff ? <Users className="size-3" /> : <User className="size-3" />} {label}
+                              </span>
+                            ) : (
+                              <span className="font-medium text-warning">
+                                {upcoming ? "Aucune praticienne disponible — à déplacer" : "Praticienne non précisée"}
+                              </span>
+                            )}
+                            {covered && (
+                              <span className="rounded-sm bg-muted px-2 py-0.5 font-semibold text-base-content/65">Couverte · {covered}</span>
+                            )}
+                          </p>
+                          {upcoming && current && options.length > 1 && (
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              <select
+                                value={current}
+                                aria-label={`Intervenante pour ${p.name}`}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  setPerStaff((prev) => ({ ...prev, [p.id]: value }));
+                                  onAssign?.(p.id, value);
+                                }}
+                                className="select select-sm w-auto bg-base-100 text-sm"
+                              >
+                                {options.map((name) => (
+                                  <option key={name} value={name}>
+                                    {name}
+                                  </option>
+                                ))}
+                              </select>
+                              {twoPractitioners && (
+                                <select
+                                  value={p.secondStaff ?? "__none__"}
+                                  aria-label={`Deuxième praticienne pour ${p.name}`}
+                                  onChange={(e) => {
+                                    const v = e.target.value;
+                                    onUpdatePrestation?.(p.id, { secondStaff: v === "__none__" ? null : v });
+                                  }}
+                                  className="select select-sm w-auto bg-base-100 text-sm"
+                                >
+                                  <option value="__none__">Seule</option>
+                                  {[...(p.secondStaff && !seconds.includes(p.secondStaff) ? [p.secondStaff] : []), ...seconds].map((name) => (
+                                    <option key={name} value={name}>
+                                      2ᵉ praticienne : {name}
+                                    </option>
+                                  ))}
+                                </select>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <span
+                          className={cn(
+                            "shrink-0 text-sm font-semibold tabular-nums",
+                            covered ? "text-base-content/40 line-through" : "text-base-content/85",
+                          )}
+                        >
+                          {fcfa(p.price)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+
+          {extras.length > 0 && (
+            <div className="border-b border-base-300 px-6 py-4">
+              <Legend>Extras</Legend>
+              <div className="mt-2 flex flex-col divide-y divide-base-300">
+                {extras.map((e) => {
+                  const boisson = productKind(e.productId) === "boisson";
+                  return (
+                    <div key={e.id} className="flex items-start gap-3 py-2.5">
+                      <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-accent text-primary">
+                        {boisson ? <Coffee className="size-4" /> : <ShoppingBag className="size-4" />}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-base-content">
+                          {e.qty > 1 ? `${e.qty}× ` : ""}
+                          {productName(e.productId)}
+                        </p>
+                        <p className="mt-0.5 text-xs text-base-content/55">
+                          {boisson ? "Boisson · à retirer sur place" : "Produit · à emporter"}
+                        </p>
+                      </div>
+                      <span className="shrink-0 text-sm font-semibold tabular-nums text-base-content/85">{fcfa(extraPrice(e))}</span>
                     </div>
-                  ))}
-                </dl>
+                  );
+                })}
               </div>
-            )}
-            <div className="mt-4 flex flex-wrap gap-2 border-t border-gray-100 pt-4">
-              <Link
-                href={`/clients/${detail.client.id}`}
-                className="text-theme-sm font-medium text-brand-500 hover:text-brand-600"
-              >
-                Voir la fiche cliente →
-              </Link>
-              <Link
-                href="/messagerie"
-                className="ml-auto inline-flex items-center gap-1.5 text-theme-sm font-medium text-gray-500 hover:text-gray-700"
-              >
-                <EnvelopeIcon className="h-4 w-4" />
-                Écrire à la cliente
-              </Link>
             </div>
-          </SectionCard>
+          )}
 
-          <SectionCard icon={<TimeIcon />} title="Historique">
-            <ol className="relative space-y-5 border-l border-gray-200 pl-5">
+          {detail.questions.length > 0 && (
+            <div className="border-b border-base-300 px-6 py-4">
+              <Legend>Questions de réservation</Legend>
+              <dl className="mt-2 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1.5 text-sm">
+                {detail.questions.map((q) => (
+                  <div key={q.id} className="contents">
+                    <dt className="text-base-content/55">{q.question}</dt>
+                    <dd className={q.answer ? "text-base-content" : "text-base-content/45 italic"}>{q.answer ?? "Sans réponse"}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          )}
+
+          <div className="px-6 py-4">
+            <Legend>Historique</Legend>
+            <ol className="mt-2 flex flex-col gap-2">
               {detail.events.map((e, i) => (
-                <li key={i} className="relative">
-                  <span
-                    className={`absolute -left-[27px] top-1 h-2.5 w-2.5 rounded-full ring-4 ring-white ${
-                      i === 0 ? "bg-brand-500" : "bg-gray-300"
-                    }`}
-                  />
-                  <p className="text-theme-sm font-medium text-gray-800">{e.label}</p>
-                  {e.detail && <p className="text-theme-xs text-gray-500">{e.detail}</p>}
-                  <p className="mt-0.5 text-theme-xs text-gray-400">
-                    {frLongDate(e.at)} · {e.at.slice(11, 16)}
-                  </p>
+                <li key={i} className="text-xs text-base-content/60">
+                  <span className="font-semibold text-base-content/80">{e.label}</span>
+                  {e.detail && ` · ${e.detail}`}
+                  <span className="text-base-content/45">
+                    {" "}
+                    — {frLongDate(e.at)} · {e.at.slice(11, 16)}
+                  </span>
                 </li>
               ))}
             </ol>
-          </SectionCard>
-
-          {/* Actions de gestion */}
-          <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-gray-200 bg-white p-5">
-            {!meta.closed && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setEditOpen(true)}
-                  className={`${inertBtn} cursor-pointer border border-gray-200 text-gray-700 hover:bg-gray-50`}
-                >
-                  Modifier
-                </button>
-                <Link
-                  href="/rendez-vous"
-                  className={`${inertBtn} border border-gray-200 text-gray-700 hover:bg-gray-50`}
-                >
-                  <CalenderIcon className="h-4 w-4" />
-                  Déplacer (depuis l&apos;agenda)
-                </Link>
-              </>
-            )}
-            {onOpenBooking && (
-              <button
-                type="button"
-                onClick={onOpenBooking}
-                className={`${inertBtn} cursor-pointer border border-gray-200 text-gray-700 hover:bg-gray-50`}
-              >
-                <PlusIcon className="h-4 w-4" />
-                Nouveau rendez-vous
-              </button>
-            )}
-            {status === "annulé" && (
-              <button
-                type="button"
-                onClick={() => {
-                  setStatus("à venir");
-                  flash("Rendez-vous rétabli — cliente prévenue par email.");
-                }}
-                className={`${inertBtn} cursor-pointer bg-brand-500 text-white hover:bg-brand-600`}
-              >
-                Rétablir le rendez-vous
-              </button>
-            )}
-            {confirmDelete ? (
-              <span className="ml-auto flex items-center gap-2 text-theme-xs">
-                <span className="text-gray-500">
-                  Supprimer définitivement ? Aucun email ne sera envoyé.
-                </span>
-                <button
-                  type="button"
-                  onClick={() => (onDelete ? onDelete() : router.push("/rendez-vous"))}
-                  className="font-semibold text-error-600 hover:underline"
-                >
-                  Supprimer
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setConfirmDelete(false)}
-                  className="font-medium text-gray-500 hover:underline"
-                >
-                  Annuler
-                </button>
-              </span>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setConfirmDelete(true)}
-                className={`${inertBtn} ml-auto cursor-pointer text-error-600 hover:bg-error-50`}
-              >
-                Supprimer définitivement
-              </button>
-            )}
           </div>
         </div>
-      </div>
+
+        <div className="shrink-0 border-t border-base-300 px-6 py-3">
+          <div className="flex items-baseline justify-between">
+            <Legend>Total</Legend>
+            <span className="text-xl font-bold tabular-nums text-base-content">{fcfa(total)}</span>
+          </div>
+        </div>
+
+        <div className="flex shrink-0 flex-col gap-2 p-5">
+          {upcoming && (
+            <div className="flex gap-2">
+              <Button variant="outline" icon={<SlidersHorizontal className="size-4" />} className="shrink-0 px-6" onClick={() => setEditOpen(true)}>
+                Modifier
+              </Button>
+              <button
+                type="button"
+                onClick={() => setConfirmCancel(true)}
+                className="btn btn-ghost btn-md flex-1 border-transparent text-[16px] font-medium whitespace-nowrap text-error normal-case hover:bg-error/10 active:scale-[0.97]"
+              >
+                Annuler la réservation
+              </button>
+            </div>
+          )}
+          {cancelled && (
+            <>
+              {(detail.cancelReason || cancelReason) && (
+                <p className="px-1 text-xs text-base-content/55">Motif : {detail.cancelReason || cancelReason}</p>
+              )}
+              <Button variant="outline" onClick={() => setStatus("à venir")}>
+                Rétablir la réservation
+              </Button>
+            </>
+          )}
+        </div>
+      </Dialog>
+
+      <Dialog open={confirmCancel} onClose={() => setConfirmCancel(false)} labelledBy={`${titleId}-cancel`} className="max-w-sm p-6">
+        <h3 id={`${titleId}-cancel`} className="text-lg font-semibold text-base-content">
+          Annuler cette réservation ?
+        </h3>
+        <p className="mt-2 text-sm text-base-content/55">
+          Toutes ses prestations passeront au statut Annulé et resteront consultables via « Afficher les annulés ». La cliente est
+          prévenue par email.
+        </p>
+        <Field label="Motif (facultatif)" className="mt-4">
+          <Textarea value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} rows={2} placeholder="Ex. la cliente a décalé sa venue" />
+        </Field>
+        <div className="mt-4 flex gap-3">
+          <Button variant="outline" className="flex-1" onClick={() => setConfirmCancel(false)}>
+            Retour
+          </Button>
+          <Button
+            variant="danger"
+            className="flex-1"
+            onClick={() => {
+              setStatusState("annulé");
+              if (onCancelWithReason) onCancelWithReason(cancelReason.trim());
+              else onStatusChange?.("annulé");
+              setConfirmCancel(false);
+            }}
+          >
+            Annuler la réservation
+          </Button>
+        </div>
+      </Dialog>
 
       {editOpen && (
         <EditRdvDialog
@@ -811,17 +597,14 @@ export default function RendezVousDetail({
           onAddLine={(line) => onAddPrestation?.(line)}
           onRemoveLine={(pid) => onRemovePrestation?.(pid)}
           onCancelRdv={(reason) => {
-            setStatus("annulé");
-            onCancelWithReason?.(reason);
+            setStatusState("annulé");
+            setCancelReason(reason);
+            if (onCancelWithReason) onCancelWithReason(reason);
+            else onStatusChange?.("annulé");
             setEditOpen(false);
-            flash(
-              reason
-                ? `Rendez-vous annulé — ${reason} — cliente prévenue par email.`
-                : "Rendez-vous annulé — cliente prévenue par email.",
-            );
           }}
         />
       )}
-    </DetailModal>
+    </>
   );
 }

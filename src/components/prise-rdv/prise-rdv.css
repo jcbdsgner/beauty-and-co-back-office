@@ -1,0 +1,119 @@
+/* Parcours de prise de rendez-vous (ADR 0032) — les tokens du site b&co, recopiés tels quels
+   depuis b&co/app/globals.css et BORNÉS à la portée .bco : le reste du point de vente garde son
+   propre thème. */
+.bco {
+  --background: #ffffff;
+  --foreground: #171717;
+
+  /* Brand tokens — Beauty and Co */
+  --core-brand-color: #fdcfca;
+  --core-brand-color-2: #eddcda;
+  --on-core-brand-color: #2d2d2d;
+  --text-secondary: #344054;
+  --button-2-color: #a27576;
+  --brand-color-1: rgba(216, 184, 180, 0.5);
+
+  /* Brand neutrals — warm rose/taupe family reused across the booking flow.
+     #806562 was a near-duplicate drift of this same taupe; unified to one value. */
+  --brand-taupe-muted: #886666;
+  --brand-cream: #f8f6f9;
+  --brand-rose-soft: #fef0ee;
+  --brand-lilac: #e4c8ff;
+
+  /* Gray scale — neutral text/border/background values shared across components */
+  --color-gray-900: #101828;
+  --color-gray-800: #1d2939;
+  --color-gray-600: #475467;
+  --color-gray-500: #667085;
+  --color-gray-400: #98a2b3;
+  --color-gray-300: #d0d5dd;
+  --color-gray-200: #eaecf0;
+  --color-gray-100: #f2f4f7;
+  --color-gray-50: #f9fafb;
+
+  /* Misc reused colors */
+  --color-error: #b42318;
+  --color-text-tertiary: #374151;
+  --color-slate-500: #64748b;
+  --color-slate-200: #e2e8f0;
+  --color-slate-900: #0f172a;
+  --color-border-light: #e5e7eb;
+  --color-neutral-200: #e4e4e4;
+  --color-bg-subtle: #f7f8fa;
+  --color-ink: #020817;
+  --color-near-black: #303030;
+  --color-black: #000;
+
+  font-family: var(--font-cabinet-grotesk), Arial, Helvetica, sans-serif;
+  font-weight: 450;
+  color: var(--foreground);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Draws the eye to a booking block the visitor hasn't interacted with yet (note field,
+   two-practitioners toggle, suggestion upsell). The shake is parked at the tail of a longer
+   cycle (rather than looping continuously) so it reads as an occasional nudge instead of a
+   constant distraction. */
+.attention-shake {
+  animation: attention-shake-wiggle 3s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@keyframes attention-shake-wiggle {
+  0%,
+  80%,
+  100% {
+    transform: rotate(0deg) translateX(0);
+  }
+  83% {
+    transform: rotate(-3deg) translateX(-6px);
+  }
+  86% {
+    transform: rotate(3deg) translateX(6px);
+  }
+  89% {
+    transform: rotate(-2.5deg) translateX(-5px);
+  }
+  92% {
+    transform: rotate(2.5deg) translateX(5px);
+  }
+  95% {
+    transform: rotate(-1deg) translateX(-2px);
+  }
+  97% {
+    transform: rotate(1deg) translateX(2px);
+  }
+}
+
+/* Same full amplitude as .attention-shake, but plays once on mount instead of looping —
+   for blocks that appear as the direct result of an action (e.g. picking a time slot),
+   where a repeating shake would be redundant with the moment already drawing the eye. */
+.attention-shake-once {
+  animation: attention-shake-wiggle-once 0.6s ease-in-out 1;
+  transform-origin: center;
+}
+
+@keyframes attention-shake-wiggle-once {
+  0%,
+  100% {
+    transform: rotate(0deg) translateX(0);
+  }
+  15% {
+    transform: rotate(-3deg) translateX(-6px);
+  }
+  30% {
+    transform: rotate(3deg) translateX(6px);
+  }
+  45% {
+    transform: rotate(-2.5deg) translateX(-5px);
+  }
+  60% {
+    transform: rotate(2.5deg) translateX(5px);
+  }
+  75% {
+    transform: rotate(-1deg) translateX(-2px);
+  }
+  90% {
+    transform: rotate(1deg) translateX(2px);
+  }
+}

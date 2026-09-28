@@ -14,7 +14,7 @@ import {
 } from "@/lib/mock/autorisations";
 import { Toggle } from "./ui";
 
-// Sous-vue « Autorisations » de l'écran Équipe — réglées PAR RÔLE.
+// Réglages › Autorisations (sortie de l'écran Équipe le 2026-09-27) — réglées PAR RÔLE.
 //
 // 1. Sokhna arrive ici rarement, à froid, souvent après s'être demandé « est-ce
 //    que ma manager peut changer un prix ? » ou après un incident. Registre posé,
@@ -44,19 +44,19 @@ export default function RolePermissions({ autorisations, onChange, onReset }: Pr
 
   return (
     <div className="space-y-5">
-      <Alert
-        variant="info"
-        title="Vos accès à vous ne changent pas"
-        message={`${account.name} garde tous les accès. Ces autorisations s'appliquent aux comptes que vous invitez : chaque personne cumule les droits de ses rôles.`}
-      />
+      <p className="max-w-[72ch] text-[15px] leading-relaxed text-base-content/70">
+        Ces autorisations s&apos;appliquent aux comptes que vous invitez : chaque personne cumule
+        les droits de ses rôles. Vos accès à vous ne changent pas — {account.name} garde tous les
+        accès.
+      </p>
 
-      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+      <div className="overflow-hidden rounded-box border border-base-300 bg-white">
         <table className="w-full border-collapse text-left">
           <thead>
-            <tr className="border-b border-gray-100">
+            <tr className="border-b border-base-300">
               <th
                 scope="col"
-                className="px-6 py-4 text-sm font-semibold text-gray-800"
+                className="px-6 py-4 text-sm font-semibold text-base-content"
               >
                 Autorisation
               </th>
@@ -67,12 +67,12 @@ export default function RolePermissions({ autorisations, onChange, onReset }: Pr
                   <th
                     scope="col"
                     key={role}
-                    className="w-40 px-4 py-4 text-center align-top"
+                    className="w-36 px-4 py-4 text-center align-top"
                   >
-                    <span className="block text-sm font-semibold text-gray-800">
+                    <span className="block text-sm font-semibold text-base-content">
                       {ROLE_LABELS[role]}
                     </span>
-                    <span className="mt-0.5 block text-theme-xs text-gray-400">
+                    <span className="mt-0.5 block text-xs text-base-content/45">
                       {count} accordée{count > 1 ? "s" : ""}
                       {dirty && " · modifié"}
                     </span>
@@ -80,7 +80,7 @@ export default function RolePermissions({ autorisations, onChange, onReset }: Pr
                       <button
                         type="button"
                         onClick={() => onReset(role)}
-                        className="mt-1 text-theme-xs font-medium text-brand-600 transition hover:text-brand-700 hover:underline"
+                        className="mt-1 text-xs font-medium text-brand-600 transition hover:text-secondary hover:underline"
                       >
                         Réinitialiser
                       </button>
@@ -126,29 +126,29 @@ function GroupRows({
 }) {
   return (
     <>
-      <tr className="bg-gray-50">
+      <tr className="border-t border-base-300 bg-base-200/60">
         <th
           scope="colgroup"
           colSpan={1 + ROLE_COLUMNS.length}
-          className="px-6 py-2.5 text-theme-xs font-semibold uppercase tracking-wide text-gray-400"
+          className="px-6 py-2 text-[13px] font-medium text-base-content/55"
         >
           {group.label}
         </th>
       </tr>
       {group.capabilities.map((cap) => (
-        <tr key={cap.id} className="border-t border-gray-100">
+        <tr key={cap.id} className="border-t border-base-300">
           <th scope="row" className="px-6 py-3.5 font-normal">
-            <span className="flex items-center gap-2 text-sm text-gray-800">
+            <span className="flex items-center gap-2 text-[15px] text-base-content">
               {cap.label}
               {cap.sensitive && (
-                <span className="inline-flex items-center gap-1 rounded bg-gray-100 px-1.5 py-0.5 text-[13px] font-medium text-gray-500">
+                <span className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[13px] font-medium text-base-content/60">
                   <LockIcon className="size-3" />
                   Sensible
                 </span>
               )}
             </span>
             {cap.hint && (
-              <span className="mt-0.5 block text-theme-xs text-gray-500">
+              <span className="mt-0.5 block text-xs text-base-content/60">
                 {cap.hint}
               </span>
             )}

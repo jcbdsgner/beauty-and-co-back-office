@@ -73,8 +73,8 @@ export default function SalonForm({
     <div className="space-y-6">
       <div>
         <BackButton onClick={onCancel} />
-        <h1 className="text-2xl font-semibold text-gray-800">Nouveau salon</h1>
-        <p className="mt-1 text-theme-sm text-gray-500">
+        <h1 className="text-2xl font-semibold text-base-content">Nouveau salon</h1>
+        <p className="mt-1 text-sm text-base-content/60">
           Renseignez l&apos;identité, la capacité et les horaires. Les prestations se
           rattacheront ensuite depuis Services.
         </p>

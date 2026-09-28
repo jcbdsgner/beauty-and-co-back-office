@@ -9,7 +9,7 @@ import {
   type QuestionType,
   type ServiceQuestion,
 } from "@/lib/mock/services";
-import { SectionCard, SelectField, Toggle, btnGhost, btnPrimary } from "./ui";
+import { SectionCard, SelectField, TextInput, Toggle, btnGhost, btnPrimary } from "./ui";
 
 type Props = {
   serviceId: string;
@@ -18,11 +18,12 @@ type Props = {
   onDelete: (id: string) => void;
 };
 
-type Draft = { label: string; type: QuestionType; active: boolean };
+type Draft = { label: string; type: QuestionType; placeholder: string; active: boolean };
 
 const draftOf = (q?: ServiceQuestion): Draft => ({
   label: q?.label ?? "",
   type: q?.type ?? "oui-non",
+  placeholder: q?.placeholder ?? "",
   active: q?.active ?? true,
 });
 
@@ -43,13 +44,13 @@ function QuestionForm({
 }) {
   const valid = draft.label.trim() !== "";
   return (
-    <div className="rounded-xl border border-brand-200 bg-brand-50/40 p-4">
-      <h4 className="text-theme-sm font-semibold text-gray-800">{title}</h4>
+    <div className="rounded-xl border border-brand-200 bg-accent/40 p-4">
+      <h4 className="text-sm font-semibold text-base-content">{title}</h4>
       <div className="mt-4 space-y-4">
         <div>
           <label
             htmlFor="question-label"
-            className="mb-1.5 block text-sm font-medium text-gray-800"
+            className="mb-1.5 block text-sm font-medium text-base-content"
           >
             Question posée à la cliente
           </label>
@@ -59,7 +60,7 @@ function QuestionForm({
             value={draft.label}
             placeholder="Avez-vous un vernis permanent ou un gel à retirer ?"
             onChange={(e) => setDraft({ ...draft, label: e.target.value })}
-            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10"
+            className="w-full rounded-field border border-base-300 bg-white px-4 py-2.5 text-sm text-base-content placeholder:text-base-content/40 focus:outline-2 focus:outline-offset-2 focus:outline-[#fdcfca]"
           />
         </div>
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3">
@@ -70,7 +71,7 @@ function QuestionForm({
             options={QUESTION_TYPE_OPTIONS}
           />
           <div className="pb-2.5">
-            <label className="flex items-center gap-2 text-theme-sm text-gray-600">
+            <label className="flex items-center gap-2 text-sm text-base-content/70">
               <Toggle
                 checked={draft.active}
                 onChange={(v) => setDraft({ ...draft, active: v })}
@@ -80,6 +81,14 @@ function QuestionForm({
             </label>
           </div>
         </div>
+        {draft.type === "texte" && (
+          <TextInput
+            label="Texte d'aide du champ"
+            placeholder="Précisez votre choix d'huile"
+            value={draft.placeholder}
+            onChange={(v) => setDraft({ ...draft, placeholder: v })}
+          />
+        )}
       </div>
       <div className="mt-5 flex items-center gap-2">
         <button type="button" onClick={onSave} disabled={!valid} className={btnPrimary}>
@@ -116,17 +125,24 @@ export default function QuestionsPanel({ serviceId, questions, onUpsert, onDelet
     setCreating(false);
   };
   const commit = (id: string) => {
-    onUpsert({ id, serviceId, label: draft.label.trim(), type: draft.type, active: draft.active });
+    onUpsert({
+      id,
+      serviceId,
+      label: draft.label.trim(),
+      type: draft.type,
+      placeholder: draft.type === "texte" ? draft.placeholder.trim() || undefined : undefined,
+      active: draft.active,
+    });
     reset();
   };
 
   return (
     <SectionCard
-      title="Questions d'accueil"
-      description="Renseignées par la cliente au moment de la réservation d'une prestation de cette catégorie."
+      title="Questions de réservation"
+      description="Obligatoires : la cliente y répond avant de réserver une prestation de cette catégorie."
     >
       {questions.length === 0 && !creating ? (
-        <p className="rounded-xl border border-dashed border-gray-200 px-4 py-10 text-center text-theme-sm text-gray-500">
+        <p className="rounded-xl border border-dashed border-base-300 px-4 py-10 text-center text-sm text-base-content/60">
           Aucune question pour cette catégorie.
         </p>
       ) : (
@@ -146,22 +162,23 @@ export default function QuestionsPanel({ serviceId, questions, onUpsert, onDelet
             ) : (
               <li
                 key={q.id}
-                className="flex items-center gap-4 rounded-xl border border-gray-200 px-4 py-3.5"
+                className="flex items-center gap-4 rounded-xl border border-base-300 px-4 py-3.5"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-gray-800">
+                  <p className="text-sm font-medium text-base-content">
                     {q.label}
                     {!q.active && (
-                      <span className="ml-2 text-theme-xs font-medium text-gray-400">Inactive</span>
+                      <span className="ml-2 text-xs font-medium text-base-content/45">Inactive</span>
                     )}
                   </p>
-                  <p className="mt-0.5 text-theme-xs text-gray-500">
+                  <p className="mt-0.5 text-xs text-base-content/60">
                     Réponse : {questionTypeLabel(q.type)}
+                    {q.type === "texte" && q.placeholder && <> · « {q.placeholder} »</>}
                   </p>
                 </div>
                 {confirmId === q.id ? (
-                  <span className="flex shrink-0 items-center gap-2 text-theme-xs">
-                    <span className="text-gray-500">Supprimer&nbsp;?</span>
+                  <span className="flex shrink-0 items-center gap-2 text-xs">
+                    <span className="text-base-content/60">Supprimer&nbsp;?</span>
                     <button
                       type="button"
                       onClick={() => {
@@ -175,7 +192,7 @@ export default function QuestionsPanel({ serviceId, questions, onUpsert, onDelet
                     <button
                       type="button"
                       onClick={() => setConfirmId(null)}
-                      className="font-medium text-gray-500 hover:underline"
+                      className="font-medium text-base-content/60 hover:underline"
                     >
                       Non
                     </button>
@@ -185,7 +202,7 @@ export default function QuestionsPanel({ serviceId, questions, onUpsert, onDelet
                     <button
                       type="button"
                       onClick={() => startEdit(q)}
-                      className="rounded-lg px-2.5 py-1.5 text-theme-xs font-medium text-gray-600 transition hover:bg-gray-50 hover:text-gray-900"
+                      className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-base-content/70 transition hover:bg-base-200 hover:text-base-content"
                     >
                       Modifier
                     </button>
@@ -193,7 +210,7 @@ export default function QuestionsPanel({ serviceId, questions, onUpsert, onDelet
                       type="button"
                       onClick={() => setConfirmId(q.id)}
                       aria-label={`Supprimer la question « ${q.label} »`}
-                      className="rounded-lg p-1.5 text-gray-400 transition hover:bg-error-50 hover:text-error-600"
+                      className="rounded-lg p-1.5 text-base-content/45 transition hover:bg-error-50 hover:text-error-600"
                     >
                       <TrashBinIcon className="size-4" />
                     </button>
@@ -205,7 +222,7 @@ export default function QuestionsPanel({ serviceId, questions, onUpsert, onDelet
         </ul>
       )}
 
-      <div className="mt-6 border-t border-gray-100 pt-6">
+      <div className="mt-6 border-t border-base-300 pt-6">
         {creating ? (
           <QuestionForm
             title="Ajouter une question"

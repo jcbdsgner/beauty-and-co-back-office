@@ -25,7 +25,7 @@ type Props = {
 };
 
 const dateField =
-  "h-11 w-full rounded-lg border border-gray-300 bg-white px-4 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10";
+  "h-11 w-full rounded-field border border-base-300 bg-white px-4 text-sm text-base-content focus:outline-2 focus:outline-offset-2 focus:outline-[#fdcfca]";
 
 export default function AbsenceDialog({
   open,
@@ -70,10 +70,10 @@ export default function AbsenceDialog({
       className="max-w-lg m-4"
     >
       <div className="p-6">
-        <h3 className="text-lg font-semibold text-gray-800">
+        <h3 className="text-lg font-semibold text-base-content">
           Poser une absence — {fullName(member)}
         </h3>
-        <p className="mt-1 text-theme-sm text-gray-500">
+        <p className="mt-1 text-sm text-base-content/60">
           L&apos;absence remplace les horaires habituels sur toute la période.
         </p>
 
@@ -89,7 +89,7 @@ export default function AbsenceDialog({
             <div>
               <label
                 htmlFor="absence-from"
-                className="mb-1.5 block text-sm font-medium text-gray-800"
+                className="mb-1.5 block text-sm font-medium text-base-content"
               >
                 Du
               </label>
@@ -107,7 +107,7 @@ export default function AbsenceDialog({
             <div>
               <label
                 htmlFor="absence-to"
-                className="mb-1.5 block text-sm font-medium text-gray-800"
+                className="mb-1.5 block text-sm font-medium text-base-content"
               >
                 Au
               </label>
@@ -141,7 +141,7 @@ export default function AbsenceDialog({
           {conflicts > 0 && (
             <Link
               href="/rendez-vous"
-              className="inline-block text-theme-sm font-medium text-brand-600 hover:text-brand-700"
+              className="inline-block text-sm font-medium text-brand-600 hover:text-secondary"
             >
               Voir les rendez-vous →
             </Link>

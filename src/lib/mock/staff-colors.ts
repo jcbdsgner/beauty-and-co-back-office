@@ -44,6 +44,6 @@ export function accentForMemberId(memberId: string): StaffAccent {
 // Le rendez-vous ne référence une praticienne que par son nom complet
 // (`RdvPrestation.staff: string | null`) — résolution par nom.
 export function accentForStaffName(name: string | null): StaffAccent {
-  if (name === null) return { bg: "#fff7e6", border: "#f79009", text: "#a0640a", dot: "#f79009" }; // à affecter — ton warning
+  if (name === null) return { bg: "#fff7e6", border: "#f79009", text: "#a0640a", dot: "#f79009" }; // aucune praticienne disponible (conflit) — ton warning
   return staffAccent(INDEX_BY_FULLNAME.get(name) ?? 0);
 }

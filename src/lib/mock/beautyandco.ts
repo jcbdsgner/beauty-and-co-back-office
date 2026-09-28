@@ -2,6 +2,8 @@
 // Volontairement indépendant du reste de la couche mock : importer directement ce fichier
 // (`@/lib/mock/beautyandco`) et non le barrel `@/lib/mock`.
 
+import { EMPTY_CLIENT_PREFERENCES, type ClientPreferences } from "./preferences";
+
 // Forme d'un indicateur de carte (StatCards) — la partie chiffrée et l'unité
 // sont séparées pour l'affichage.
 export type Kpi = {
@@ -105,11 +107,11 @@ const ALL_SALONS_TODAY: SalonToday[] = [
     area: "Route de Ngor",
     count: 6,
     appointments: [
-      { time: "09:00", client: "Awa Diop", service: "Coupe & Brushing", staff: "Sophie", status: "à venir" },
-      { time: "10:30", client: "Fatou Ndiaye", service: "Coloration", staff: "Mariama", status: "à venir" },
-      { time: "12:00", client: "Marième Sow", service: "Manucure", staff: "Aïda", status: "à venir" },
-      { time: "14:00", client: "Aïcha Ba", service: "Soin visage", staff: "Sophie", status: "à venir" },
-      { time: "15:30", client: "Ndèye Fall", service: "Balayage", staff: "Mariama", status: "à venir" },
+      { time: "09:00", client: "Awa Sarr", service: "Coupe & Brushing", staff: "Sophie", status: "à venir" },
+      { time: "10:30", client: "Fatou Camara", service: "Coloration", staff: "Mariama", status: "à venir" },
+      { time: "12:00", client: "Coumba Thiam", service: "Manucure", staff: "Aïda", status: "à venir" },
+      { time: "14:00", client: "Bineta Diagne", service: "Soin visage", staff: "Sophie", status: "à venir" },
+      { time: "15:30", client: "Mariam Kane", service: "Balayage", staff: "Mariama", status: "à venir" },
       { time: "17:00", client: "Khady Guèye", service: "Coupe", staff: "Aïda", status: "à venir" },
     ],
   },
@@ -119,7 +121,7 @@ const ALL_SALONS_TODAY: SalonToday[] = [
     area: "Corniche Ouest",
     count: 3,
     appointments: [
-      { time: "10:00", client: "Sokhna Mbaye", service: "Manucure", staff: "Bineta", status: "à venir" },
+      { time: "10:00", client: "Sokhna Ndiaye", service: "Manucure", staff: "Bineta", status: "à venir" },
       { time: "13:00", client: "Rama Diallo", service: "Soin visage", staff: "Coumba", status: "à venir" },
       { time: "16:00", client: "Bineta Cissé", service: "Coupe & Brushing", staff: "Bineta", status: "à venir" },
     ],
@@ -467,11 +469,13 @@ export function trendChart(
 export type PopularService = { name: string; count: number };
 
 const POPULAR_30D: PopularService[] = [
-  { name: "Coupe & Brushing", count: 320 },
-  { name: "Coloration", count: 210 },
-  { name: "Soin visage", count: 165 },
-  { name: "Manucure", count: 140 },
-  { name: "Balayage", count: 95 },
+  // Noms réels du catalogue (`services.ts`) — remplace l'ancien « Coloration »,
+  // prestation que Beauty & Co ne propose pas.
+  { name: "Shampoing brushing", count: 320 },
+  { name: "Tresses cheveux", count: 210 },
+  { name: "Vernis permanent mains", count: 165 },
+  { name: "Soin complet", count: 140 },
+  { name: "Manucure russe", count: 95 },
 ];
 
 // Fenêtre glissante de 30 jours, indépendante de la période choisie plus haut :
@@ -531,32 +535,32 @@ export type Review = {
 // Avis fictifs des 3 derniers mois. Volontairement modeste en volume (collecte
 // automatique post-visite : quelques avis par semaine et par salon).
 const REVIEWS: Review[] = [
-  { id: "r01", date: "2026-06-08", rating: 5, client: "Awa Diop", service: "Coupe & Brushing", staff: "Sophie", salon: "almadies", comment: "Toujours au top, merci Sophie." },
+  { id: "r01", date: "2026-06-08", rating: 5, client: "Awa Sarr", service: "Coupe & Brushing", staff: "Sophie", salon: "almadies", comment: "Toujours au top, merci Sophie." },
   { id: "r02", date: "2026-06-14", rating: 4, client: "Rama Diallo", service: "Manucure", staff: "Coumba", salon: "seaplaza" },
   { id: "r03", date: "2026-06-19", rating: 5, client: "Adama Sarr", service: "Coloration", staff: "Mariama", salon: "almadies", comment: "Couleur exactement comme je voulais." },
   { id: "r04", date: "2026-06-25", rating: 3, client: "Penda Ndoye", service: "Soin visage", staff: "Bineta", salon: "seaplaza", comment: "Correct, mais j'ai attendu 20 minutes." },
-  { id: "r05", date: "2026-07-02", rating: 5, client: "Astou Faye", service: "Balayage", staff: "Mariama", salon: "almadies" },
+  { id: "r05", date: "2026-07-02", rating: 5, client: "Ndèye Diop", service: "Balayage", staff: "Mariama", salon: "almadies" },
   { id: "r06", date: "2026-07-06", rating: 2, client: "Nafi Camara", service: "Coupe", staff: "Aïda", salon: "almadies", comment: "Coupe pas égale, j'ai dû la faire reprendre ailleurs." },
   { id: "r07", date: "2026-07-11", rating: 4, client: "Dieynaba Kane", service: "Manucure", staff: "Coumba", salon: "seaplaza", comment: "Très bien, ambiance agréable." },
   { id: "r08", date: "2026-07-15", rating: 5, client: "Rokhaya Seck", service: "Coupe & Brushing", staff: "Sophie", salon: "almadies" },
-  { id: "r09", date: "2026-07-19", rating: 5, client: "Yacine Thiam", service: "Soin visage", staff: "Bineta", salon: "seaplaza", comment: "Peau nickel, je reviendrai." },
+  { id: "r09", date: "2026-07-19", rating: 5, client: "Yacine Wade", service: "Soin visage", staff: "Bineta", salon: "seaplaza", comment: "Peau nickel, je reviendrai." },
   { id: "r10", date: "2026-07-24", rating: 4, client: "Oumou Baldé", service: "Coloration", staff: "Mariama", salon: "almadies" },
   { id: "r11", date: "2026-07-28", rating: 3, client: "Fatoumata Barry", service: "Coupe", staff: "Aïda", salon: "almadies" },
   { id: "r12", date: "2026-08-01", rating: 5, client: "Seynabou Wade", service: "Manucure", staff: "Coumba", salon: "seaplaza", comment: "Rapide et soigné." },
   { id: "r13", date: "2026-08-05", rating: 5, client: "Maimouna Sy", service: "Coupe & Brushing", staff: "Sophie", salon: "almadies", comment: "Sophie connaît mes cheveux par cœur." },
-  { id: "r14", date: "2026-08-08", rating: 4, client: "Awa Diop", service: "Soin visage", staff: "Bineta", salon: "seaplaza" },
+  { id: "r14", date: "2026-08-08", rating: 4, client: "Awa Sarr", service: "Soin visage", staff: "Bineta", salon: "seaplaza" },
   { id: "r15", date: "2026-08-12", rating: 1, client: "Mame Diarra", service: "Coloration", staff: "Aïda", salon: "almadies", comment: "Résultat orange, très déçue. Personne ne m'a rappelée." },
   { id: "r16", date: "2026-08-15", rating: 5, client: "Khady Guèye", service: "Balayage", staff: "Mariama", salon: "almadies", comment: "Magnifique, bravo." },
-  { id: "r17", date: "2026-08-18", rating: 4, client: "Sokhna Mbaye", service: "Manucure", staff: "Coumba", salon: "seaplaza" },
-  { id: "r18", date: "2026-08-20", rating: 5, client: "Aïcha Ba", service: "Coupe & Brushing", staff: "Sophie", salon: "almadies" },
-  { id: "r19", date: "2026-08-22", rating: 2, client: "Ndèye Fall", service: "Soin visage", staff: "Bineta", salon: "seaplaza", comment: "Le produit a piqué, pas assez à l'écoute." },
-  { id: "r20", date: "2026-08-24", rating: 4, client: "Marième Sow", service: "Coupe", staff: "Aïda", salon: "almadies", comment: "Mieux que la dernière fois." },
-  { id: "r21", date: "2026-08-26", rating: 5, client: "Fatou Ndiaye", service: "Coloration", staff: "Mariama", salon: "almadies", comment: "Toujours parfaite." },
+  { id: "r17", date: "2026-08-18", rating: 4, client: "Sokhna Ndiaye", service: "Manucure", staff: "Coumba", salon: "seaplaza" },
+  { id: "r18", date: "2026-08-20", rating: 5, client: "Bineta Diagne", service: "Coupe & Brushing", staff: "Sophie", salon: "almadies" },
+  { id: "r19", date: "2026-08-22", rating: 2, client: "Mariam Kane", service: "Soin visage", staff: "Bineta", salon: "seaplaza", comment: "Le produit a piqué, pas assez à l'écoute." },
+  { id: "r20", date: "2026-08-24", rating: 4, client: "Coumba Thiam", service: "Coupe", staff: "Aïda", salon: "almadies", comment: "Mieux que la dernière fois." },
+  { id: "r21", date: "2026-08-26", rating: 5, client: "Fatou Camara", service: "Coloration", staff: "Mariama", salon: "almadies", comment: "Toujours parfaite." },
   { id: "r22", date: "2026-08-27", rating: 5, client: "Adama Sarr", service: "Manucure", staff: "Coumba", salon: "seaplaza" },
-  { id: "r23", date: "2026-08-29", rating: 3, client: "Astou Faye", service: "Coupe & Brushing", staff: "Sophie", salon: "almadies", comment: "Le brushing n'a pas tenu la journée." },
+  { id: "r23", date: "2026-08-29", rating: 3, client: "Ndèye Diop", service: "Coupe & Brushing", staff: "Sophie", salon: "almadies", comment: "Le brushing n'a pas tenu la journée." },
   { id: "r24", date: "2026-08-30", rating: 5, client: "Dieynaba Kane", service: "Soin visage", staff: "Bineta", salon: "seaplaza", comment: "Très professionnelle, je recommande." },
   { id: "r25", date: "2026-09-01", rating: 4, client: "Rokhaya Seck", service: "Balayage", staff: "Mariama", salon: "almadies" },
-  { id: "r26", date: "2026-09-02", rating: 5, client: "Yacine Thiam", service: "Manucure", staff: "Coumba", salon: "seaplaza", comment: "Rien à redire." },
+  { id: "r26", date: "2026-09-02", rating: 5, client: "Yacine Wade", service: "Manucure", staff: "Coumba", salon: "seaplaza", comment: "Rien à redire." },
 ];
 
 const mean = (list: Review[]) =>
@@ -789,13 +793,13 @@ const GROUP_ROWS: Record<Exclude<ReportGroupId, "period">, RowSeed[]> = {
     { key: "balayage", label: "Balayage", weight: 0.17, satisfaction: 4.4 },
   ],
   client: [
-    { key: "c1", label: "Awa Diop", weight: 0.14, satisfaction: 5 },
-    { key: "c2", label: "Fatou Ndiaye", weight: 0.12, satisfaction: 4 },
-    { key: "c3", label: "Marième Sow", weight: 0.11, satisfaction: 5 },
-    { key: "c4", label: "Aïcha Ba", weight: 0.1, satisfaction: 4 },
-    { key: "c5", label: "Ndèye Fall", weight: 0.09, satisfaction: 5 },
+    { key: "c1", label: "Awa Sarr", weight: 0.14, satisfaction: 5 },
+    { key: "c2", label: "Fatou Camara", weight: 0.12, satisfaction: 4 },
+    { key: "c3", label: "Coumba Thiam", weight: 0.11, satisfaction: 5 },
+    { key: "c4", label: "Bineta Diagne", weight: 0.1, satisfaction: 4 },
+    { key: "c5", label: "Mariam Kane", weight: 0.09, satisfaction: 5 },
     { key: "c6", label: "Khady Guèye", weight: 0.08, satisfaction: 4 },
-    { key: "c7", label: "Sokhna Mbaye", weight: 0.07, satisfaction: 5 },
+    { key: "c7", label: "Sokhna Ndiaye", weight: 0.07, satisfaction: 5 },
     { key: "c8", label: "Rama Diallo", weight: 0.06, satisfaction: 4 },
     { key: "other", label: "Autres clientes", weight: 0.23, satisfaction: 4.6 },
   ],
@@ -995,20 +999,30 @@ export function buildReport(opts: {
 /* Clientèle — fiches clientes, historique de visites, fidélité        */
 /* ------------------------------------------------------------------ */
 //
-// Alimente l'écran « Clients » : un tableau triable (nom, email, téléphone,
-// dernière visite, total dépensé, rendez-vous, points) + une fiche de détail
-// par cliente. Tout est dérivé de la liste de visites de chaque cliente ;
-// `lastVisit`, `totalSpent` et le nombre de rendez-vous ne comptent que les
-// visites honorées. `segment` sert au filtre « Actives / À relancer ».
+// Alimente l'écran « Clients » (répertoire) et la fiche cliente. Point-de-vente
+// fait autorité (2026-09-27) : les dix clientes que la caisse connaît
+// (`point-de-vente/lib/data/clientele.ts`, `cl-1` … `cl-10`) portent ici la
+// même identité — nom, n° client, téléphone / WhatsApp, e-mail, adresse, pays
+// de résidence, anniversaire, ethnicité, palier, points, préférences, notes
+// signées, praticienne préférée, total dépensé et nombre de visites. Le
+// rattachement `cl-N` → `cNN` est celui de `PDV_CLIENT` dans `./rendezvous`
+// (cl-7 → c11, cl-9 → c14). Les autres fiches n'existent que côté back-office.
+//
+// Les rendez-vous à venir ne vivent pas ici : ils se lisent dans
+// `./rendezvous` (jointure faite par `ClientsContext`, pour éviter un cycle
+// d'import). Seul l'historique ancien (avant les réservations reprises de
+// point-de-vente) est saisi ci-dessous, en prestations réelles du catalogue.
 
 export type ClientVisitStatus = "honoré" | "à venir" | "annulé";
 
 export type ClientVisit = {
   date: string; // ISO yyyy-mm-dd
+  time?: string; // « HH:MM », pour un rendez-vous de `./rendezvous`
   service: string;
   staff: string;
   amount: number; // FCFA facturés (0 si annulé ou à venir)
   status: ClientVisitStatus;
+  rdvId?: string; // renseigné quand la visite est un rendez-vous de `./rendezvous`
 };
 
 export type ClientGender = "femme" | "homme";
@@ -1017,309 +1031,423 @@ export const genderLabel = (g: ClientGender) => (g === "homme" ? "Homme" : "Femm
 // Nom commun accordé au genre — « la cliente » / « le client » dans les libellés.
 export const clientNoun = (g: ClientGender) => (g === "homme" ? "client" : "cliente");
 
-// Préférences de la cliente, rangées par thème pour l'accueil en salon.
-export type ClientPreferences = {
-  general: string[];
-  onglerie: string[];
-  coiffure: string[];
-  boissons: string[];
+// Palier de fidélité — champ de la fiche, comme `Cliente.tier` de
+// point-de-vente (jamais recalculé depuis les points là-bas non plus).
+export type ClientTier = "silver" | "gold" | "platinum" | "vip" | null;
+export const TIER_LABEL: Record<Exclude<ClientTier, null>, string> = {
+  silver: "Silver",
+  gold: "Gold",
+  platinum: "Platinum",
+  vip: "VIP",
 };
 
-export const PREFERENCE_GROUPS: { key: keyof ClientPreferences; label: string }[] = [
-  { key: "general", label: "Général" },
-  { key: "onglerie", label: "Onglerie" },
-  { key: "coiffure", label: "Coiffure" },
-  { key: "boissons", label: "Boissons" },
+export type ClientEthnicity = "asiatique" | "africain" | "americain" | "europeen";
+export const ETHNICITY_LABEL: Record<ClientEthnicity, string> = {
+  asiatique: "Asiatique",
+  africain: "Africain",
+  americain: "Américain",
+  europeen: "Européen",
+};
+export const ETHNICITY_OPTIONS = (Object.keys(ETHNICITY_LABEL) as ClientEthnicity[]).map((value) => ({
+  value,
+  label: ETHNICITY_LABEL[value],
+}));
+
+const MONTH_NAMES = [
+  "janvier", "février", "mars", "avril", "mai", "juin",
+  "juillet", "août", "septembre", "octobre", "novembre", "décembre",
 ];
 
-// Genre, adresse et préférences vivent dans une table à part : la saisie des
-// visites reste lisible, et ces champs n'entrent pas dans les dérivés du tableau.
-type ClientProfile = {
-  gender: ClientGender;
-  address: string;
-  preferences: ClientPreferences;
+// « N° 1042 » — le numéro cliente tel qu'il s'affiche partout (point-de-vente).
+export const clientNumberLabel = (n: number) => `N° ${n}`;
+
+// « MM-JJ » → « 27 septembre » (jamais l'année, comme point-de-vente).
+export function formatBirthday(birthday: string): string {
+  const [m, d] = birthday.split("-").map(Number);
+  if (!m || !d) return birthday;
+  return `${d === 1 ? "1er" : d} ${MONTH_NAMES[m - 1]}`;
+}
+
+// Préférences de la cliente : modèle de point-de-vente (2026-09-27) — texte libre
+// par domaine + passages de « Noter la cliente » (réponses aux questions
+// configurées dans Réglages › Préférences clientes), voir `./preferences`.
+export type { ClientPreferences } from "./preferences";
+
+// Note interne signée (journal de la fiche) — `authorId` = membre de l'équipe
+// (`./staff`), `origin` dit si elle a été prise sur la fiche ou juste après un
+// encaissement (même modèle que `ClientNote` de point-de-vente).
+export type ClientNoteSeed = {
+  text: string;
+  at: string; // ISO datetime
+  authorId: string;
+  origin: "fiche" | "encaissement";
 };
 
-const EMPTY_PREFERENCES: ClientPreferences = {
-  general: [], onglerie: [], coiffure: [], boissons: [],
-};
-
-const CLIENT_PROFILES: Record<string, Partial<ClientProfile>> = {
-  c01: {
-    address: "Almadies",
-    preferences: {
-      general: ["Allergie au latex", "Préfère les rendez-vous en matinée"],
-      onglerie: [],
-      coiffure: ["Coloration sans ammoniaque", "Ne pas raccourcir la longueur"],
-      boissons: ["Thé à la menthe"],
-    },
-  },
-  c02: {
-    address: "Ngor",
-    preferences: {
-      general: ["Vient toujours accompagnée de sa fille"],
-      onglerie: [],
-      coiffure: ["Sensible aux tiraillements — brushing tiède"],
-      boissons: ["Café sans sucre"],
-    },
-  },
-  c03: {
-    address: "Ouakam",
-    preferences: {
-      general: [], onglerie: ["Ongles courts", "Base fortifiante"],
-      coiffure: [], boissons: ["Eau plate"],
-    },
-  },
-  c04: {
-    address: "Point E",
-    preferences: {
-      general: ["N'aime pas attendre — prévenir en cas de retard"],
-      onglerie: [], coiffure: [], boissons: ["Jus de bissap"],
-    },
-  },
-  c05: {
-    address: "Mermoz",
-    preferences: {
-      general: [], onglerie: ["Vernis semi-permanent", "Teintes nude"],
-      coiffure: ["Balayage caramel"], boissons: ["Thé vert"],
-    },
-  },
-  c07: {
-    address: "Sacré-Cœur",
-    preferences: {
-      general: ["Cliente pressée — enchaîner les prestations"],
-      onglerie: ["Pose gel", "Nail art discret"],
-      coiffure: [], boissons: ["Café au lait"],
-    },
-  },
-  c08: {
-    address: "Fann Résidence",
-    preferences: {
-      general: ["À relancer après 6 mois d'absence"],
-      onglerie: [], coiffure: ["Cheveux fragilisés — éviter la chaleur"],
-      boissons: [],
-    },
-  },
-  c11: {
-    address: "Yoff",
-    preferences: {
-      general: ["Cliente fidèle — anniversaire le 14 février"],
-      onglerie: ["Manucure russe", "Rouge profond"],
-      coiffure: [], boissons: ["Thé à la menthe sans sucre"],
-    },
-  },
-  c13: {
-    address: "Plateau",
-    preferences: {
-      general: [], onglerie: [],
-      coiffure: ["Coupe au carré", "Frange à garder longue"],
-      boissons: ["Eau gazeuse"],
-    },
-  },
-  c14: {
-    address: "Les Almadies",
-    preferences: {
-      general: ["Peau réactive — patch test avant tout nouveau soin"],
-      onglerie: [], coiffure: [], boissons: ["Café noir"],
-    },
-  },
-};
-
-const profileOf = (id: string): ClientProfile => {
-  const p = CLIENT_PROFILES[id] ?? {};
-  return {
-    gender: p.gender ?? "femme",
-    address: p.address ?? "Dakar",
-    preferences: p.preferences ?? EMPTY_PREFERENCES,
-  };
+// Les dates de passage et de note de point-de-vente sont écrites par rapport à
+// son « aujourd'hui » (25 sept.) ; le monde de démo d'ici est figé au 3 sept.
+// On les recale du même écart, pour qu'aucune ne tombe dans le futur.
+const PDV_SHIFT_DAYS = 22;
+const pdv = (iso: string) => {
+  const d = new Date(iso.length > 10 ? iso : `${iso}T12:00:00.000Z`);
+  d.setUTCDate(d.getUTCDate() - PDV_SHIFT_DAYS);
+  return iso.length > 10 ? d.toISOString() : d.toISOString().slice(0, 10);
 };
 
 type ClientSeed = {
   id: string;
+  number: number; // n° client, séquentiel, jamais réattribué
   name: string;
+  gender?: ClientGender;
   email: string;
   phone: string;
-  salon: SalonId;
+  whatsapp?: string;
+  address: string;
+  profession?: string;
+  residenceCountry: string;
+  birthday: string; // « MM-JJ »
+  ethnicity: ClientEthnicity;
+  salon: SalonId; // salon habituel (filtre salon du répertoire)
   since: string; // ISO — cliente depuis
+  tier: ClientTier;
   points: number;
+  preferredStaffId?: string; // membre de `./staff`
+  // Cumul tenu par la caisse (point-de-vente) : fait foi sur le compte de
+  // visites / le total dépensé, l'historique ci-dessous n'en montre que le récent.
+  totals?: { spent: number; visits: number };
+  preferences?: ClientPreferences;
+  notes?: ClientNoteSeed[];
   visits: ClientVisit[];
 };
+
+// Anciennes visites, en prestations réelles du catalogue (`./services`) —
+// repris à la main pour ne pas créer de cycle d'import avec le catalogue.
+const SVC = {
+  brushing: ["Shampoing Brushing (Shampoing Inclus et Obligatoire)", 23_000],
+  soinComplet: ["Soin Complet", 46_000],
+  glow: ["Glow Me Facial", 49_000],
+  hydra: ["Hydrafacial Deep Clean", 55_000],
+  silk: ["Silk Press", 79_000],
+  manucure: ["Manucure + Permanent", 32_000],
+  jelly: ["Jelly Pédicure", 29_000],
+  coupe: ["Coupe Transformation", 36_000],
+  tresses: ["Tresses Cheveux +", 19_000],
+  relax: ["Relax Me Time", 60_000],
+  dos: ["Soin du Dos", 65_000],
+  pierres: ["Hot Stone - Pierres Chaudes", 59_000],
+  aisselles: ["Épilation Aisselles", 7_000],
+  jambes: ["Épilation Jambes Complètes", 14_000],
+} as const satisfies Record<string, readonly [string, number]>;
 
 // Raccourci de saisie — le statut par défaut est « honoré ».
 const v = (
   date: string,
-  service: string,
+  service: keyof typeof SVC,
   staff: string,
-  amount: number,
   status: ClientVisitStatus = "honoré",
-): ClientVisit => ({ date, service, staff, amount, status });
+): ClientVisit => ({
+  date,
+  service: SVC[service][0],
+  staff,
+  amount: status === "honoré" ? SVC[service][1] : 0,
+  status,
+});
 
 const CLIENT_SEEDS: ClientSeed[] = [
+  /* ---- Les dix clientes de point-de-vente ---- */
   {
-    id: "c01", name: "Awa Diop", email: "awa.diop@gmail.com", phone: "+221 77 512 46 08",
-    salon: "almadies", since: "2023-02-11", points: 480,
+    id: "c01", number: 1006, name: "Awa Sarr", email: "awa.sarr@example.com",
+    phone: "+221 78 445 56 61", whatsapp: "+221 78 445 56 61",
+    address: "Sacré-Cœur 3, Villa 412, Dakar", residenceCountry: "Sénégal", birthday: "03-14", ethnicity: "africain",
+    salon: "almadies", since: "2026-02-01", tier: null, points: 320, preferredStaffId: "m-bineta",
+    totals: { spent: 245_000, visits: 9 },
+    preferences: {
+      hairType: "Naturel 4C",
+      colorReference: "Châtain profond #3",
+      notes: {
+        coiffure: "Préfère les tresses collées, pas de rajouts trop lourds.",
+        boisson: "Thé à la menthe, sans sucre.",
+      },
+      rounds: [
+        { at: pdv("2026-09-19"), choices: { "ongles-type": ["gel-x"], "ongles-longueur": ["moyens"], "coiffure-style": ["tresses-collees"], "coiffure-soin": ["masque"], "boisson-choix": ["the-menthe"], "boisson-sucre": ["sans-sucre"] } },
+        { at: pdv("2026-08-30"), choices: { "ongles-type": ["gel-x", "french"], "ongles-longueur": ["longs"], "boisson-choix": ["the-menthe"], "boisson-sucre": ["sans-sucre"] } },
+        { at: pdv("2026-08-02"), choices: { "ongles-type": ["capsules", "french"], "ongles-longueur": ["longs"], "coiffure-style": ["tresses-collees"], "coiffure-soin": ["bain-huile"], "boisson-choix": ["bissap"], "boisson-sucre": ["peu-sucre"] } },
+        { at: pdv("2026-06-21"), choices: { "ongles-type": ["vernis-permanent"], "ongles-longueur": ["courts"], "coiffure-style": ["box-braids"], "coiffure-soin": ["masque"], "boisson-choix": ["the-menthe"], "boisson-sucre": ["sans-sucre"] } },
+        { at: pdv("2026-05-09"), choices: { "ongles-type": ["gel-x", "decoration"], "ongles-longueur": ["longs"], "coiffure-style": ["tresses-collees"], "coiffure-soin": ["masque"], "boisson-choix": ["the-menthe"] } },
+      ],
+    },
+    notes: [
+      { at: pdv("2026-09-19T16:40:00.000Z"), authorId: "m-awa", origin: "encaissement", text: "A demandé à être prévenue dès qu'un créneau se libère le samedi matin." },
+      { at: pdv("2026-08-02T11:15:00.000Z"), authorId: "m-bineta", origin: "fiche", text: "Cuir chevelu sensible — éviter les produits mentholés au shampooing." },
+    ],
     visits: [
-      v("2026-09-12", "Coloration", "Mariama", 0, "à venir"),
-      v("2026-08-30", "Coupe & Brushing", "Sophie", 15_000),
-      v("2026-08-08", "Soin visage", "Sophie", 25_000),
-      v("2026-07-15", "Coloration", "Mariama", 35_000),
-      v("2026-06-20", "Balayage", "Mariama", 45_000),
-      v("2026-06-01", "Coupe & Brushing", "Sophie", 15_000),
+      v("2026-08-28", "tresses", "Bineta Cissé"),
+      v("2026-08-08", "manucure", "Coumba Faye"),
+      v("2026-07-11", "tresses", "Bineta Cissé"),
+      v("2026-05-30", "glow", "Sophie Ndione"),
     ],
   },
   {
-    id: "c02", name: "Fatou Ndiaye", email: "fatou.ndiaye@yahoo.fr", phone: "+221 78 204 11 39",
-    salon: "almadies", since: "2024-01-20", points: 260,
+    id: "c02", number: 1009, name: "Fatou Camara", email: "fatou.camara@example.com",
+    phone: "+221 77 112 23 34",
+    address: "Cité Keur Gorgui, Rue 12, Dakar", residenceCountry: "Sénégal", birthday: "10-12", ethnicity: "africain",
+    salon: "almadies", since: "2026-05-10", tier: null, points: 140,
+    totals: { spent: 98_000, visits: 4 },
+    preferences: {
+      notes: {},
+      rounds: [
+        { at: pdv("2026-09-10"), choices: { "ongles-type": ["vernis-permanent", "decoration"], "ongles-longueur": ["courts"], "boisson-choix": ["cafe"] } },
+        { at: pdv("2026-07-18"), choices: { "ongles-type": ["vernis-permanent"], "ongles-longueur": ["courts"], "spa-massage": ["relaxant"], "spa-pression": ["legere"] } },
+        { at: pdv("2026-06-02"), choices: { "ongles-type": ["french"], "ongles-longueur": ["moyens"], "boisson-choix": ["cafe", "eau"] } },
+      ],
+    },
+    notes: [
+      { at: pdv("2026-09-10T15:05:00.000Z"), authorId: "m-rokhaya", origin: "encaissement", text: "Vient souvent avec sa fille, prévoir un fauteuil en plus." },
+    ],
     visits: [
-      v("2026-09-09", "Coloration", "Mariama", 0, "à venir"),
-      v("2026-08-26", "Coloration", "Mariama", 35_000),
-      v("2026-07-24", "Coloration", "Mariama", 35_000),
-      v("2026-06-15", "Coupe", "Aïda", 10_000),
+      v("2026-08-19", "manucure", "Aïda Sarr"),
+      v("2026-06-26", "relax", "Sophie Ndione"),
+      v("2026-05-11", "manucure", "Aïda Sarr"),
     ],
   },
   {
-    id: "c03", name: "Marième Sow", email: "marieme.sow@gmail.com", phone: "+221 76 640 27 15",
-    salon: "almadies", since: "2024-06-05", points: 150,
+    id: "c03", number: 1010, name: "Coumba Thiam", email: "coumba.thiam@example.com",
+    phone: "+221 76 554 43 32",
+    address: "Parcelles Assainies U15, Dakar", residenceCountry: "Sénégal", birthday: "09-26", ethnicity: "africain",
+    salon: "almadies", since: "2026-06-20", tier: null, points: 60,
+    totals: { spent: 42_000, visits: 2 },
     visits: [
-      v("2026-08-20", "Coupe", "Aïda", 10_000),
-      v("2026-07-05", "Manucure", "Aïda", 12_000),
-      v("2026-05-30", "Coupe & Brushing", "Sophie", 15_000),
+      v("2026-08-06", "tresses", "Mariama Bâ"),
+      v("2026-06-20", "brushing", "Mariama Bâ"),
     ],
   },
   {
-    id: "c04", name: "Aïcha Ba", email: "aicha.ba@orange.sn", phone: "+221 77 331 58 92",
-    salon: "almadies", since: "2023-11-30", points: 90,
+    id: "c04", number: 1005, name: "Bineta Diagne", email: "bineta.diagne@example.com",
+    phone: "+221 70 998 87 76",
+    address: "Mermoz, Rue MZ-24, Dakar", residenceCountry: "Sénégal", birthday: "07-02", ethnicity: "africain",
+    salon: "almadies", since: "2026-01-15", tier: null, points: 210,
+    totals: { spent: 156_000, visits: 6 },
     visits: [
-      v("2026-07-10", "Soin visage", "Sophie", 25_000),
-      v("2026-04-18", "Manucure", "Aïda", 12_000),
+      v("2026-08-03", "jelly", "Aïda Sarr"),
+      v("2026-06-12", "glow", "Sophie Ndione"),
+      v("2026-04-18", "manucure", "Aïda Sarr"),
     ],
   },
   {
-    id: "c05", name: "Ndèye Fall", email: "ndeye.fall@gmail.com", phone: "+221 70 118 74 60",
-    salon: "almadies", since: "2024-03-18", points: 175,
+    id: "c05", number: 1007, name: "Mariam Kane", email: "mariam.kane@example.com",
+    phone: "+221 78 123 45 67",
+    address: "Cocody Angré, Rue des Jardins, Abidjan", residenceCountry: "Côte d'Ivoire", birthday: "12-05", ethnicity: "africain",
+    salon: "seaplaza", since: "2026-03-05", tier: null, points: 90,
+    totals: { spent: 61_000, visits: 3 },
     visits: [
-      v("2026-08-22", "Balayage", "Mariama", 45_000),
-      v("2026-07-01", "Coupe & Brushing", "Sophie", 15_000),
-      v("2026-05-12", "Coloration", "Mariama", 35_000),
+      v("2026-07-02", "brushing", "Mariama Bâ"),
+      v("2026-03-05", "tresses", "Bineta Cissé"),
     ],
   },
   {
-    id: "c06", name: "Khady Guèye", email: "khady.gueye@yahoo.fr", phone: "+221 77 902 33 47",
-    salon: "almadies", since: "2023-09-01", points: 60,
+    id: "c06", number: 1002, name: "Awa Niang", email: "awa.niang@example.com",
+    phone: "+221 77 654 32 10",
+    address: "Almadies, Route des Almadies, Dakar", residenceCountry: "Sénégal", birthday: "01-23", ethnicity: "africain",
+    salon: "almadies", since: "2025-09-01", tier: "vip", points: 1420, preferredStaffId: "m-mariama",
+    totals: { spent: 890_000, visits: 22 },
+    preferences: {
+      hairType: "Défrisé",
+      colorReference: "Auburn #30",
+      notes: {
+        onglerie: "Vernis semi-permanent nude, ongles courts et carrés.",
+        spa: "Sensible au parfum d'eucalyptus — préférer la lavande.",
+      },
+      rounds: [
+        { at: pdv("2026-09-14"), choices: { "spa-massage": ["pierres-chaudes"], "spa-pression": ["forte"], "ongles-type": ["french"], "ongles-longueur": ["moyens"] } },
+        { at: pdv("2026-08-10"), choices: { "spa-massage": ["deep-tissue"], "spa-pression": ["forte"] } },
+        { at: pdv("2026-07-06"), choices: { "spa-massage": ["deep-tissue", "relaxant"], "spa-pression": ["moyenne"], "ongles-type": ["french"], "ongles-longueur": ["courts"] } },
+      ],
+    },
+    notes: [
+      { at: pdv("2026-07-22T10:30:00.000Z"), authorId: "m-awa", origin: "fiche", text: "Préfère régler par Wave. Arrive en général 10 min en avance." },
+    ],
     visits: [
-      v("2026-07-02", "Balayage", "Mariama", 45_000),
-      v("2026-03-10", "Coupe", "Aïda", 10_000),
+      v("2026-08-23", "pierres", "Sophie Ndione"),
+      v("2026-07-19", "relax", "Sophie Ndione"),
+      v("2026-06-14", "silk", "Mariama Bâ"),
+      v("2026-05-02", "dos", "Sophie Ndione"),
     ],
   },
   {
-    id: "c07", name: "Adama Sarr", email: "adama.sarr@gmail.com", phone: "+221 78 655 20 84",
-    salon: "almadies", since: "2022-10-14", points: 210,
+    id: "c08", number: 1004, name: "Ndèye Diop", email: "ndeye.diop@example.com",
+    phone: "+221 78 123 99 00",
+    address: "12 Rue de Belleville, 75020 Paris", residenceCountry: "France", birthday: "11-30", ethnicity: "africain",
+    salon: "almadies", since: "2025-12-01", tier: "silver", points: 300,
+    totals: { spent: 180_000, visits: 7 },
     visits: [
-      v("2026-09-06", "Manucure", "Aïda", 0, "à venir"),
-      v("2026-08-27", "Manucure", "Aïda", 12_000),
-      v("2026-08-01", "Coloration", "Mariama", 35_000),
-      v("2026-06-19", "Coloration", "Mariama", 35_000),
+      v("2026-04-02", "silk", "Mariama Bâ"),
+      v("2026-02-14", "soinComplet", "Mariama Bâ"),
+      v("2025-12-20", "brushing", "Sophie Ndione"),
     ],
   },
   {
-    id: "c08", name: "Astou Faye", email: "astou.faye@gmail.com", phone: "+221 76 447 61 03",
-    salon: "almadies", since: "2021-05-22", points: 120,
+    id: "c10", number: 1008, name: "Aminata Fall", email: "aminata.fall@example.com",
+    phone: "+221 77 662 31 45", whatsapp: "+221 77 662 31 45",
+    address: "Liberté 6, Rue LB-19, Dakar", residenceCountry: "Sénégal", birthday: "09-27", ethnicity: "africain",
+    salon: "almadies", since: "2026-04-12", tier: null, points: 140,
+    totals: { spent: 96_000, visits: 4 },
+    preferences: {
+      notes: { boisson: "Jus de bissap pour les enfants, jamais de café." },
+      rounds: [
+        { at: pdv("2026-09-05"), choices: { "boisson-choix": ["cafe"], "boisson-sucre": ["sucre"], "coiffure-style": ["brushing"], "coiffure-soin": ["keratine"] } },
+        { at: pdv("2026-08-08"), choices: { "boisson-choix": ["cafe"], "boisson-sucre": ["sucre"], "coiffure-style": ["coupe", "brushing"], "coiffure-soin": ["shampoing"] } },
+      ],
+    },
     visits: [
-      v("2026-02-14", "Balayage", "Mariama", 45_000),
-      v("2025-11-30", "Coloration", "Mariama", 35_000),
-      v("2025-09-15", "Coupe & Brushing", "Sophie", 15_000),
+      v("2026-08-14", "brushing", "Mariama Bâ"),
+      v("2026-07-17", "coupe", "Mariama Bâ"),
     ],
   },
   {
-    id: "c09", name: "Nafi Camara", email: "nafi.camara@orange.sn", phone: "+221 77 208 95 71",
-    salon: "almadies", since: "2024-08-01", points: 30,
+    id: "c11", number: 1003, name: "Sokhna Ndiaye", email: "sokhna.ndiaye@example.com",
+    phone: "+221 70 321 65 49",
+    address: "Point E, Rue 4 x E, Dakar", residenceCountry: "Sénégal", birthday: "05-18", ethnicity: "africain",
+    salon: "seaplaza", since: "2025-11-12", tier: "gold", points: 680,
+    totals: { spent: 410_000, visits: 14 },
     visits: [
-      v("2026-06-10", "Coloration", "Aïda", 0, "annulé"),
-      v("2026-05-02", "Coloration", "Aïda", 35_000),
-      v("2026-01-20", "Coupe", "Aïda", 10_000),
+      v("2026-08-18", "manucure", "Coumba Faye"),
+      v("2026-08-01", "manucure", "Coumba Faye"),
+      v("2026-07-10", "jelly", "Coumba Faye"),
+      v("2026-06-15", "glow", "Bineta Cissé"),
     ],
   },
   {
-    id: "c10", name: "Maïmouna Sy", email: "maimouna.sy@gmail.com", phone: "+221 75 690 42 28",
-    salon: "almadies", since: "2024-02-10", points: 140,
+    id: "c14", number: 1001, name: "Yacine Wade", email: "yacine.wade@example.com",
+    phone: "+221 77 555 12 34", whatsapp: "+221 77 555 12 34",
+    address: "Ouakam, Cité Assemblée, Dakar", residenceCountry: "Sénégal", birthday: "10-03", ethnicity: "africain",
+    salon: "seaplaza", since: "2025-08-19", tier: "platinum", points: 950,
+    totals: { spent: 620_000, visits: 18 },
+    preferences: {
+      hairType: "Locks",
+      colorReference: "Noir naturel #1",
+      notes: {
+        epilation: "Cire tiède uniquement, peau réactive.",
+        boisson: "Café noir, un carré de chocolat.",
+      },
+      rounds: [
+        { at: pdv("2026-09-20"), choices: { "epilation-methode": ["cire-chaude"], "epilation-zone": ["sourcils", "aisselles"], "boisson-choix": ["gingembre"], "boisson-sucre": ["peu-sucre"] } },
+        { at: pdv("2026-08-22"), choices: { "epilation-methode": ["fil"], "epilation-zone": ["sourcils"], "boisson-choix": ["gingembre"] } },
+        { at: pdv("2026-07-25"), choices: { "epilation-methode": ["cire-chaude"], "epilation-zone": ["sourcils", "jambes"], "boisson-choix": ["bouye"], "boisson-sucre": ["sucre"] } },
+      ],
+    },
     visits: [
-      v("2026-08-05", "Coupe & Brushing", "Sophie", 15_000),
-      v("2026-06-28", "Coupe & Brushing", "Sophie", 15_000),
-      v("2026-05-15", "Soin visage", "Sophie", 25_000),
+      v("2026-08-29", "aisselles", "Bineta Cissé"),
+      v("2026-07-31", "hydra", "Bineta Cissé"),
+      v("2026-07-03", "jambes", "Bineta Cissé"),
+    ],
+  },
+
+  /* ---- Fiches propres au back-office ---- */
+  {
+    id: "c07", number: 1011, name: "Adama Sarr", email: "adama.sarr@gmail.com",
+    phone: "+221 78 655 20 84",
+    address: "Sacré-Cœur, Dakar", residenceCountry: "Sénégal", birthday: "06-09", ethnicity: "africain",
+    salon: "almadies", since: "2022-10-14", tier: null, points: 210,
+    preferences: {
+      notes: { onglerie: "Nail art discret." },
+      rounds: [
+        { at: "2026-08-12", choices: { "ongles-type": ["capsules", "decoration"], "ongles-longueur": ["longs"], "boisson-choix": ["cafe"] } },
+        { at: "2026-07-10", choices: { "ongles-type": ["capsules"], "ongles-longueur": ["longs"] } },
+        { at: "2026-06-12", choices: { "ongles-type": ["polygel"], "ongles-longueur": ["tres-longs"] } },
+      ],
+    },
+    notes: [
+      { at: "2026-07-10T14:05:00.000Z", authorId: "m-awa", origin: "fiche", text: "Cliente pressée — enchaîner les prestations." },
+    ],
+    visits: [
+      v("2026-08-27", "manucure", "Aïda Sarr"),
+      v("2026-08-01", "soinComplet", "Mariama Bâ"),
+      v("2026-06-19", "soinComplet", "Mariama Bâ"),
     ],
   },
   {
-    id: "c11", name: "Sokhna Mbaye", email: "sokhna.mbaye@gmail.com", phone: "+221 77 814 06 53",
-    salon: "seaplaza", since: "2022-07-19", points: 300,
+    id: "c09", number: 1012, name: "Nafi Camara", email: "nafi.camara@orange.sn",
+    phone: "+221 77 208 95 71",
+    address: "Dakar", residenceCountry: "Sénégal", birthday: "02-17", ethnicity: "africain",
+    salon: "almadies", since: "2024-08-01", tier: null, points: 30,
     visits: [
-      v("2026-09-08", "Manucure", "Coumba", 0, "à venir"),
-      v("2026-08-18", "Manucure", "Coumba", 12_000),
-      v("2026-08-01", "Manucure", "Coumba", 12_000),
-      v("2026-07-10", "Pédicure", "Coumba", 15_000),
-      v("2026-06-15", "Soin visage", "Bineta", 25_000),
+      v("2026-06-10", "soinComplet", "Aïda Sarr", "annulé"),
+      v("2026-05-02", "soinComplet", "Aïda Sarr"),
+      v("2026-01-20", "coupe", "Aïda Sarr"),
     ],
   },
   {
-    id: "c12", name: "Rama Diallo", email: "rama.diallo@yahoo.fr", phone: "+221 78 233 79 10",
-    salon: "seaplaza", since: "2023-04-02", points: 80,
+    id: "c12", number: 1013, name: "Rama Diallo", email: "rama.diallo@yahoo.fr",
+    phone: "+221 78 233 79 10",
+    address: "Dakar", residenceCountry: "Sénégal", birthday: "08-21", ethnicity: "africain",
+    salon: "seaplaza", since: "2023-04-02", tier: null, points: 80,
     visits: [
-      v("2026-07-06", "Manucure", "Coumba", 12_000),
-      v("2026-06-14", "Manucure", "Coumba", 12_000),
-      v("2026-04-02", "Soin visage", "Bineta", 25_000),
+      v("2026-07-06", "manucure", "Coumba Faye"),
+      v("2026-06-14", "manucure", "Coumba Faye"),
+      v("2026-04-02", "glow", "Bineta Cissé"),
     ],
   },
   {
-    id: "c13", name: "Bineta Cissé", email: "bineta.cisse@gmail.com", phone: "+221 76 501 88 24",
-    salon: "seaplaza", since: "2023-01-15", points: 190,
+    id: "c13", number: 1014, name: "Bineta Cissé", email: "bineta.cisse@gmail.com",
+    phone: "+221 76 501 88 24",
+    address: "Plateau, Dakar", residenceCountry: "Sénégal", birthday: "04-11", ethnicity: "africain",
+    salon: "seaplaza", since: "2023-01-15", tier: null, points: 190,
+    preferences: {
+      notes: { coiffure: "Coupe au carré, frange à garder longue." },
+      rounds: [{ at: "2026-08-15", choices: { "coiffure-style": ["coupe", "brushing"], "boisson-choix": ["eau"] } }],
+    },
     visits: [
-      v("2026-08-24", "Coupe & Brushing", "Bineta", 15_000),
-      v("2026-07-20", "Coloration", "Bineta", 35_000),
-      v("2026-06-05", "Coupe & Brushing", "Bineta", 15_000),
+      v("2026-08-24", "brushing", "Bineta Cissé"),
+      v("2026-07-20", "soinComplet", "Bineta Cissé"),
+      v("2026-06-05", "brushing", "Bineta Cissé"),
     ],
   },
   {
-    id: "c14", name: "Yacine Thiam", email: "yacine.thiam@orange.sn", phone: "+221 77 126 63 90",
-    salon: "seaplaza", since: "2024-04-11", points: 160,
+    id: "c15", number: 1015, name: "Dieynaba Kane", email: "dieynaba.kane@gmail.com",
+    phone: "+221 70 744 51 17",
+    address: "Dakar", residenceCountry: "Sénégal", birthday: "12-29", ethnicity: "africain",
+    salon: "seaplaza", since: "2024-05-30", tier: null, points: 100,
     visits: [
-      v("2026-08-30", "Soin visage", "Bineta", 25_000),
-      v("2026-07-19", "Soin visage", "Bineta", 25_000),
-      v("2026-06-01", "Manucure", "Coumba", 12_000),
+      v("2026-07-11", "manucure", "Coumba Faye"),
+      v("2026-05-30", "glow", "Bineta Cissé"),
     ],
   },
   {
-    id: "c15", name: "Dieynaba Kane", email: "dieynaba.kane@gmail.com", phone: "+221 70 744 51 17",
-    salon: "seaplaza", since: "2024-05-30", points: 100,
+    id: "c16", number: 1016, name: "Penda Ndoye", email: "penda.ndoye@yahoo.fr",
+    phone: "+221 77 380 09 66",
+    address: "Dakar", residenceCountry: "Sénégal", birthday: "03-02", ethnicity: "africain",
+    salon: "seaplaza", since: "2023-10-15", tier: null, points: 45,
     visits: [
-      v("2026-07-11", "Manucure", "Coumba", 12_000),
-      v("2026-05-30", "Soin visage", "Bineta", 25_000),
+      v("2025-12-20", "glow", "Bineta Cissé"),
+      v("2025-10-15", "manucure", "Coumba Faye"),
     ],
   },
   {
-    id: "c16", name: "Penda Ndoye", email: "penda.ndoye@yahoo.fr", phone: "+221 77 380 09 66",
-    salon: "seaplaza", since: "2023-10-15", points: 45,
+    id: "c17", number: 1017, name: "Oumou Baldé", email: "oumou.balde@gmail.com",
+    phone: "+221 78 690 15 42",
+    address: "Dakar", residenceCountry: "Sénégal", birthday: "07-15", ethnicity: "africain",
+    salon: "seaplaza", since: "2023-05-20", tier: null, points: 130,
     visits: [
-      v("2025-12-20", "Soin visage", "Bineta", 25_000),
-      v("2025-10-15", "Manucure", "Coumba", 12_000),
+      v("2026-08-12", "soinComplet", "Bineta Cissé"),
+      v("2026-07-01", "coupe", "Coumba Faye"),
+      v("2026-05-20", "soinComplet", "Bineta Cissé"),
     ],
   },
   {
-    id: "c17", name: "Oumou Baldé", email: "oumou.balde@gmail.com", phone: "+221 78 690 15 42",
-    salon: "seaplaza", since: "2023-05-20", points: 130,
+    id: "c18", number: 1018, name: "Rokhaya Seck", email: "rokhaya.seck@gmail.com",
+    phone: "+221 76 255 47 81",
+    address: "Dakar", residenceCountry: "Sénégal", birthday: "10-30", ethnicity: "africain",
+    salon: "seaplaza", since: "2024-06-01", tier: null, points: 110,
     visits: [
-      v("2026-08-12", "Coloration", "Bineta", 35_000),
-      v("2026-07-01", "Coupe", "Coumba", 10_000),
-      v("2026-05-20", "Coloration", "Bineta", 35_000),
-    ],
-  },
-  {
-    id: "c18", name: "Rokhaya Seck", email: "rokhaya.seck@gmail.com", phone: "+221 76 255 47 81",
-    salon: "seaplaza", since: "2024-06-01", points: 110,
-    visits: [
-      v("2026-07-15", "Coupe & Brushing", "Bineta", 15_000),
-      v("2026-06-01", "Balayage", "Bineta", 45_000),
+      v("2026-07-15", "brushing", "Bineta Cissé"),
+      v("2026-06-01", "silk", "Bineta Cissé"),
     ],
   },
 ];
+
+// Notes internes seed, reprises par `ClientsContext` (état de session).
+export const CLIENT_NOTE_SEEDS: Record<string, ClientNoteSeed[]> = Object.fromEntries(
+  CLIENT_SEEDS.filter((c) => c.notes?.length).map((c) => [c.id, c.notes!]),
+);
 
 const daysSinceIso = (iso: string) =>
   Math.round((new Date(TODAY_ISO).getTime() - new Date(iso).getTime()) / DAY_MS);
@@ -1327,20 +1455,33 @@ const daysSinceIso = (iso: string) =>
 // Régulière (≤ 45 j) / occasionnelle / à relancer (> 100 j ou jamais venue).
 export type ClientSegment = "active" | "occasionnelle" | "a-relancer";
 
+export const segmentOf = (days: number | null): ClientSegment =>
+  days === null || days > 100 ? "a-relancer" : days <= 45 ? "active" : "occasionnelle";
+
+export const daysSince = daysSinceIso;
+
 export type ClientRow = {
   id: string;
+  number: number;
   name: string;
   email: string;
   phone: string;
+  whatsapp: string | null;
   gender: ClientGender;
   address: string;
+  profession: string | null;
+  residenceCountry: string;
+  birthday: string; // « MM-JJ »
+  ethnicity: ClientEthnicity;
   salon: SalonId;
   salonLabel: string;
   since: string;
+  tier: ClientTier;
+  preferredStaffId: string | null;
   lastVisit: string | null;
   daysSinceLastVisit: number | null;
   totalSpent: number;
-  appointments: number; // rendez-vous honorés
+  appointments: number; // visites honorées
   upcoming: number; // rendez-vous à venir
   loyaltyPoints: number;
   segment: ClientSegment;
@@ -1354,28 +1495,32 @@ function toClientRow(c: ClientSeed): ClientRow {
       ? null
       : honoured.reduce((m, x) => (x.date > m ? x.date : m), honoured[0].date);
   const days = lastVisit ? daysSinceIso(lastVisit) : null;
-  const segment: ClientSegment =
-    days === null || days > 100 ? "a-relancer" : days <= 45 ? "active" : "occasionnelle";
-
-  const profile = profileOf(c.id);
 
   return {
     id: c.id,
+    number: c.number,
     name: c.name,
     email: c.email,
     phone: c.phone,
-    gender: profile.gender,
-    address: profile.address,
+    whatsapp: c.whatsapp ?? null,
+    gender: c.gender ?? "femme",
+    address: c.address,
+    profession: c.profession ?? null,
+    residenceCountry: c.residenceCountry,
+    birthday: c.birthday,
+    ethnicity: c.ethnicity,
     salon: c.salon,
     salonLabel: salonName(c.salon),
     since: c.since,
+    tier: c.tier,
+    preferredStaffId: c.preferredStaffId ?? null,
     lastVisit,
     daysSinceLastVisit: days,
-    totalSpent: honoured.reduce((s, x) => s + x.amount, 0),
-    appointments: honoured.length,
+    totalSpent: c.totals?.spent ?? honoured.reduce((s, x) => s + x.amount, 0),
+    appointments: c.totals?.visits ?? honoured.length,
     upcoming: upcoming.length,
     loyaltyPoints: c.points,
-    segment,
+    segment: segmentOf(days),
   };
 }
 
@@ -1383,13 +1528,19 @@ export function clients(scope: SalonScope): ClientRow[] {
   return CLIENT_SEEDS.filter((c) => scope === "all" || c.salon === scope).map(toClientRow);
 }
 
-// Cliente créée il y a ≤ 30 jours — filtre « Nouvelles » de /clients, aligné
-// sur le filtre équivalent de point-de-vente (`FILTERS`, `repertoire-view.tsx`).
+// Cliente créée il y a ≤ 30 jours — filtre « Nouvelles » du répertoire,
+// aligné sur point-de-vente (`FILTERS`, `repertoire-view.tsx`).
 export const isNewClient = (row: ClientRow): boolean => daysSinceIso(row.since) <= 30;
+
+// « Historique » : au moins 5 visites (même seuil que point-de-vente).
+export const HISTORIQUE_MIN_VISITS = 5;
 
 // Identifiant d'une cliente créée en session (même convention que
 // `newStaffId`/`newRequestId`/`newAbsenceId` dans les autres modules mock).
 export const newClientId = () => `c-${Date.now().toString(36)}`;
+// Prochain n° client libre (création en session).
+export const nextClientNumber = (taken: number[]) =>
+  Math.max(...CLIENT_SEEDS.map((c) => c.number), ...taken) + 1;
 
 // Répartition des rendez-vous par statut, pour la fiche cliente.
 export type ClientVisitStats = {
@@ -1413,7 +1564,7 @@ export function clientDetail(id: string): ClientDetail | null {
   const count = (s: ClientVisitStatus) => seed.visits.filter((x) => x.status === s).length;
   return {
     row: toClientRow(seed),
-    preferences: profileOf(id).preferences,
+    preferences: seed.preferences ?? EMPTY_CLIENT_PREFERENCES,
     stats: {
       total: seed.visits.length,
       honoured: count("honoré"),
@@ -1427,4 +1578,38 @@ export function clientDetail(id: string): ClientDetail | null {
       .filter((x) => x.status !== "à venir")
       .sort((a, b) => b.date.localeCompare(a.date)),
   };
+}
+
+// Pays de résidence — même liste courte que point-de-vente (`lib/data/pays.ts`),
+// Sénégal par défaut. La fiche stocke le libellé tel quel.
+export const PAYS_DEFAUT = "Sénégal";
+export const PAYS_OPTIONS = [
+  "Sénégal", "Bénin", "Burkina Faso", "Cameroun", "Canada", "Cap-Vert", "Côte d'Ivoire",
+  "Émirats arabes unis", "Espagne", "États-Unis", "France", "Gabon", "Gambie", "Ghana",
+  "Guinée", "Guinée-Bissau", "Italie", "Mali", "Maroc", "Mauritanie", "Niger", "Nigéria",
+  "Portugal", "Royaume-Uni", "Suisse", "Togo", "Tunisie", "Autre",
+].map((p) => ({ value: p, label: p }));
+
+// Jour + mois → « MM-JJ ».
+export const toBirthday = (day: number, month: number) =>
+  `${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+export { MONTH_NAMES };
+
+// Une cliente correspond-elle à la saisie ? Même règle que point-de-vente
+// (`clientMatchesQuery`) : nom, e-mail, n° client (« 1042 », « N° 1042 »,
+// « #1042 »), téléphone ou WhatsApp (chiffres comparés sans espaces ni
+// ponctuation). Accents ignorés en plus, pour la saisie au clavier.
+const fold = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+export function clientMatchesQuery(c: Pick<ClientRow, "name" | "email" | "number" | "phone" | "whatsapp">, query: string) {
+  const q = fold(query.trim());
+  if (!q) return true;
+  if (fold(c.name).includes(q)) return true;
+  if (c.email && fold(c.email).includes(q)) return true;
+  const asNumber = q.match(/^(?:n°|no|#)?\s*(\d+)$/);
+  if (asNumber && Number(asNumber[1]) === c.number) return true;
+  const qDigits = q.replace(/\D/g, "");
+  if (qDigits.length >= 2 && /^[\d\s+().-]+$/.test(q)) {
+    return [c.phone, c.whatsapp].some((n) => n?.replace(/\D/g, "").includes(qDigits));
+  }
+  return false;
 }

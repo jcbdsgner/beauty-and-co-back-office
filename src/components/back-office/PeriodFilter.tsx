@@ -21,14 +21,14 @@ const frDate = (iso: string) => {
 const FIXED_PERIODS = periods.filter((p) => p.id !== "custom");
 
 const segmentClass = (active: boolean) =>
-  `rounded-md px-3 py-1.5 text-theme-sm font-medium transition-colors ${
+  `rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
     active
-      ? "bg-white text-gray-900 shadow-theme-xs"
-      : "text-gray-500 hover:text-gray-800"
+      ? "bg-white text-base-content"
+      : "text-base-content/60 hover:text-base-content"
   }`;
 
 const fieldClass =
-  "h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-theme-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10";
+  "h-10 w-full rounded-field border border-base-300 bg-white px-3 text-sm text-base-content focus:outline-2 focus:outline-offset-2 focus:outline-[#fdcfca]";
 
 // Champ date : au clic, flatpickr déroule un calendrier juste en dessous
 // (static → dans le flux du popover, pas en overlay flottant).
@@ -69,7 +69,7 @@ function DateField({
 
   return (
     <label className="block">
-      <span className="mb-1 block text-theme-xs font-medium text-gray-500">{label}</span>
+      <span className="mb-1 block text-xs font-medium text-base-content/60">{label}</span>
       <input
         ref={inputRef}
         type="text"
@@ -113,7 +113,7 @@ export default function PeriodFilter({ value, onChange }: Props) {
     <div
       role="radiogroup"
       aria-label="Période affichée"
-      className="relative inline-flex items-center gap-0.5 rounded-lg bg-gray-100 p-0.5"
+      className="relative inline-flex items-center gap-0.5 rounded-lg bg-muted p-0.5"
     >
       {FIXED_PERIODS.map((p) => (
         <button
@@ -145,7 +145,7 @@ export default function PeriodFilter({ value, onChange }: Props) {
         onClose={() => setOpen(false)}
         className="top-full right-0 w-[340px] p-4"
       >
-        <p className="mb-3 text-theme-sm font-semibold text-gray-800">
+        <p className="mb-3 text-sm font-semibold text-base-content">
           Période personnalisée
         </p>
 
@@ -158,7 +158,7 @@ export default function PeriodFilter({ value, onChange }: Props) {
         </div>
 
         {rangeInverted && (
-          <p className="mt-2 text-theme-xs font-medium text-error-500">
+          <p className="mt-2 text-xs font-medium text-error-500">
             La date de fin doit être postérieure à la date de début.
           </p>
         )}
@@ -180,7 +180,7 @@ export default function PeriodFilter({ value, onChange }: Props) {
           <button
             type="button"
             onClick={reset}
-            className="mt-2 w-full rounded-lg py-2 text-theme-xs font-medium text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-800"
+            className="mt-2 w-full rounded-lg py-2 text-xs font-medium text-base-content/60 transition-colors hover:bg-base-200 hover:text-base-content"
           >
             Réinitialiser
           </button>

@@ -21,7 +21,7 @@ const DEFAULT_WORKING: WorkingShift = {
 };
 
 const timeField =
-  "h-9 rounded-lg border border-gray-300 bg-white px-2.5 text-theme-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10";
+  "h-9 rounded-field border border-base-300 bg-white px-2.5 text-sm text-base-content focus:outline-2 focus:outline-offset-2 focus:outline-[#fdcfca]";
 
 function WorkingControls({
   weekday,
@@ -37,7 +37,7 @@ function WorkingControls({
   const day = WEEKDAY_LABELS[weekday];
 
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-theme-sm text-gray-500">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-base-content/60">
       <select
         value={shift.salonId}
         onChange={(e) => patch({ salonId: e.target.value as WorkingShift["salonId"] })}
@@ -71,7 +71,7 @@ function WorkingControls({
 
       {hasBreak ? (
         <span className="flex items-center gap-1.5">
-          <span className="text-gray-400">coupure</span>
+          <span className="text-base-content/45">coupure</span>
           <input
             type="time"
             value={shift.breakStart}
@@ -90,7 +90,7 @@ function WorkingControls({
           <button
             type="button"
             onClick={() => patch({ breakStart: undefined, breakEnd: undefined })}
-            className="text-theme-xs font-medium text-gray-400 hover:text-error-600"
+            className="text-xs font-medium text-base-content/45 hover:text-error-600"
           >
             retirer
           </button>
@@ -99,7 +99,7 @@ function WorkingControls({
         <button
           type="button"
           onClick={() => patch({ breakStart: "13:00", breakEnd: "14:00" })}
-          className="text-theme-xs font-medium text-brand-600 hover:text-brand-700"
+          className="text-xs font-medium text-brand-600 hover:text-secondary"
         >
           + ajouter une coupure
         </button>
@@ -125,11 +125,11 @@ function DayRow({
           onChange={(on) => onChange(on ? DEFAULT_WORKING : { off: true })}
           aria-label={`${WEEKDAY_LABELS[weekday]} travaillé`}
         />
-        <span className="text-sm font-medium text-gray-800">{WEEKDAY_LABELS[weekday]}</span>
+        <span className="text-sm font-medium text-base-content">{WEEKDAY_LABELS[weekday]}</span>
       </div>
 
       {shift.off ? (
-        <span className="text-theme-sm text-gray-400">Repos</span>
+        <span className="text-sm text-base-content/45">Repos</span>
       ) : (
         <WorkingControls weekday={weekday} shift={shift} onChange={onChange} />
       )}
@@ -140,14 +140,14 @@ function DayRow({
 export default function MemberSchedulePanel({ baseHours, onChange }: Props) {
   return (
     <div className="space-y-4">
-      <p className="text-theme-sm text-gray-500">
+      <p className="text-sm text-base-content/60">
         Ces horaires sont la trame de référence, salon compris : le Planning les
         applique chaque semaine, et vous n&apos;y saisissez que les exceptions
         (absences, ajustements). Une personne peut très bien travailler dans un
         salon un jour et dans l&apos;autre le lendemain.
       </p>
-      <div className="rounded-2xl border border-gray-200 bg-white">
-        <div className="divide-y divide-gray-100">
+      <div className="rounded-box border border-base-300 bg-white">
+        <div className="divide-y divide-base-300">
           {WEEKDAYS.map((weekday) => (
             <DayRow
               key={weekday}

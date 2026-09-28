@@ -53,7 +53,7 @@ export default function RatingStars({
         </span>
       </span>
       {showValue && (
-        <span className="text-theme-sm font-medium text-gray-700">
+        <span className="text-sm font-medium text-base-content/80">
           {value.toLocaleString("fr-FR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} / 5
         </span>
       )}

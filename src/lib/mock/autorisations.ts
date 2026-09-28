@@ -86,7 +86,7 @@ export const CAPABILITY_GROUPS: CapabilityGroup[] = [
       },
       {
         id: "rdv.assign",
-        label: "Affecter une praticienne à un rendez-vous",
+        label: "Changer la praticienne d’un rendez-vous",
         requires: "rdv.view",
       },
     ],

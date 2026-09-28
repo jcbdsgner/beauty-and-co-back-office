@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { SegmentedToggle } from "@/components/ui/molecules/segmented-toggle";
 
 export type SegmentedOption<T extends string> = { value: T; label: string };
 
@@ -10,61 +11,34 @@ type Props<T extends string> = {
   onChange: (value: T) => void;
   "aria-label": string;
   size?: "sm" | "md";
-  // Autorise le retour à la ligne des options — utile dans un conteneur étroit
-  // (ex. panneau latéral) où toutes les options ne tiennent pas sur une ligne.
+  // Conservé pour compatibilité : le contrôle de point-de-vente est une grille
+  // à colonnes égales qui ne passe pas à la ligne — sans usage actuellement.
   wrap?: boolean;
-  // "neutral" (défaut) : pastille grise, utilisée dans le corps de page
-  // (onglets, sous-sections). "tinted" : pastille teintée de marque, réservée
-  // au bandeau de titre (`PageHeader`) — reprend la palette du Figma tableau
-  // de bord (bordure/fond `#efe9e8`/`#f9f8f8`, actif `#fdcfcb`).
+  // "tinted" : réservé au bandeau de titre (`PageHeader`) → taille compacte,
+  // comme les contrôles d'en-tête de point-de-vente (`size="sm"`).
   variant?: "neutral" | "tinted";
 };
 
-// Contrôle segmenté : choix unique parmi quelques options toutes visibles.
-// Sémantique radio (on filtre du contenu, ce ne sont pas des onglets).
+// Enveloppe historique conservée pour ses ~17 consommateurs — le rendu est
+// désormais le `SegmentedToggle` de point-de-vente (pastille blanche qui glisse
+// sous le segment actif). `inline-grid` : garde la largeur au contenu, comme
+// l'ancien contrôle, au lieu d'occuper toute la ligne.
 export default function SegmentedControl<T extends string>({
   options,
   value,
   onChange,
   "aria-label": ariaLabel,
   size = "md",
-  wrap = false,
   variant = "neutral",
 }: Props<T>) {
-  const pad = size === "sm" ? "px-2.5 py-1 text-theme-xs" : "px-3 py-1.5 text-theme-sm";
-  const tinted = variant === "tinted";
-
   return (
-    <div
-      role="radiogroup"
+    <SegmentedToggle
       aria-label={ariaLabel}
-      className={`inline-flex items-center gap-0.5 rounded-lg p-0.5 ${
-        tinted ? "border border-[#efe9e8] bg-[#f9f8f8]" : "bg-gray-100"
-      } ${wrap ? "flex-wrap" : ""}`}
-    >
-      {options.map((opt) => {
-        const active = opt.value === value;
-        return (
-          <button
-            key={opt.value}
-            type="button"
-            role="radio"
-            aria-checked={active}
-            onClick={() => onChange(opt.value)}
-            className={`rounded-md font-medium transition-colors ${pad} ${
-              tinted
-                ? active
-                  ? "bg-[#fdcfcb] text-[#5a4242]"
-                  : "text-[#6a6060] hover:text-[#2d2626]"
-                : active
-                  ? "bg-white text-gray-900 shadow-theme-xs"
-                  : "text-gray-500 hover:text-gray-800"
-            }`}
-          >
-            {opt.label}
-          </button>
-        );
-      })}
-    </div>
+      options={options}
+      value={value}
+      onChange={(v) => onChange(v as T)}
+      size={size === "sm" || variant === "tinted" ? "sm" : "default"}
+      className="inline-grid w-fit"
+    />
   );
 }

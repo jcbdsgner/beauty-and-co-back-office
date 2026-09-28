@@ -1,4 +1,59 @@
 @import 'tailwindcss';
+@import 'tw-animate-css';
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Design system repris de point-de-vente (2026-09-27) — daisyUI 5, thème unique
+   « beautyco », valeurs identiques à point-de-vente/app/globals.css. Seul écart :
+   `--size-field` / `--size-selector` (densité), réglés pour un poste desktop à
+   la souris (48px au lieu de 56px de hauteur de champ/bouton) plutôt qu'une
+   caisse tactile.
+   ───────────────────────────────────────────────────────────────────────────── */
+@plugin "daisyui" {
+  themes: false;
+  logs: false;
+}
+
+@plugin "daisyui/theme" {
+  name: "beautyco";
+  default: true;
+  prefersdark: false;
+  color-scheme: light;
+
+  --color-base-100: #ffffff;
+  --color-base-200: #f9f9f9;
+  --color-base-300: #e6dedd;
+  --color-base-content: #241f1d;
+
+  --color-primary: #886666;
+  --color-primary-content: #ffffff;
+  --color-secondary: #5c4444;
+  --color-secondary-content: #ffffff;
+  --color-accent: #f3eeee;
+  --color-accent-content: #5c4444;
+  --color-neutral: #3a2d2d;
+  --color-neutral-content: #f9f9f9;
+
+  --color-info: #2662d9;
+  --color-info-content: #ffffff;
+  --color-success: #12805c;
+  --color-success-content: #ffffff;
+  --color-warning: #b5590a;
+  --color-warning-content: #ffffff;
+  --color-error: #b42318;
+  --color-error-content: #ffffff;
+
+  --radius-selector: 0.5rem;
+  --radius-field: 0.5rem;
+  --radius-box: 0.75rem;
+
+  /* Densité desktop : btn/input md = 0.3rem × 10 = 48px (56px côté point-de-vente). */
+  --size-selector: 0.25rem;
+  --size-field: 0.3rem;
+
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
 
 @custom-variant dark (&:is(.dark *));
 
@@ -82,18 +137,18 @@
   --color-brand-900: #382b29;
   --color-brand-950: #241b1a;
 
-  --color-blue-light-25: #f5fbff;
-  --color-blue-light-50: #f0f9ff;
-  --color-blue-light-100: #e0f2fe;
-  --color-blue-light-200: #b9e6fe;
-  --color-blue-light-300: #7cd4fd;
-  --color-blue-light-400: #36bffa;
-  --color-blue-light-500: #0ba5ec;
-  --color-blue-light-600: #0086c9;
-  --color-blue-light-700: #026aa2;
-  --color-blue-light-800: #065986;
-  --color-blue-light-900: #0b4a6f;
-  --color-blue-light-950: #062c41;
+  --color-blue-light-25: #f6f9fd;
+  --color-blue-light-50: #ebf1fc;
+  --color-blue-light-100: #d8e3f8;
+  --color-blue-light-200: #bacdf3;
+  --color-blue-light-300: #92b0ec;
+  --color-blue-light-400: #5e8be3;
+  --color-blue-light-500: #2662d9;
+  --color-blue-light-600: #2154bb;
+  --color-blue-light-700: #1b479c;
+  --color-blue-light-800: #16397e;
+  --color-blue-light-900: #112d64;
+  --color-blue-light-950: #0c1f45;
 
   --color-gray-25: #fcfcfd;
   --color-gray-50: #f9fafb;
@@ -122,47 +177,48 @@
   --color-orange-900: #7e2410;
   --color-orange-950: #511c10;
 
-  --color-success-25: #f6fef9;
-  --color-success-50: #ecfdf3;
-  --color-success-100: #d1fadf;
-  --color-success-200: #a6f4c5;
-  --color-success-300: #6ce9a6;
-  --color-success-400: #32d583;
-  --color-success-500: #12b76a;
-  --color-success-600: #039855;
-  --color-success-700: #027a48;
-  --color-success-800: #05603a;
-  --color-success-900: #054f31;
-  --color-success-950: #053321;
+  --color-success-25: #f6faf8;
+  --color-success-50: #eaf4f0;
+  --color-success-100: #d4e8e2;
+  --color-success-200: #b3d6cb;
+  --color-success-300: #88c0ae;
+  --color-success-400: #50a186;
+  --color-success-500: #12805c;
+  --color-success-600: #0f6e4f;
+  --color-success-700: #0d5c42;
+  --color-success-800: #0a4a35;
+  --color-success-900: #083b2a;
+  --color-success-950: #06291d;
 
-  --color-error-25: #fffbfa;
-  --color-error-50: #fef3f2;
-  --color-error-100: #fee4e2;
-  --color-error-200: #fecdca;
-  --color-error-300: #fda29b;
-  --color-error-400: #f97066;
-  --color-error-500: #f04438;
-  --color-error-600: #d92d20;
-  --color-error-700: #b42318;
-  --color-error-800: #912018;
-  --color-error-900: #7a271a;
-  --color-error-950: #55160c;
+  --color-error-25: #fcf6f6;
+  --color-error-50: #f8ebea;
+  --color-error-100: #f2d7d5;
+  --color-error-200: #e7b9b5;
+  --color-error-300: #da918c;
+  --color-error-400: #c85c54;
+  --color-error-500: #b42318;
+  --color-error-600: #9b1e15;
+  --color-error-700: #821911;
+  --color-error-800: #68140e;
+  --color-error-900: #53100b;
+  --color-error-950: #3a0b08;
 
-  /* Ocre chaud propre à la marque plutôt que l'amber Tailwind par défaut —
-     même usage sémantique (état "à traiter"), teinte alignée sur la famille
-     brand et error (voir CLAUDE.md, « Nettoyage hiérarchie visuelle »). */
-  --color-warning-25: #fcfaf7;
-  --color-warning-50: #f8f3ed;
-  --color-warning-100: #ede1d4;
-  --color-warning-200: #dec8af;
-  --color-warning-300: #cfa577;
-  --color-warning-400: #c2823d;
-  --color-warning-500: #9f6528;
-  --color-warning-600: #86521d;
-  --color-warning-700: #6e3f17;
-  --color-warning-800: #542f12;
-  --color-warning-900: #3d220f;
-  --color-warning-950: #23140b;
+  /* Échelles sémantiques success / error / warning / blue-light recalées le
+     2026-09-27 sur les teintes de point-de-vente (#12805c / #b42318 / #b5590a /
+     #2662d9, cf. son thème daisyUI « beautyco ») : 500 = la teinte exacte,
+     paliers clairs = mélange avec le blanc, foncés = mélange avec le noir. */
+  --color-warning-25: #fcf8f5;
+  --color-warning-50: #f8f0e9;
+  --color-warning-100: #f2e1d3;
+  --color-warning-200: #e7cab1;
+  --color-warning-300: #daac84;
+  --color-warning-400: #c8844a;
+  --color-warning-500: #b5590a;
+  --color-warning-600: #9c4d09;
+  --color-warning-700: #824007;
+  --color-warning-800: #693406;
+  --color-warning-900: #532905;
+  --color-warning-950: #3a1c03;
 
   --color-theme-pink-500: #ee46bc;
 
@@ -222,6 +278,73 @@
   If we ever want to remove these styles, we need to add an explicit border
   color utility to any element that depends on these defaults.
 */
+/* Alias utilisés par les composants repris de point-de-vente (card / popover /
+   muted / destructive / border / ring / *-foreground), mappés sur le thème. */
+@theme inline {
+  --font-sans: var(--font-poppins);
+  --font-heading: var(--font-poppins);
+
+  --color-card: #ffffff;
+  --color-card-foreground: #241f1d;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #241f1d;
+  --color-primary-foreground: #ffffff;
+  --color-secondary-foreground: #ffffff;
+  --color-muted: #efe9e8;
+  --color-muted-foreground: #7a706b;
+  --color-accent-foreground: #5c4444;
+  --color-destructive: #b42318;
+  --color-destructive-foreground: #ffffff;
+  --color-border: #e6dedd;
+  --color-input: #e6dedd;
+  --color-ring: #886666;
+  --radius-card: 0.75rem;
+}
+
+:root {
+  --brand-lilac: #e4c8ff;
+  --pos-fulfillment-livraison-soft: #fdcfca;
+
+  /* Paliers de fidélité — dégradés métalliques, repris tels quels de point-de-vente. */
+  --pos-tier-silver-from: #f4f5f7;
+  --pos-tier-silver-via: #dfe2e7;
+  --pos-tier-silver-to: #b9bfc8;
+  --pos-tier-silver-ink: #1f2733;
+  --pos-tier-gold-from: #faeaa8;
+  --pos-tier-gold-via: #e9c85a;
+  --pos-tier-gold-to: #cfa634;
+  --pos-tier-gold-ink: #382800;
+  --pos-tier-platinum-from: #646d7b;
+  --pos-tier-platinum-via: #4a515d;
+  --pos-tier-platinum-to: #2c313a;
+  --pos-tier-platinum-ink: #ffffff;
+  --pos-tier-vip-from: #f1e0ff;
+  --pos-tier-vip-via: #d3a9fa;
+  --pos-tier-vip-to: #a874e0;
+  --pos-tier-vip-ink: #2a0b47;
+  --pos-tier-silver: linear-gradient(135deg, var(--pos-tier-silver-from), var(--pos-tier-silver-via) 55%, var(--pos-tier-silver-to));
+  --pos-tier-gold: linear-gradient(135deg, var(--pos-tier-gold-from), var(--pos-tier-gold-via) 55%, var(--pos-tier-gold-to));
+  --pos-tier-platinum: linear-gradient(135deg, var(--pos-tier-platinum-from), var(--pos-tier-platinum-via) 55%, var(--pos-tier-platinum-to));
+  --pos-tier-vip: linear-gradient(135deg, var(--pos-tier-vip-from), var(--pos-tier-vip-via) 55%, var(--pos-tier-vip-to));
+}
+
+/* Anneau de focus des champs en rose #fdcfca (comme point-de-vente), pas le
+   quasi-noir par défaut de daisyUI. */
+.input:focus,
+.input:focus-within,
+.select:focus,
+.select:focus-within,
+.textarea:focus,
+.textarea:focus-within {
+  --input-color: #fdcfca;
+}
+
+/* Mise en évidence — bord primary + halo rosé (recette point-de-vente). */
+@utility highlight-rose {
+  border-color: var(--color-primary);
+  box-shadow: 0 4px 17.5px rgb(253 207 202 / 0.65);
+}
+
 @layer base {
   *,
   ::after,
@@ -235,7 +358,7 @@
     cursor: pointer;
   }
   body {
-    @apply relative font-normal font-poppins z-1 bg-gray-50;
+    @apply relative font-normal font-poppins z-1 bg-base-200 text-base-content;
   }
 }
 

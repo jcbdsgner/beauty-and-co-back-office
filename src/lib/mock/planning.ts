@@ -71,8 +71,8 @@ export type ShiftOverride = {
 /* ------------------------------------------------------------------ */
 
 export const absences: Absence[] = [
-  // Trou de couverture : jeudi 03/09, Bineta est en repos hebdomadaire (jeudi) et
-  // Coumba part en formation → plus personne à Sea Plaza ce jour-là.
+  // Coumba en formation jeudi 03 et vendredi 04/09 : Bineta tient Sea Plaza
+  // seule, ses rendez-vous d'onglerie sont affectés à Aïda aux Almadies.
   {
     id: "ab-coumba-formation",
     memberId: "m-coumba",
@@ -89,12 +89,12 @@ export const absences: Absence[] = [
     to: "2026-09-12",
     type: "conge",
   },
-  // Journée maladie isolée — samedi 05/09, Almadies garde Sophie et Aïda.
+  // Journée maladie isolée — vendredi 04/09, Almadies garde Sophie et Aïda.
   {
     id: "ab-mariama-maladie",
     memberId: "m-mariama",
-    from: "2026-09-05",
-    to: "2026-09-05",
+    from: "2026-09-04",
+    to: "2026-09-04",
     type: "maladie",
   },
 ];

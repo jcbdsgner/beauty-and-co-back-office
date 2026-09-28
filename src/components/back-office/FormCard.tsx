@@ -12,18 +12,18 @@ export function FormCard({
   footer?: boolean;
 }) {
   return (
-    <div className="mb-6 rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
-      <div className="border-b border-gray-100 px-6 py-5 dark:border-gray-800">
-        <h3 className="text-base font-medium text-gray-800 dark:text-white/90">{title}</h3>
-        {description && <p className="mt-1 text-theme-sm text-gray-500 dark:text-gray-400">{description}</p>}
+    <div className="mb-6 rounded-box border border-base-300 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+      <div className="border-b border-base-300 px-6 py-5 dark:border-gray-800">
+        <h3 className="text-base font-medium text-base-content dark:text-white/90">{title}</h3>
+        {description && <p className="mt-1 text-sm text-base-content/60 dark:text-base-content/45">{description}</p>}
       </div>
       <div className="space-y-5 p-6">{children}</div>
       {footer && (
-        <div className="flex justify-end gap-3 border-t border-gray-100 px-6 py-4 dark:border-gray-800">
-          <button className="cursor-default rounded-lg px-4 py-2 text-theme-sm font-medium text-gray-600 dark:text-gray-300">
+        <div className="flex justify-end gap-3 border-t border-base-300 px-6 py-4 dark:border-gray-800">
+          <button className="cursor-default rounded-lg px-4 py-2 text-sm font-medium text-base-content/70 dark:text-base-content/30">
             Cancel
           </button>
-          <button className="cursor-default rounded-lg bg-brand-500 px-4 py-2 text-theme-sm font-medium text-white opacity-90">
+          <button className="cursor-default rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white opacity-90">
             Save changes
           </button>
         </div>
@@ -44,12 +44,12 @@ export function ToggleRow({
   return (
     <div className="flex items-start justify-between gap-4">
       <div>
-        <p className="text-theme-sm font-medium text-gray-800 dark:text-white/90">{label}</p>
-        {description && <p className="text-theme-xs text-gray-500 dark:text-gray-400">{description}</p>}
+        <p className="text-sm font-medium text-base-content dark:text-white/90">{label}</p>
+        {description && <p className="text-xs text-base-content/60 dark:text-base-content/45">{description}</p>}
       </div>
       <span
         className={`relative h-6 w-11 shrink-0 rounded-full transition ${
-          on ? "bg-brand-500" : "bg-gray-200 dark:bg-white/10"
+          on ? "bg-brand-500" : "bg-base-300 dark:bg-white/10"
         }`}
       >
         <span

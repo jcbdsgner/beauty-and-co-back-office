@@ -1,14 +1,15 @@
 "use client";
 
-import { useSidebar } from "@/context/SidebarContext";
 import { LocationProvider } from "@/context/LocationContext";
 import { AccountProvider } from "@/context/AccountContext";
 import { NotificationsProvider } from "@/context/NotificationsContext";
 import { PlanningProvider } from "@/context/PlanningContext";
 import { ClientsProvider } from "@/context/ClientsContext";
+import { PreferencesProvider } from "@/context/PreferencesContext";
+import { AutorisationsProvider } from "@/context/AutorisationsContext";
+import { FideliteProvider } from "@/context/FideliteContext";
 import AppHeader from "@/layout/AppHeader";
 import AppSidebar from "@/layout/AppSidebar";
-import Backdrop from "@/layout/Backdrop";
 import React from "react";
 
 export default function AdminLayout({
@@ -18,38 +19,34 @@ export default function AdminLayout({
   children: React.ReactNode;
   modal: React.ReactNode;
 }) {
-  const { isExpanded, isHovered, isMobileOpen } = useSidebar();
-
-  // Dynamic class for main content margin based on sidebar state
-  const mainContentMargin = isMobileOpen
-    ? "ml-0"
-    : isExpanded || isHovered
-    ? "lg:ml-[260px]"
-    : "lg:ml-[80px]";
-
   return (
     <LocationProvider>
       <AccountProvider>
         <NotificationsProvider>
           <PlanningProvider>
             <ClientsProvider>
+            <PreferencesProvider>
+            <AutorisationsProvider>
+            <FideliteProvider>
               <div className="min-h-screen xl:flex">
-                {/* Sidebar and Backdrop */}
+                {/* Sidebar fixe 260px (Figma « Point de vente », node 381:497) */}
                 <AppSidebar />
-                <Backdrop />
                 {/* Main Content Area */}
                 <div
-                  className={`flex-1 transition-all  duration-300 ease-in-out print:!ml-0 ${mainContentMargin}`}
+                  className="ml-[260px] min-w-0 flex-1 bg-base-200 print:!ml-0"
                 >
                   {/* Header */}
                   <AppHeader />
                   {/* Page Content */}
-                  <div className="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6 print:p-0">
+                  <div className="mx-auto max-w-[1440px] px-8 pt-2 pb-8 print:p-0">
                     {children}
                   </div>
                 </div>
               </div>
               {modal}
+            </FideliteProvider>
+            </AutorisationsProvider>
+            </PreferencesProvider>
             </ClientsProvider>
           </PlanningProvider>
         </NotificationsProvider>

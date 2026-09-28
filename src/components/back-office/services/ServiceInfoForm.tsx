@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { CheckCircleIcon } from "@/icons";
 import type { SalonId } from "@/lib/mock/beautyandco";
-import { SERVICE_ICON_OPTIONS, serviceSalons, type Service } from "@/lib/mock/services";
-import { SERVICE_ICONS } from "./serviceIcons";
+import { serviceSalons, type Service } from "@/lib/mock/services";
+import ImagePicker from "../shared/ImagePicker";
 import { SectionCard, TextInput, Toggle, btnGhost, btnPrimary } from "./ui";
 
 // Les sous-catégories ne se gèrent pas dans ce formulaire (cf.
@@ -13,7 +13,7 @@ export type ServiceDraft = Omit<Service, "id" | "subcategories">;
 
 const BLANK: ServiceDraft = {
   name: "",
-  icon: SERVICE_ICON_OPTIONS[0].value,
+  image: null,
   description: "",
   active: true,
   salonIds: [],
@@ -30,7 +30,7 @@ export default function ServiceInfoForm({ mode, service, onSubmit, onCancel }: P
   const initial: ServiceDraft = service
     ? {
         name: service.name,
-        icon: service.icon,
+        image: service.image,
         description: service.description,
         active: service.active,
         salonIds: service.salonIds,
@@ -69,45 +69,26 @@ export default function ServiceInfoForm({ mode, service, onSubmit, onCancel }: P
       description="Ce que la cliente voit au moment de choisir une catégorie à la réservation."
     >
       <div className="space-y-6">
-        <div className="grid grid-cols-[1fr_auto] items-end gap-4">
-          <TextInput
-            label="Nom de la catégorie"
-            placeholder="Coiffure"
-            value={draft.name}
-            onChange={(v) => set("name", v)}
+        <TextInput
+          label="Nom de la catégorie"
+          placeholder="Coiffure"
+          value={draft.name}
+          onChange={(v) => set("name", v)}
+        />
+
+        <div>
+          <span className="mb-2 block text-sm font-medium text-base-content">Image</span>
+          <ImagePicker
+            value={draft.image}
+            onChange={(v) => set("image", v)}
+            label="l'image de la catégorie"
           />
-          <div>
-            <span className="mb-1.5 block text-sm font-medium text-gray-800">Vignette</span>
-            <div className="flex flex-wrap gap-1">
-              {SERVICE_ICON_OPTIONS.map((o) => {
-                const Icon = SERVICE_ICONS[o.value];
-                const on = draft.icon === o.value;
-                return (
-                  <button
-                    key={o.value}
-                    type="button"
-                    onClick={() => set("icon", o.value)}
-                    aria-label={`Choisir la vignette ${o.label}`}
-                    aria-pressed={on}
-                    title={o.label}
-                    className={`flex h-9 w-9 items-center justify-center rounded-lg border transition ${
-                      on
-                        ? "border-brand-400 bg-brand-50 text-brand-700"
-                        : "border-gray-200 text-gray-500 hover:bg-gray-50"
-                    }`}
-                  >
-                    <Icon className="size-4" />
-                  </button>
-                );
-              })}
-            </div>
-          </div>
         </div>
 
         <div>
           <label
             htmlFor="service-description"
-            className="mb-1.5 block text-sm font-medium text-gray-800"
+            className="mb-1.5 block text-sm font-medium text-base-content"
           >
             Description
           </label>
@@ -117,12 +98,12 @@ export default function ServiceInfoForm({ mode, service, onSubmit, onCancel }: P
             value={draft.description}
             placeholder="Coupes, brushings, tresses, tissages et colorations."
             onChange={(e) => set("description", e.target.value)}
-            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10"
+            className="w-full rounded-field border border-base-300 bg-white px-4 py-2.5 text-sm text-base-content placeholder:text-base-content/40 focus:outline-2 focus:outline-offset-2 focus:outline-[#fdcfca]"
           />
         </div>
 
         <div>
-          <span className="mb-2 block text-sm font-medium text-gray-800">Proposé dans</span>
+          <span className="mb-2 block text-sm font-medium text-base-content">Proposé dans</span>
           <div className="flex flex-wrap gap-2">
             {serviceSalons.map((s) => {
               const on = draft.salonIds.includes(s.id);
@@ -132,15 +113,15 @@ export default function ServiceInfoForm({ mode, service, onSubmit, onCancel }: P
                   type="button"
                   onClick={() => toggleSalon(s.id)}
                   aria-pressed={on}
-                  className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-theme-sm font-medium transition ${
+                  className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition ${
                     on
-                      ? "border-brand-400 bg-brand-50 text-brand-700"
-                      : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                      ? "border-brand-400 bg-accent text-secondary"
+                      : "border-base-300 text-base-content/70 hover:bg-base-200"
                   }`}
                 >
                   <span
                     className={`flex h-4 w-4 items-center justify-center rounded border ${
-                      on ? "border-brand-500 bg-brand-500 text-white" : "border-gray-300"
+                      on ? "border-brand-500 bg-brand-500 text-white" : "border-base-300"
                     }`}
                   >
                     {on && (
@@ -155,16 +136,16 @@ export default function ServiceInfoForm({ mode, service, onSubmit, onCancel }: P
             })}
           </div>
           {draft.salonIds.length === 0 && (
-            <p className="mt-2 text-theme-xs text-warning-600">
+            <p className="mt-2 text-xs text-warning-600">
               Sans salon, cette catégorie ne sera proposée nulle part à la réservation.
             </p>
           )}
         </div>
 
-        <div className="flex items-start justify-between gap-6 border-t border-gray-100 pt-5">
+        <div className="flex items-start justify-between gap-6 border-t border-base-300 pt-5">
           <div className="min-w-0">
-            <p className="text-sm font-medium text-gray-800">Catégorie active</p>
-            <p className="mt-0.5 text-theme-xs text-gray-500">
+            <p className="text-sm font-medium text-base-content">Catégorie active</p>
+            <p className="mt-0.5 text-xs text-base-content/60">
               Une catégorie inactive reste paramétrable mais n&apos;apparaît pas à la réservation.
             </p>
           </div>
@@ -188,7 +169,7 @@ export default function ServiceInfoForm({ mode, service, onSubmit, onCancel }: P
           </button>
         )}
         {mode === "edit" && justSaved && !dirty && (
-          <span className="inline-flex items-center gap-1.5 text-theme-sm font-medium text-success-600">
+          <span className="inline-flex items-center gap-1.5 text-sm font-medium text-success-600">
             <CheckCircleIcon className="size-4" />
             Enregistré
           </span>

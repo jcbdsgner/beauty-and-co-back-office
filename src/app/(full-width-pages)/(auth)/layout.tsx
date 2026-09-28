@@ -17,7 +17,7 @@ export default function AuthLayout({
           <GridShape />
           <div className="relative z-1 mx-auto flex max-w-xs flex-col items-center">
             <Link href="/signin" className="mb-5 flex items-center gap-2.5">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-sm font-bold text-brand-700">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-sm font-bold text-secondary">
                 B&amp;C
               </span>
               <span className="text-xl font-bold text-white">

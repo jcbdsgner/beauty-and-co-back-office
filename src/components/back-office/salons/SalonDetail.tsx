@@ -14,7 +14,7 @@ import {
   type SalonId,
 } from "@/lib/mock/beautyandco";
 import { prestationSeeds, serviceSeeds } from "@/lib/mock/services";
-import { SERVICE_ICONS } from "../services/serviceIcons";
+import CategoryThumb from "../shared/CategoryThumb";
 import HoursEditor from "./HoursEditor";
 import {
   BackButton,
@@ -74,8 +74,8 @@ export default function SalonDetail({
     <div className="space-y-6">
       <div>
         <BackButton onClick={onBack} />
-        <h1 className="text-2xl font-semibold text-gray-800">{config.name || "Salon"}</h1>
-        <p className="mt-1 text-theme-sm text-gray-500">{config.address}</p>
+        <h1 className="text-2xl font-semibold text-base-content">{config.name || "Salon"}</h1>
+        <p className="mt-1 text-sm text-base-content/60">{config.address}</p>
       </div>
 
       <div className="max-w-3xl space-y-5">
@@ -87,7 +87,7 @@ export default function SalonDetail({
             <TextInput label="Adresse" value={config.address} onChange={(v) => set("address", v)} />
             <TextInput label="Téléphone" value={config.phone} onChange={(v) => set("phone", v)} />
           </div>
-          <div className="mt-5 border-t border-gray-100 pt-4">
+          <div className="mt-5 border-t border-base-300 pt-4">
             <SettingRow
               title="Salon actif"
               description="Un salon inactif n'apparaît plus à la réservation et disparaît des filtres."
@@ -101,7 +101,7 @@ export default function SalonDetail({
               }
             />
             {blockedDeactivate && (
-              <p className="mt-2 text-theme-xs text-warning-600">
+              <p className="mt-2 text-xs text-warning-600">
                 Impossible de désactiver le dernier salon actif.
               </p>
             )}
@@ -124,11 +124,11 @@ export default function SalonDetail({
               />
             ))}
           </div>
-          <p className="mt-4 text-theme-sm text-gray-500">
+          <p className="mt-4 text-sm text-base-content/60">
             Total : {posteCount(config)} poste{posteCount(config) > 1 ? "s" : ""}
           </p>
           {posteCount(config) === 0 && (
-            <p className="mt-1 text-theme-xs text-warning-600">
+            <p className="mt-1 text-xs text-warning-600">
               Aucune réservation possible tant qu&apos;aucun poste n&apos;est déclaré.
             </p>
           )}
@@ -147,31 +147,31 @@ export default function SalonDetail({
           <ClosureForm salonId={config.id} onAdd={onAddClosure} />
 
           {salonClosures.length === 0 ? (
-            <p className="mt-4 text-theme-sm text-gray-500">Aucune fermeture programmée.</p>
+            <p className="mt-4 text-sm text-base-content/60">Aucune fermeture programmée.</p>
           ) : (
             <ul className="mt-4 space-y-2">
               {salonClosures.map((c) => (
                 <li
                   key={c.id}
-                  className="flex items-center gap-4 rounded-xl border border-gray-200 px-4 py-3"
+                  className="flex items-center gap-4 rounded-xl border border-base-300 px-4 py-3"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-gray-800">
+                    <p className="text-sm font-medium text-base-content">
                       {frShortDate(c.from)}
                       {c.to !== c.from ? ` → ${frShortDate(c.to)}` : ""}
                     </p>
-                    <p className="mt-0.5 text-theme-xs text-gray-500">
+                    <p className="mt-0.5 text-xs text-base-content/60">
                       {c.reason} · {c.scope === "all" ? "Tous les salons" : "Ce salon"}
                     </p>
                   </div>
                   {c.scope === "all" ? (
-                    <span className="text-theme-xs text-gray-400">Fermeture réseau</span>
+                    <span className="text-xs text-base-content/45">Fermeture réseau</span>
                   ) : (
                     <button
                       type="button"
                       onClick={() => onRemoveClosure(c.id)}
                       aria-label="Supprimer la fermeture"
-                      className="rounded-lg p-1.5 text-gray-400 transition hover:bg-error-50 hover:text-error-600"
+                      className="rounded-lg p-1.5 text-base-content/45 transition hover:bg-error-50 hover:text-error-600"
                     >
                       <TrashBinIcon className="size-4" />
                     </button>
@@ -181,7 +181,7 @@ export default function SalonDetail({
             </ul>
           )}
 
-          <p className="mt-4 text-theme-xs text-gray-500">
+          <p className="mt-4 text-xs text-base-content/60">
             Vérifiez les rendez-vous de cette période dans{" "}
             <Link href="/rendez-vous" className="font-medium text-brand-600 hover:underline">
               Rendez-vous
@@ -195,10 +195,10 @@ export default function SalonDetail({
           title="Prestations proposées ici"
           description="Reflet du catalogue. La composition se gère dans Services."
         >
-          <p className="text-theme-sm text-gray-700">
+          <p className="text-sm text-base-content/80">
             {prestationsHere.length} sur {totalCategorised} prestations proposées dans ce salon
             {proposedServices.length > 0 && (
-              <span className="text-gray-400">
+              <span className="text-base-content/45">
                 {" "}
                 · {proposedServices.length} catégorie{proposedServices.length > 1 ? "s" : ""}
               </span>
@@ -207,9 +207,8 @@ export default function SalonDetail({
           {proposedServices.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-1.5">
               {proposedServices.map((s) => {
-                const Icon = SERVICE_ICONS[s.icon];
                 return (
-                  <Badge key={s.id} size="sm" color="light" startIcon={<Icon className="size-3.5" />}>
+                  <Badge key={s.id} size="sm" color="light" startIcon={<CategoryThumb image={s.image} name={s.name} size={18} className="bg-transparent p-0" />}>
                     {s.name}
                   </Badge>
                 );
@@ -218,7 +217,7 @@ export default function SalonDetail({
           )}
           <Link
             href="/services"
-            className="mt-4 inline-block text-theme-sm font-medium text-brand-600 hover:underline"
+            className="mt-4 inline-block text-sm font-medium text-brand-600 hover:underline"
           >
             Gérer dans Services →
           </Link>
@@ -260,12 +259,12 @@ function ClosureForm({
   };
 
   const dateClass =
-    "h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10";
+    "h-10 rounded-field border border-base-300 bg-white px-3 text-sm text-base-content focus:outline-2 focus:outline-offset-2 focus:outline-[#fdcfca]";
 
   return (
-    <div className="rounded-xl border border-dashed border-gray-200 p-4">
+    <div className="rounded-xl border border-dashed border-base-300 p-4">
       <div className="flex flex-wrap items-end gap-3">
-        <label className="text-theme-xs font-medium text-gray-600">
+        <label className="text-xs font-medium text-base-content/70">
           Du
           <input
             type="date"
@@ -274,7 +273,7 @@ function ClosureForm({
             className={`mt-1 block ${dateClass}`}
           />
         </label>
-        <label className="text-theme-xs font-medium text-gray-600">
+        <label className="text-xs font-medium text-base-content/70">
           Au
           <input
             type="date"
@@ -283,7 +282,7 @@ function ClosureForm({
             className={`mt-1 block ${dateClass}`}
           />
         </label>
-        <label className="flex-1 text-theme-xs font-medium text-gray-600">
+        <label className="flex-1 text-xs font-medium text-base-content/70">
           Motif
           <input
             type="text"
@@ -295,12 +294,12 @@ function ClosureForm({
         </label>
       </div>
       <div className="mt-3 flex items-center justify-between">
-        <label className="flex items-center gap-2 text-theme-sm text-gray-600">
+        <label className="flex items-center gap-2 text-sm text-base-content/70">
           <input
             type="checkbox"
             checked={scopeAll}
             onChange={(e) => setScopeAll(e.target.checked)}
-            className="size-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500/20"
+            className="checkbox checkbox-primary checkbox-sm shrink-0"
           />
           Appliquer à tous les salons
         </label>
@@ -323,7 +322,7 @@ function ClosureForm({
         </div>
       </div>
       {from !== "" && to !== "" && to < from && (
-        <p className="mt-2 text-theme-xs text-error-600">
+        <p className="mt-2 text-xs text-error-600">
           La date de fin doit suivre la date de début.
         </p>
       )}

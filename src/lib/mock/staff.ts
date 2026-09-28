@@ -220,7 +220,14 @@ export const members: Member[] = [
       "coiffure-shampoing-brushing-shampoing-inclus-et-obligatoire",
       "coiffure-ponytail",
       "coiffure-shampoing-sechage",
+      "coiffure-silk-press",
+      "coiffure-soin-complet",
       "manucure-pedicure-manucure-russe-sans-vernis-sans-gel",
+      "manucure-pedicure-manucure-spa-express",
+      "manucure-pedicure-jelly-pedicure",
+      "manucure-pedicure-smooth-pedicure",
+      "mini-co-mini-jely-manucure",
+      "mini-co-mini-cutie-pedicure",
       "onglerie-vernis-permanent-mains",
       "onglerie-remplissage-gel",
     ],
@@ -259,6 +266,9 @@ export const members: Member[] = [
       "soin-du-visage-acne-treatment",
       "soin-du-visage-hydrate-me-and-restore",
       "soin-du-visage-detox-me-facial",
+      "soin-du-visage-hydrafacial-deep-clean",
+      "soin-du-visage-golden-vip-facial",
+      "spa-hot-stone-pierres-chaudes",
       "epilation-epilation-menton",
       "epilation-epilation-bras",
       "epilation-epilation-jambes-completes",
@@ -269,11 +279,11 @@ export const members: Member[] = [
       "epilation-pack-epilations-completes",
       "mini-co-mini-cutie-pedicure",
     ],
-    // Jeudi repos.
+    // Mercredi repos (jeudi travaillé depuis le 29/08, cf. journal `jn-0244`).
     baseHours: week({
       lun: full("seaplaza"),
       mar: full("seaplaza"),
-      mer: full("seaplaza"),
+      jeu: full("seaplaza"),
       ven: full("seaplaza"),
       sam: full("seaplaza"),
     }),
@@ -298,6 +308,7 @@ export const members: Member[] = [
       "manucure-pedicure-pedicure-me-spa",
       "manucure-pedicure-manucure-spa-express",
       "manucure-pedicure-gel-sur-ongle-naturel-gainage",
+      "manucure-pedicure-perfect-manucure-russe-gel-sur-ongles-naturels-gainage",
       "manucure-pedicure-supplement-decoration-chrome-cat-eye-baby-boomer",
       "onglerie-vernis-permanent-pieds",
       "onglerie-vernis-permanent-mains",
@@ -309,6 +320,10 @@ export const members: Member[] = [
       "onglerie-supplement-french",
       "onglerie-supplement-decoration-chrome-cat-eye-baby-boomer",
       "mini-co-mini-jely-manucure",
+      // Relais de Bineta pour les soins les plus demandés (son jour de repos).
+      "spa-relax-me-time",
+      "soin-du-visage-glow-me-facial",
+      "soin-du-visage-golden-vip-facial",
     ],
     // Mardi–samedi, démarrage 10:00, coupure 13:30–14:30 — à Sea Plaza.
     baseHours: week({

@@ -94,7 +94,7 @@ export default function MemberIdentityFields({ value, onChange }: Props) {
       </div>
 
       <div>
-        <span className="mb-2 block text-sm font-medium text-gray-800">Rôles</span>
+        <span className="mb-2 block text-sm font-medium text-base-content">Rôles</span>
         <div className="flex flex-wrap gap-2">
           {ROLE_OPTIONS.map((o) => (
             <CheckPill
@@ -107,7 +107,7 @@ export default function MemberIdentityFields({ value, onChange }: Props) {
           ))}
         </div>
         {value.roles.length === 0 && (
-          <p className="mt-2 text-theme-xs text-warning-600">
+          <p className="mt-2 text-xs text-warning-600">
             Choisissez au moins un rôle.
           </p>
         )}

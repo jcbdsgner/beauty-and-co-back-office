@@ -54,7 +54,7 @@ export default function WeekTimeline({
 
   if (rows.length === 0) {
     return (
-      <div className="rounded-2xl border border-gray-200 bg-white px-6 py-14 text-center text-theme-sm text-gray-400">
+      <div className="rounded-box border border-base-300 bg-white px-6 py-14 text-center text-sm text-base-content/45">
         Personne à planifier cette semaine.
       </div>
     );
@@ -63,21 +63,21 @@ export default function WeekTimeline({
   const gridCols = "200px repeat(7, minmax(0, 1fr))";
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white [scrollbar-width:thin]">
+    <div className="overflow-x-auto rounded-box border border-base-300 bg-white [scrollbar-width:thin]">
       <div className="min-w-[920px]">
-        <div className="grid border-b border-gray-100 bg-gray-50/60" style={{ gridTemplateColumns: gridCols }}>
+        <div className="grid border-b border-base-300 bg-gray-50/60" style={{ gridTemplateColumns: gridCols }}>
           <div />
           {days.map((d) => {
             const isToday = d.iso === todayIso;
             return (
               <div
                 key={d.iso}
-                className={`border-l border-gray-100 px-2 py-2.5 text-center ${isToday ? "bg-brand-50/70" : ""}`}
+                className={`border-l border-base-300 px-2 py-2.5 text-center ${isToday ? "bg-accent/70" : ""}`}
               >
-                <p className={`text-[11px] font-bold uppercase tracking-wide ${isToday ? "text-brand-600" : "text-gray-400"}`}>
+                <p className={`text-[11px] font-bold uppercase tracking-wide ${isToday ? "text-brand-600" : "text-base-content/45"}`}>
                   {WEEKDAY_LABELS[d.weekday].slice(0, 3)}
                 </p>
-                <p className={`text-theme-sm font-semibold tabular-nums ${isToday ? "text-brand-700" : "text-gray-700"}`}>
+                <p className={`text-sm font-semibold tabular-nums ${isToday ? "text-secondary" : "text-base-content/80"}`}>
                   {Number(d.iso.slice(8, 10))}
                 </p>
               </div>
@@ -90,7 +90,7 @@ export default function WeekTimeline({
           return (
             <div
               key={row.memberId}
-              className="grid border-b border-l-[3px] border-gray-100 last:border-b-0"
+              className="grid border-b border-l-[3px] border-base-300 last:border-b-0"
               style={{ gridTemplateColumns: gridCols, borderLeftColor: accent.dot }}
             >
               <div className="flex items-center gap-2 px-3 py-2.5">
@@ -100,7 +100,7 @@ export default function WeekTimeline({
                 >
                   {row.label.slice(0, 1)}
                 </span>
-                <span className="min-w-0 flex-1 truncate text-theme-sm font-semibold" style={{ color: accent.text }}>
+                <span className="min-w-0 flex-1 truncate text-sm font-semibold" style={{ color: accent.text }}>
                   {row.label}
                 </span>
                 {showRowMenu && (
@@ -109,7 +109,7 @@ export default function WeekTimeline({
                       type="button"
                       onClick={() => setMenuKey((k) => (k === row.memberId ? null : row.memberId))}
                       aria-label={`Options pour ${row.label}`}
-                      className="dropdown-toggle flex size-7 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-50 hover:text-gray-700"
+                      className="dropdown-toggle flex size-7 items-center justify-center rounded-lg text-base-content/45 hover:bg-base-200 hover:text-base-content/80"
                     >
                       <MoreDotIcon className="size-4" />
                     </button>
@@ -117,7 +117,7 @@ export default function WeekTimeline({
                       {isolated === row.memberId ? (
                         <DropdownItem
                           onItemClick={() => (setMenuKey(null), onShowAll?.())}
-                          baseClassName="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-theme-sm text-gray-700 hover:bg-gray-50"
+                          baseClassName="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-base-content/80 hover:bg-base-200"
                         >
                           <EyeIcon className="size-4" /> Afficher toute l&apos;équipe
                         </DropdownItem>
@@ -125,7 +125,7 @@ export default function WeekTimeline({
                         onIsolate && (
                           <DropdownItem
                             onItemClick={() => (setMenuKey(null), onIsolate(row.memberId))}
-                            baseClassName="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-theme-sm text-gray-700 hover:bg-gray-50"
+                            baseClassName="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-base-content/80 hover:bg-base-200"
                           >
                             <EyeCloseIcon className="size-4" /> Isoler cette ligne
                           </DropdownItem>
@@ -134,7 +134,7 @@ export default function WeekTimeline({
                       {onMarkAbsent && (
                         <DropdownItem
                           onItemClick={() => (setMenuKey(null), onMarkAbsent(row.memberId))}
-                          baseClassName="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-theme-sm text-warning-700 hover:bg-warning-50"
+                          baseClassName="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-warning-700 hover:bg-warning-50"
                         >
                           <UserIcon className="size-4" /> Marquer absente aujourd&apos;hui
                         </DropdownItem>
@@ -152,19 +152,19 @@ export default function WeekTimeline({
                     type="button"
                     onClick={() => onPickDay(d.iso, row.memberId)}
                     disabled={d.closed}
-                    className={`flex min-h-16 flex-col items-center justify-center gap-1 border-l border-gray-100 px-2 py-2 text-center transition ${
-                      d.closed ? "bg-gray-50/60" : isToday ? "bg-brand-50/40 hover:bg-brand-50" : "hover:bg-gray-50"
+                    className={`flex min-h-16 flex-col items-center justify-center gap-1 border-l border-base-300 px-2 py-2 text-center transition ${
+                      d.closed ? "bg-gray-50/60" : isToday ? "bg-accent/40 hover:bg-accent" : "hover:bg-base-200"
                     }`}
                   >
                     {d.closed ? (
-                      <span className="text-[12px] text-gray-300">Fermé</span>
+                      <span className="text-[12px] text-base-content/30">Fermé</span>
                     ) : cell.absent ? (
                       <span className="text-[12px] font-semibold text-warning-600">Absente</span>
                     ) : cell.off || !cell.hours ? (
-                      <span className="text-[12px] text-gray-300">Repos</span>
+                      <span className="text-[12px] text-base-content/30">Repos</span>
                     ) : (
                       <>
-                        <span className="text-[12px] font-medium tabular-nums text-gray-600">
+                        <span className="text-[12px] font-medium tabular-nums text-base-content/70">
                           {h(cell.hours.start)}–{h(cell.hours.end)}
                         </span>
                         {cell.count > 0 && (

@@ -304,7 +304,7 @@ const c14 = contactFromClient("c14");
 // Seeds ancrés sur la date réelle → les statuts « à jour / à régler » restent
 // cohérents quelle que soit la date de consultation.
 export const abonnementSeeds: Abonnement[] = [
-  // c11 Sokhna Mbaye — Mains & Pieds, à jour (avantage du RDV rdv-2409).
+  // c11 Sokhna Ndiaye — Mains & Pieds, à jour (avantage de sa réservation du jour, RV-…0qtafz9td).
   {
     id: "ab-c11-mains",
     forfaitId: "mains-et-pieds",
@@ -316,7 +316,7 @@ export const abonnementSeeds: Abonnement[] = [
     revokedAt: null,
     redeemedPrestationIds: ["onglerie-remplissage-gel"],
   },
-  // c01 Awa Diop — Éclat Mensuel, prépayé (échéance loin devant).
+  // c01 Awa Sarr — Éclat Mensuel, prépayé (échéance loin devant).
   {
     id: "ab-c01-eclat",
     forfaitId: "eclat-mensuel",
@@ -328,7 +328,7 @@ export const abonnementSeeds: Abonnement[] = [
     revokedAt: null,
     redeemedPrestationIds: [],
   },
-  // c05 Ndèye Fall — Détente Spa, à régler (échéance dépassée).
+  // c05 Mariam Kane — Détente Spa, à régler (échéance dépassée).
   {
     id: "ab-c05-spa",
     forfaitId: "detente-spa",
@@ -340,7 +340,7 @@ export const abonnementSeeds: Abonnement[] = [
     revokedAt: null,
     redeemedPrestationIds: ["spa-soin-du-dos"],
   },
-  // c14 Yacine Thiam — Détente Spa pour une bénéficiaire distincte.
+  // c14 Yacine Wade — Détente Spa pour une bénéficiaire distincte.
   {
     id: "ab-c14-spa",
     forfaitId: "detente-spa",
@@ -374,7 +374,7 @@ export const abonnementSeeds: Abonnement[] = [
 ];
 
 export const packPurchaseSeeds: PackPurchase[] = [
-  // c03 Marième Sow — Éclat Express, 1/3 consommé (avantage du RDV rdv-3002).
+  // c03 Coumba Thiam — Éclat Express, 1/3 consommé (avantage de sa réservation du jour, RV-…4gvqnvmw6).
   {
     id: "pp-c03-express",
     packId: "eclat-express",
@@ -383,7 +383,7 @@ export const packPurchaseSeeds: PackPurchase[] = [
     purchasedAt: addDaysIso(nowIso(), -18),
     redeemedPrestationIds: ["epilation-epilation-sourcils"],
   },
-  // c02 Fatou Ndiaye — Éclat Express, 2/3 consommé (avantage du RDV rdv-2410).
+  // c02 Fatou Camara — Éclat Express, 2/3 consommé (avantage de sa réservation du jour, RV-…2z95rx39g).
   {
     id: "pp-c02-express",
     packId: "eclat-express",

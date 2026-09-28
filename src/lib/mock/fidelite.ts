@@ -53,19 +53,24 @@ export const defaultSettings: LoyaltySettings = {
 
 export type LoyaltyTier = {
   id: string;
-  name: string; // « Argent », « Or », « Platine »…
+  name: string; // « Silver », « Gold », « Platinum », « VIP »…
   minPoints: number; // seuil d'entrée dans le palier
   multiplierPct: number; // 150 → ×1,50 · 100 = taux de base
+  // Teinte métallique du badge, celle des paliers de point-de-vente
+  // (`--pos-tier-*`, `Badge` variantes silver/gold/platinum/vip). Absente pour
+  // un palier créé par la propriétaire → badge neutre.
+  badge?: "silver" | "gold" | "platinum" | "vip";
 };
 
-// Vocabulaire aligné sur `Cliente.tier` de point-de-vente (`"silver" | "gold" |
-// "vip"`, jamais calculé côté point-de-vente — un champ statique de seed) :
-// mêmes noms, mais back-office garde son mécanisme de seuils/multiplicateur
-// dérivé des points, plus riche que la simple étiquette figée de point-de-vente.
+// Les 4 paliers de point-de-vente (`ClientTier` / `TIER_LABEL` : Silver, Gold,
+// Platinum, VIP — 2026-09-27, remplace Argent/Or/VIP) : mêmes libellés et
+// mêmes badges que la caisse. Le back-office définit en plus le seuil et le
+// multiplicateur de chaque palier, que point-de-vente ne connaît pas.
 export const defaultTiers: LoyaltyTier[] = [
-  { id: "tier-argent", name: "Argent", minPoints: 200, multiplierPct: 150 },
-  { id: "tier-or", name: "Or", minPoints: 500, multiplierPct: 200 },
-  { id: "tier-vip", name: "VIP", minPoints: 1000, multiplierPct: 250 },
+  { id: "tier-silver", name: "Silver", minPoints: 200, multiplierPct: 125, badge: "silver" },
+  { id: "tier-gold", name: "Gold", minPoints: 500, multiplierPct: 150, badge: "gold" },
+  { id: "tier-platinum", name: "Platinum", minPoints: 1000, multiplierPct: 200, badge: "platinum" },
+  { id: "tier-vip", name: "VIP", minPoints: 2000, multiplierPct: 250, badge: "vip" },
 ];
 
 /* ---------------------------------------------------------------- Récompenses */

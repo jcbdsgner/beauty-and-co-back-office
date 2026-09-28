@@ -39,17 +39,17 @@ export default function StatCards({
         return (
           <div
             key={kpi.key}
-            className={`flex h-full flex-col rounded-2xl border p-5 shadow-[var(--shadow-card)] transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-hover)] md:p-6 ${
+            className={`flex h-full flex-col rounded-box border p-5 shadow-[var(--shadow-card)] transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-hover)] md:p-6 ${
               hero
                 ? "border-brand-100 bg-gradient-to-br from-brand-50 to-white"
-                : "border-gray-100 bg-white"
+                : "border-base-300 bg-white"
             }`}
           >
             {/* Zone 0 — icône de repère */}
             {Icon && (
               <span
                 className={`mb-3 flex h-9 w-9 items-center justify-center rounded-xl ${
-                  hero ? "bg-brand-500 text-white" : "bg-gray-100 text-gray-500"
+                  hero ? "bg-brand-500 text-white" : "bg-muted text-base-content/60"
                 }`}
               >
                 <Icon className="h-[18px] w-[18px]" />
@@ -57,7 +57,7 @@ export default function StatCards({
             )}
 
             {/* Zone 1 — libellé */}
-            <span className="text-theme-sm text-gray-500">{kpi.label}</span>
+            <span className="text-sm text-base-content/60">{kpi.label}</span>
 
             {/* Zone 2 — valeur (toute la largeur) + écart sur sa propre ligne.
                 `flex-wrap` : si l'unité ne tient pas à côté d'un gros montant
@@ -65,16 +65,16 @@ export default function StatCards({
                 sous la valeur plutôt que de déborder de la carte. */}
             <div className="mt-3 flex flex-wrap items-baseline gap-x-1.5">
               <span
-                className={`text-title-sm font-bold leading-none ${hero ? "text-brand-900" : "text-gray-800"}`}
+                className={`text-title-sm font-bold leading-none ${hero ? "text-brand-900" : "text-base-content"}`}
               >
                 {kpi.value}
               </span>
               {kpi.unit && (
-                <span className="text-lg font-semibold text-gray-400">{kpi.unit}</span>
+                <span className="text-lg font-semibold text-base-content/45">{kpi.unit}</span>
               )}
             </div>
 
-            <div className="mt-2 flex min-h-[1.5rem] flex-wrap items-center gap-2 text-theme-xs">
+            <div className="mt-2 flex min-h-[1.5rem] flex-wrap items-center gap-2 text-xs">
               {showDelta && (
                 <>
                   <span
@@ -83,20 +83,20 @@ export default function StatCards({
                         ? "bg-success-50 text-success-600"
                         : down
                           ? "bg-error-50 text-error-600"
-                          : "bg-gray-100 text-gray-600"
+                          : "bg-muted text-base-content/70"
                     }`}
                   >
                     {up && <ArrowUpIcon />}
                     {down && <ArrowDownIcon />}
                     {Math.abs(kpi.delta as number)}&nbsp;%
                   </span>
-                  {kpi.deltaLabel && <span className="text-gray-400">{kpi.deltaLabel}</span>}
+                  {kpi.deltaLabel && <span className="text-base-content/45">{kpi.deltaLabel}</span>}
                 </>
               )}
             </div>
 
             {/* Zone 3 — repère de la période précédente, ancré en bas pour aligner les cartes */}
-            <div className="mt-auto min-h-[2.5rem] pt-3 text-theme-xs text-gray-400">
+            <div className="mt-auto min-h-[2.5rem] pt-3 text-xs text-base-content/45">
               {kpi.hint && <span>{kpi.hint}</span>}
             </div>
           </div>

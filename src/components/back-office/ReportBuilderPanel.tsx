@@ -31,11 +31,11 @@ function GroupSelect({
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="dropdown-toggle flex w-full items-center justify-between gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-start text-theme-sm font-medium text-gray-800 shadow-theme-xs transition-colors hover:bg-gray-50 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10"
+        className="dropdown-toggle flex w-full items-center justify-between gap-2 rounded-field border border-base-300 bg-white px-3 py-2 text-start text-sm font-medium text-base-content transition-colors hover:bg-base-200 focus:outline-2 focus:outline-offset-2 focus:outline-[#fdcfca]"
       >
         {currentLabel}
         <ChevronDownIcon
-          className={`size-4 shrink-0 text-gray-400 transition-transform ${
+          className={`size-4 shrink-0 text-base-content/45 transition-transform ${
             open ? "rotate-180" : ""
           }`}
         />
@@ -59,10 +59,10 @@ function GroupSelect({
                     onGroupChange(g.id);
                     setOpen(false);
                   }}
-                  className={`flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-start text-theme-sm transition-colors ${
+                  className={`flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-start text-sm transition-colors ${
                     active
-                      ? "bg-brand-50 font-medium text-brand-600"
-                      : "text-gray-600 hover:bg-gray-50"
+                      ? "bg-accent font-medium text-brand-600"
+                      : "text-base-content/70 hover:bg-base-200"
                   }`}
                 >
                   {g.label}
@@ -97,18 +97,18 @@ export default function ReportBuilderPanel({
 
   return (
     <aside
-      className={`flex flex-col gap-6 rounded-2xl border border-gray-200 bg-white p-5 ${className}`}
+      className={`flex flex-col gap-6 rounded-box border border-base-300 bg-white p-5 ${className}`}
     >
       {/* Axe d'analyse */}
       <div>
-        <h3 className="text-theme-sm font-semibold text-gray-800">Regrouper par</h3>
+        <h3 className="text-sm font-semibold text-base-content">Regrouper par</h3>
         <GroupSelect group={group} onGroupChange={onGroupChange} />
       </div>
 
       {/* Colonnes */}
       <div>
-        <h3 className="text-theme-sm font-semibold text-gray-800">Indicateurs</h3>
-        <p className="mt-1 text-theme-xs text-gray-500">
+        <h3 className="text-sm font-semibold text-base-content">Indicateurs</h3>
+        <p className="mt-1 text-xs text-base-content/60">
           Chaque indicateur coché devient une colonne du tableau.
         </p>
         <div className="mt-3 flex flex-col gap-2.5">
@@ -123,7 +123,7 @@ export default function ReportBuilderPanel({
                   onChange={() => onToggleMetric(m.id)}
                 />
                 {!available && (
-                  <p className="ml-8 text-theme-xs text-gray-400">
+                  <p className="ml-8 text-xs text-base-content/45">
                     sans objet par {currentGroupLabel}
                   </p>
                 )}
@@ -134,7 +134,7 @@ export default function ReportBuilderPanel({
       </div>
 
       {/* Sortie */}
-      <div className="border-t border-gray-100 pt-5">
+      <div className="border-t border-base-300 pt-5">
         <ReportActions report={report} />
       </div>
     </aside>

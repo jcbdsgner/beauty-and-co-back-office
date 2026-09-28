@@ -21,6 +21,8 @@ type Props<T> = {
   empty?: string;
 };
 
+// Habillage du `DataTable` de point-de-vente (2026-09-27) : en-têtes en capitales
+// espacées, lignes 15px, survol `accent`. Garde un vrai <table> (poste souris).
 export default function DataTable<T>({
   columns,
   rows,
@@ -28,16 +30,16 @@ export default function DataTable<T>({
   empty = "Aucune donnée",
 }: Props<T>) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+    <div className="overflow-hidden rounded-box border border-border bg-white">
       <div className="max-w-full overflow-x-auto">
         <Table>
-          <TableHeader className="border-b border-gray-100">
+          <TableHeader className="border-b border-base-300">
             <TableRow>
               {columns.map((col) => (
                 <TableCell
                   key={col.key}
                   isHeader
-                  className={`px-5 py-3 font-medium text-gray-500 text-theme-xs ${
+                  className={`px-4 py-3 text-xs font-semibold tracking-wide text-base-content/55 uppercase ${
                     col.align === "right" ? "text-end" : "text-start"
                   }`}
                 >
@@ -46,20 +48,20 @@ export default function DataTable<T>({
               ))}
             </TableRow>
           </TableHeader>
-          <TableBody className="divide-y divide-gray-100">
+          <TableBody className="divide-y divide-base-200">
             {rows.length === 0 ? (
               <TableRow>
-                <TableCell className="px-5 py-8 text-center text-gray-500 text-theme-sm">
+                <TableCell className="px-4 py-12 text-center text-sm text-base-content/45">
                   {empty}
                 </TableCell>
               </TableRow>
             ) : (
               rows.map((row) => (
-                <TableRow key={rowKey(row)} className="hover:bg-gray-50">
+                <TableRow key={rowKey(row)} className="transition hover:bg-accent/40">
                   {columns.map((col) => (
                     <TableCell
                       key={col.key}
-                      className={`px-5 py-4 text-gray-700 text-theme-sm ${
+                      className={`px-4 py-3.5 text-[15px] text-base-content/90 ${
                         col.align === "right" ? "text-end" : "text-start"
                       }`}
                     >

@@ -22,8 +22,8 @@ type Props = {
 // Fiche panneau latéral d'une catégorie (Service) — informations + (en
 // édition seulement, une fois l'id connu) sous-catégories et questions
 // d'accueil. Les prestations elles-mêmes ne se gèrent plus ici : elles se
-// voient et se déplacent directement sur le tableau, cf. `ServicesBoard` /
-// `PrestationPanel`.
+// voient dans la section de la catégorie et se modifient (catégorie comprise)
+// dans leur propre fiche, cf. `ServicesCatalog` / `PrestationPanel`.
 export default function CategoryPanel({
   service,
   prestationCount,
@@ -47,9 +47,9 @@ export default function CategoryPanel({
 
         {service && (
           <>
-            <p className="text-theme-xs text-gray-500">
-              {prestationCount} prestation{prestationCount > 1 ? "s" : ""} sur le tableau —
-              fermez ce panneau pour les glisser ou en ajouter.
+            <p className="text-xs text-base-content/60">
+              {prestationCount} prestation{prestationCount > 1 ? "s" : ""} dans cette catégorie —
+              elles se gèrent depuis la page, sous le nom de la catégorie.
             </p>
 
             <SubcategoriesPanel

@@ -46,7 +46,7 @@ export type JournalEntry = {
   salonId: SalonId;
   domain: JournalDomain;
   action: string; // « a encaissé un paiement »
-  detail: string; // « Fatou Ndiaye — 45.000 FCFA, espèces »
+  detail: string; // « Fatou Camara — 45.000 FCFA, espèces »
   tone: JournalTone;
   href?: string; // page existante concernée (facultatif)
 };
@@ -151,7 +151,7 @@ export const journalEntries: JournalEntry[] = [
     salonId: "almadies",
     domain: "rendez-vous",
     action: "a réaffecté un rendez-vous",
-    detail: "Coupe & brushing de Sokhna Mbaye — confié à Mariama Bâ",
+    detail: "Coupe & brushing de Sokhna Ndiaye — confié à Mariama Bâ",
     tone: "info",
     href: "/rendez-vous",
   },
@@ -205,7 +205,7 @@ export const journalEntries: JournalEntry[] = [
     action: "a modifié les horaires habituels",
     detail: "Bineta Cissé — jeudi désormais travaillé (09:00–19:00)",
     tone: "info",
-    href: "/equipe?vue=planning",
+    href: "/equipe/planning",
   },
   {
     id: "jn-0221",
@@ -244,7 +244,7 @@ export const journalEntries: JournalEntry[] = [
     salonId: "almadies",
     domain: "paiement",
     action: "a encaissé un paiement",
-    detail: "Fatou Ndiaye — 45.000 FCFA, espèces",
+    detail: "Fatou Camara — 45.000 FCFA, espèces",
     tone: "info",
   },
   {
@@ -256,7 +256,7 @@ export const journalEntries: JournalEntry[] = [
     salonId: "almadies",
     domain: "paiement",
     action: "a appliqué une remise",
-    detail: "Manucure — −20 % (programme de fidélité), Awa Diop",
+    detail: "Manucure — −20 % (programme de fidélité), Awa Sarr",
     tone: "notable",
   },
   {
@@ -292,7 +292,7 @@ export const journalEntries: JournalEntry[] = [
     salonId: "almadies",
     domain: "paiement",
     action: "a remboursé une cliente",
-    detail: "Awa Diop — 15.000 FCFA, prestation écourtée",
+    detail: "Awa Sarr — 15.000 FCFA, prestation écourtée",
     tone: "sensitive",
   },
   {
@@ -354,7 +354,7 @@ export const journalEntries: JournalEntry[] = [
     salonId: "almadies",
     domain: "rendez-vous",
     action: "a terminé une visite",
-    detail: "Awa Diop — coupe & brushing",
+    detail: "Awa Sarr — coupe & brushing",
     tone: "info",
     href: "/rendez-vous",
   },
@@ -367,7 +367,7 @@ export const journalEntries: JournalEntry[] = [
     salonId: "seaplaza",
     domain: "rendez-vous",
     action: "a enregistré un rendez-vous",
-    detail: "Yacine Thiam — soin hydratant, jeudi à 14:00 · pris par téléphone",
+    detail: "Yacine Wade — soin hydratant, jeudi à 14:00 · pris par téléphone",
     tone: "info",
     href: "/rendez-vous",
   },
@@ -380,7 +380,7 @@ export const journalEntries: JournalEntry[] = [
     salonId: "almadies",
     domain: "client",
     action: "a complété une fiche cliente",
-    detail: "Awa Diop — préférence notée : coloration sans ammoniaque",
+    detail: "Awa Sarr — préférence notée : coloration sans ammoniaque",
     tone: "info",
     href: "/clients",
   },
@@ -421,7 +421,7 @@ export const journalEntries: JournalEntry[] = [
     action: "a bloqué un créneau",
     detail: "Formation coloriste — vendredi 14:00 à 18:00",
     tone: "info",
-    href: "/equipe?vue=planning",
+    href: "/equipe/planning",
   },
   {
     id: "jn-0219",

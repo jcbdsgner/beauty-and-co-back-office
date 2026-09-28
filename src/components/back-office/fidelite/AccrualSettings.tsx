@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Alert from "@/components/ui/alert/Alert";
-import { CheckCircleIcon } from "@/icons";
+import { Select } from "@/components/ui/atoms/select";
 import { fcfa } from "@/lib/mock/beautyandco";
 import {
   ACCRUAL_BASIS_OPTIONS,
@@ -10,19 +9,21 @@ import {
   points as fmtPoints,
   type LoyaltySettings,
 } from "@/lib/mock/fidelite";
+import { Toggle } from "./ui";
 import {
-  SectionCard,
-  SettingRow,
-  Toggle,
-  SelectField,
-  TextInput,
-  Divider,
-  btnPrimary,
-} from "./ui";
+  SaveBar,
+  SavedNote,
+  SettingsGroup,
+  SettingsRow,
+  UnitInput,
+} from "../reglages/kit";
+
+// Réglages › Programme de fidélité › règles d'accumulation. Brouillon local,
+// appliqué par la barre d'enregistrement.
 
 // Chaîne de saisie → entier positif (vide et valeurs invalides retombent sur 0).
 const toPositiveInt = (raw: string) => {
-  const n = Math.floor(Number(raw));
+  const n = Math.floor(Number(raw.replace(/\D/g, "")));
   return Number.isFinite(n) && n > 0 ? n : 0;
 };
 
@@ -42,11 +43,7 @@ export default function AccrualSettings({
   };
 
   const dirty = JSON.stringify(draft) !== JSON.stringify(settings);
-
-  const save = () => {
-    onSave(draft);
-    setJustSaved(true);
-  };
+  const off = !draft.enabled;
 
   const accrualHint =
     draft.basis === "visit"
@@ -54,112 +51,96 @@ export default function AccrualSettings({
       : `1 point crédité par tranche de ${fcfa(draft.fcfaPerPoint)} dépensés.`;
 
   return (
-    <div className="space-y-5">
-      {!settings.enabled && (
-        <Alert
-          variant="warning"
-          title="Programme désactivé"
-          message="Aucun point n'est attribué aux clientes tant que le programme n'est pas réactivé. Le paramétrage ci-dessous reste modifiable."
-        />
-      )}
-
-      <SectionCard title="Règles d'accumulation">
-        <div className="space-y-6">
-          <SettingRow
-            title="Programme activé"
-            description="Aucun point n'est attribué tant que c'est désactivé."
-            control={
-              <Toggle
-                checked={draft.enabled}
-                onChange={(v) => set("enabled", v)}
-                aria-label="Programme activé"
-              />
-            }
-          />
-
-          <div className="grid grid-cols-2 gap-4">
-            <SelectField
-              label="Base d'accumulation"
-              value={draft.basis}
-              onChange={(v) => set("basis", v)}
-              options={ACCRUAL_BASIS_OPTIONS}
-            />
-            <SelectField
-              label="Arrondi"
-              value={draft.rounding}
-              onChange={(v) => set("rounding", v)}
-              options={ROUNDING_OPTIONS}
-            />
-          </div>
-
-          <div className="max-w-[280px]">
-            {draft.basis === "visit" ? (
-              <TextInput
-                label="Points par visite"
-                inputMode="numeric"
-                value={String(draft.pointsPerVisit)}
-                onChange={(v) => set("pointsPerVisit", toPositiveInt(v))}
-              />
+    <div>
+      <SettingsGroup title="Règles d'accumulation">
+        <SettingsRow
+          label="Programme activé"
+          help={
+            off ? (
+              <span className="font-medium text-warning-700">
+                Aucun point n&apos;est attribué tant que le programme est coupé.
+              </span>
             ) : (
-              <TextInput
-                label="Montant pour 1 point (FCFA)"
-                inputMode="numeric"
-                value={String(draft.fcfaPerPoint)}
-                onChange={(v) => set("fcfaPerPoint", toPositiveInt(v))}
-              />
-            )}
-            <p className="mt-1.5 text-theme-xs text-gray-500">{accrualHint}</p>
-          </div>
+              "Les clientes cumulent des points à chaque visite encaissée."
+            )
+          }
+        >
+          <Toggle checked={draft.enabled} onChange={(v) => set("enabled", v)} aria-label="Programme activé" />
+        </SettingsRow>
 
-          <SettingRow
-            title="Clients invités éligibles"
-            description="Attribuer des points même sans compte (suivi par téléphone)."
-            control={
-              <Toggle
-                checked={draft.guestsEligible}
-                onChange={(v) => set("guestsEligible", v)}
-                aria-label="Clients invités éligibles"
-              />
-            }
-          />
+        <SettingsRow label="Base d'accumulation" wide muted={off}>
+          <Select value={draft.basis} onChange={(v) => set("basis", v as LoyaltySettings["basis"])} options={ACCRUAL_BASIS_OPTIONS} />
+        </SettingsRow>
 
-          <Divider />
-
-          <SettingRow
-            title="Expiration des points"
-            description="Les points non utilisés finissent par expirer."
-            control={
-              <Toggle
-                checked={draft.pointsExpire}
-                onChange={(v) => set("pointsExpire", v)}
-                aria-label="Expiration des points"
-              />
-            }
-          />
-
-          <div className="max-w-[280px]">
-            <TextInput
-              label="Solde min. pour échanger"
-              inputMode="numeric"
-              value={String(draft.minRedeemBalance)}
-              onChange={(v) => set("minRedeemBalance", toPositiveInt(v))}
-              hint="En dessous de ce solde de points, aucune récompense ne peut être échangée."
+        {draft.basis === "visit" ? (
+          <SettingsRow label="Points par visite" htmlFor="acc-visit" help={accrualHint} wide muted={off}>
+            <UnitInput
+              id="acc-visit"
+              unit="points"
+              value={String(draft.pointsPerVisit)}
+              onChange={(v) => set("pointsPerVisit", toPositiveInt(v))}
             />
-          </div>
-        </div>
+          </SettingsRow>
+        ) : (
+          <SettingsRow label="Montant pour 1 point" htmlFor="acc-amount" help={accrualHint} wide muted={off}>
+            <UnitInput
+              id="acc-amount"
+              unit="FCFA"
+              value={String(draft.fcfaPerPoint)}
+              onChange={(v) => set("fcfaPerPoint", toPositiveInt(v))}
+            />
+          </SettingsRow>
+        )}
 
-        <div className="mt-8 flex items-center gap-3">
-          <button type="button" onClick={save} disabled={!dirty} className={btnPrimary}>
-            Enregistrer les paramètres
-          </button>
-          {justSaved && !dirty && (
-            <span className="inline-flex items-center gap-1.5 text-theme-sm font-medium text-success-600">
-              <CheckCircleIcon className="size-4" />
-              Paramètres enregistrés
-            </span>
-          )}
-        </div>
-      </SectionCard>
+        <SettingsRow label="Arrondi" help="Quand le calcul tombe entre deux points." wide muted={off}>
+          <Select value={draft.rounding} onChange={(v) => set("rounding", v as LoyaltySettings["rounding"])} options={ROUNDING_OPTIONS} />
+        </SettingsRow>
+
+        <SettingsRow
+          label="Clientes sans compte"
+          help="Attribuer des points même sans compte, avec le numéro de téléphone."
+          muted={off}
+        >
+          <Toggle
+            checked={draft.guestsEligible}
+            onChange={(v) => set("guestsEligible", v)}
+            aria-label="Clientes sans compte éligibles"
+          />
+        </SettingsRow>
+
+        <SettingsRow label="Expiration des points" help="Les points non utilisés finissent par expirer." muted={off}>
+          <Toggle
+            checked={draft.pointsExpire}
+            onChange={(v) => set("pointsExpire", v)}
+            aria-label="Expiration des points"
+          />
+        </SettingsRow>
+
+        <SettingsRow
+          label="Solde minimum pour échanger"
+          htmlFor="acc-min"
+          help="En dessous, aucune récompense ne peut être échangée."
+          wide
+          muted={off}
+        >
+          <UnitInput
+            id="acc-min"
+            unit="points"
+            value={String(draft.minRedeemBalance)}
+            onChange={(v) => set("minRedeemBalance", toPositiveInt(v))}
+          />
+        </SettingsRow>
+      </SettingsGroup>
+
+      <SavedNote show={justSaved && !dirty} />
+      <SaveBar
+        dirty={dirty}
+        onSave={() => {
+          onSave(draft);
+          setJustSaved(true);
+        }}
+        onReset={() => setDraft(settings)}
+      />
     </div>
   );
 }

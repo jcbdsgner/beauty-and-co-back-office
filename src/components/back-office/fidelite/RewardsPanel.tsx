@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Plus } from "lucide-react";
 import {
   REWARD_TYPE_OPTIONS,
   points as fmtPoints,
@@ -8,15 +9,18 @@ import {
   type LoyaltyReward,
   type RewardType,
 } from "@/lib/mock/fidelite";
+import { SelectField, TextInput } from "./ui";
 import {
-  SectionCard,
-  TextInput,
-  SelectField,
-  EditableRow,
-  EmptyList,
-  btnPrimary,
-  btnGhost,
-} from "./ui";
+  EditorPanel,
+  EmptyRow,
+  ItemHeader,
+  ItemRow,
+  SettingsGroup,
+  btnOutline,
+} from "../reglages/kit";
+
+// Réglages › Programme de fidélité › récompenses : liste, ajout et
+// modification en panneau latéral.
 
 let seq = 0;
 const uid = () => `reward-${Date.now()}-${seq++}`;
@@ -29,13 +33,7 @@ type FormState = {
   description: string;
 };
 
-const EMPTY: FormState = {
-  name: "",
-  costPoints: "",
-  type: "fixed",
-  value: "0",
-  description: "",
-};
+const EMPTY: FormState = { name: "", costPoints: "", type: "fixed", value: "", description: "" };
 
 const isInt = (raw: string) => raw.trim() !== "" && Number.isInteger(Number(raw)) && Number(raw) >= 0;
 
@@ -46,137 +44,115 @@ export default function RewardsPanel({
   rewards: LoyaltyReward[];
   onChange: (next: LoyaltyReward[]) => void;
 }) {
+  const [editing, setEditing] = useState<string | null | undefined>(undefined);
   const [form, setForm] = useState<FormState>(EMPTY);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [confirmId, setConfirmId] = useState<string | null>(null);
 
-  const valid =
-    form.name.trim().length > 0 && isInt(form.costPoints) && isInt(form.value);
+  const valid = form.name.trim().length > 0 && isInt(form.costPoints) && isInt(form.value);
+  const sorted = [...rewards].sort((a, b) => a.costPoints - b.costPoints);
 
-  const resetForm = () => {
-    setForm(EMPTY);
-    setEditingId(null);
+  const open = (r?: LoyaltyReward) => {
+    setEditing(r ? r.id : null);
+    setForm(
+      r
+        ? {
+            name: r.name,
+            costPoints: String(r.costPoints),
+            type: r.type,
+            value: String(r.value),
+            description: r.description ?? "",
+          }
+        : EMPTY,
+    );
   };
 
   const submit = () => {
     if (!valid) return;
     const next: LoyaltyReward = {
-      id: editingId ?? uid(),
+      id: editing ?? uid(),
       name: form.name.trim(),
       costPoints: Number(form.costPoints),
       type: form.type,
       value: Number(form.value),
       description: form.description.trim() || undefined,
     };
-    onChange(
-      editingId
-        ? rewards.map((r) => (r.id === editingId ? next : r))
-        : [...rewards, next],
-    );
-    resetForm();
+    onChange(editing ? rewards.map((r) => (r.id === editing ? next : r)) : [...rewards, next]);
+    setEditing(undefined);
   };
 
-  const startEdit = (r: LoyaltyReward) => {
-    setConfirmId(null);
-    setEditingId(r.id);
-    setForm({
-      name: r.name,
-      costPoints: String(r.costPoints),
-      type: r.type,
-      value: String(r.value),
-      description: r.description ?? "",
-    });
-  };
-
-  const remove = (id: string) => {
-    onChange(rewards.filter((r) => r.id !== id));
-    setConfirmId(null);
-    if (editingId === id) resetForm();
-  };
+  const valueLabel =
+    form.type === "percent" ? "Remise (%)" : form.type === "fixed" ? "Remise (FCFA)" : "Valeur (FCFA)";
 
   return (
-    <SectionCard
-      title="Catalogue de récompenses"
+    <SettingsGroup
+      title="Récompenses"
       description="Ce que les clientes peuvent échanger contre leurs points."
+      action={
+        <button type="button" onClick={() => open()} className={`${btnOutline} gap-1.5`}>
+          <Plus className="size-4" aria-hidden />
+          Ajouter une récompense
+        </button>
+      }
     >
-      {rewards.length === 0 ? (
-        <EmptyList>
-          Aucune récompense. Les clientes accumulent des points mais n&apos;ont rien à échanger.
-        </EmptyList>
+      {sorted.length === 0 ? (
+        <EmptyRow>Aucune récompense : les clientes cumulent des points sans rien pouvoir échanger.</EmptyRow>
       ) : (
-        <ul className="space-y-2.5">
-          {rewards.map((r) => (
-            <EditableRow
+        <>
+          <ItemHeader label="Récompense" columns={["Coût", "Valeur"]} />
+          {sorted.map((r) => (
+            <ItemRow
               key={r.id}
               title={r.name}
-              subtitle={`${fmtPoints(r.costPoints)} · ${rewardValueLabel(r)}${
-                r.description ? ` · ${r.description}` : ""
-              }`}
-              confirming={confirmId === r.id}
-              onEdit={() => startEdit(r)}
-              onAskDelete={() => setConfirmId(r.id)}
-              onConfirmDelete={() => remove(r.id)}
-              onCancelDelete={() => setConfirmId(null)}
+              meta={r.description}
+              columns={[fmtPoints(r.costPoints), rewardValueLabel(r)]}
+              onEdit={() => open(r)}
+              onDelete={() => onChange(rewards.filter((x) => x.id !== r.id))}
               deleteLabel={`Supprimer la récompense ${r.name}`}
             />
           ))}
-        </ul>
+        </>
       )}
 
-      <div className="mt-6 border-t border-gray-100 pt-6">
-        <h3 className="text-theme-sm font-semibold text-gray-800">
-          {editingId ? "Modifier la récompense" : "Ajouter une récompense"}
-        </h3>
-
-        <div className="mt-4 grid grid-cols-[minmax(0,1fr)_150px_200px] items-start gap-3">
-          <TextInput
-            label="Nom"
-            placeholder="−2000 FCFA"
-            value={form.name}
-            onChange={(v) => setForm((f) => ({ ...f, name: v }))}
-          />
-          <TextInput
-            label="Coût (points)"
-            inputMode="numeric"
-            placeholder="100"
-            value={form.costPoints}
-            onChange={(v) => setForm((f) => ({ ...f, costPoints: v }))}
-          />
-          <SelectField
-            label="Type"
-            value={form.type}
-            onChange={(v) => setForm((f) => ({ ...f, type: v }))}
-            options={REWARD_TYPE_OPTIONS}
-          />
-        </div>
-
-        <div className="mt-3 grid grid-cols-[200px_minmax(0,1fr)] items-start gap-3">
-          <TextInput
-            label="Valeur (FCFA ou %)"
-            inputMode="numeric"
-            placeholder="0"
-            value={form.value}
-            onChange={(v) => setForm((f) => ({ ...f, value: v }))}
-          />
-          <TextInput
-            label="Description"
-            placeholder="Facultatif"
-            value={form.description}
-            onChange={(v) => setForm((f) => ({ ...f, description: v }))}
-          />
-        </div>
-
-        <div className="mt-4 flex items-center gap-2">
-          <button type="button" onClick={submit} disabled={!valid} className={btnPrimary}>
-            {editingId ? "Enregistrer" : "Ajouter la récompense"}
-          </button>
-          {editingId && (
-            <button type="button" onClick={resetForm} className={btnGhost}>
-              Annuler
-            </button>
-          )}
-        </div>
-      </div>
-    </SectionCard>
+      <EditorPanel
+        open={editing !== undefined}
+        title={editing ? "Modifier la récompense" : "Nouvelle récompense"}
+        onClose={() => setEditing(undefined)}
+        onSubmit={submit}
+        submitLabel={editing ? "Enregistrer" : "Ajouter la récompense"}
+        canSubmit={valid}
+      >
+        <TextInput
+          label="Nom"
+          placeholder="Remise de 2.000 FCFA"
+          value={form.name}
+          onChange={(v) => setForm((f) => ({ ...f, name: v }))}
+        />
+        <TextInput
+          label="Coût (points)"
+          inputMode="numeric"
+          placeholder="100"
+          value={form.costPoints}
+          onChange={(v) => setForm((f) => ({ ...f, costPoints: v }))}
+        />
+        <SelectField
+          label="Type"
+          value={form.type}
+          onChange={(v) => setForm((f) => ({ ...f, type: v }))}
+          options={REWARD_TYPE_OPTIONS}
+        />
+        <TextInput
+          label={valueLabel}
+          inputMode="numeric"
+          placeholder="0"
+          value={form.value}
+          onChange={(v) => setForm((f) => ({ ...f, value: v }))}
+        />
+        <TextInput
+          label="Description (facultatif)"
+          placeholder="Ce que la cliente reçoit, en une phrase"
+          value={form.description}
+          onChange={(v) => setForm((f) => ({ ...f, description: v }))}
+        />
+      </EditorPanel>
+    </SettingsGroup>
   );
 }

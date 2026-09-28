@@ -27,7 +27,7 @@ const LABEL_W = 200;
 const ROW_H = 68;
 
 export type TimelineRow = {
-  key: string; // memberId, ou "pending" pour la file « à affecter »
+  key: string; // memberId, ou "pending" : prestations qu'aucune praticienne ne peut prendre (conflit)
   label: string;
   sublabel: string;
   accent: StaffAccent;
@@ -167,23 +167,23 @@ export default function DayTimeline({
 
   if (rows.length === 0) {
     return (
-      <div className="px-6 py-14 text-center text-theme-sm text-gray-400">
+      <div className="px-6 py-14 text-center text-sm text-base-content/45">
         Personne à planifier ce jour-là.
       </div>
     );
   }
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white [scrollbar-width:thin]">
+    <div className="overflow-x-auto rounded-box border border-base-300 bg-white [scrollbar-width:thin]">
       <div className="relative" style={{ minWidth: LABEL_W + bodyW }}>
         {/* en-tête des heures */}
-        <div className="flex border-b border-gray-100 bg-gray-50/60">
-          <div className="sticky left-0 z-10 shrink-0 border-r border-gray-100 bg-gray-50/60" style={{ width: LABEL_W }} />
+        <div className="flex border-b border-base-300 bg-gray-50/60">
+          <div className="sticky left-0 z-10 shrink-0 border-r border-base-300 bg-gray-50/60" style={{ width: LABEL_W }} />
           <div className="relative shrink-0" style={{ width: bodyW, height: 30 }}>
             {hourMarks.map((m) => (
               <span
                 key={m}
-                className="absolute top-1/2 -translate-y-1/2 text-[11px] font-semibold tabular-nums text-gray-400"
+                className="absolute top-1/2 -translate-y-1/2 text-[11px] font-semibold tabular-nums text-base-content/45"
                 style={{ left: x(m) + 4 }}
               >
                 {String(Math.floor(m / 60)).padStart(2, "0")}h
@@ -204,7 +204,7 @@ export default function DayTimeline({
 
           const canReorder = Boolean(onReorderRow) && !row.pending;
           return (
-            <div key={row.key} className="flex border-b border-gray-100 last:border-b-0">
+            <div key={row.key} className="flex border-b border-base-300 last:border-b-0">
               <div
                 draggable={canReorder}
                 onDragStart={(e) => {
@@ -222,7 +222,7 @@ export default function DayTimeline({
                   onReorderRow?.(dragRowKey, row.key);
                   setDragRowKey(null);
                 }}
-                className={`sticky left-0 z-10 flex shrink-0 items-center gap-2 border-r border-l-[3px] border-gray-100 bg-white px-3 ${canReorder ? "cursor-grab active:cursor-grabbing" : ""}`}
+                className={`sticky left-0 z-10 flex shrink-0 items-center gap-2 border-r border-l-[3px] border-base-300 bg-white px-3 ${canReorder ? "cursor-grab active:cursor-grabbing" : ""}`}
                 style={{ width: LABEL_W, minHeight: rowH, borderLeftColor: row.accent.dot }}
               >
                 <span
@@ -232,11 +232,11 @@ export default function DayTimeline({
                   {row.label.slice(0, 1)}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="flex items-center gap-1.5 truncate text-theme-sm font-semibold" style={{ color: row.accent.text }}>
+                  <p className="flex items-center gap-1.5 truncate text-sm font-semibold" style={{ color: row.accent.text }}>
                     <span aria-hidden className="size-1.5 shrink-0 rounded-full" style={{ backgroundColor: row.accent.dot }} />
                     {row.label}
                   </p>
-                  <p className={`truncate text-[12px] ${row.absent ? "font-semibold text-warning-600" : "text-gray-400"}`}>
+                  <p className={`truncate text-[12px] ${row.absent ? "font-semibold text-warning-600" : "text-base-content/45"}`}>
                     {row.sublabel}
                   </p>
                 </div>
@@ -246,7 +246,7 @@ export default function DayTimeline({
                       type="button"
                       onClick={() => setMenuKey((k) => (k === row.key ? null : row.key))}
                       aria-label={`Options pour ${row.label}`}
-                      className="dropdown-toggle flex size-7 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-50 hover:text-gray-700"
+                      className="dropdown-toggle flex size-7 items-center justify-center rounded-lg text-base-content/45 hover:bg-base-200 hover:text-base-content/80"
                     >
                       <MoreDotIcon className="size-4" />
                     </button>
@@ -254,7 +254,7 @@ export default function DayTimeline({
                       {isolated === row.key ? (
                         <DropdownItem
                           onItemClick={() => (setMenuKey(null), onShowAll?.())}
-                          baseClassName="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-theme-sm text-gray-700 hover:bg-gray-50"
+                          baseClassName="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-base-content/80 hover:bg-base-200"
                         >
                           <EyeIcon className="size-4" /> Afficher toute l&apos;équipe
                         </DropdownItem>
@@ -262,7 +262,7 @@ export default function DayTimeline({
                         onIsolate && (
                           <DropdownItem
                             onItemClick={() => (setMenuKey(null), onIsolate(row.key))}
-                            baseClassName="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-theme-sm text-gray-700 hover:bg-gray-50"
+                            baseClassName="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-base-content/80 hover:bg-base-200"
                           >
                             <EyeCloseIcon className="size-4" /> Isoler cette ligne
                           </DropdownItem>
@@ -271,7 +271,7 @@ export default function DayTimeline({
                       {isToday && onMarkAbsent && !row.absent && (
                         <DropdownItem
                           onItemClick={() => (setMenuKey(null), onMarkAbsent(row.key))}
-                          baseClassName="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-theme-sm text-warning-700 hover:bg-warning-50"
+                          baseClassName="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-warning-700 hover:bg-warning-50"
                         >
                           <UserIcon className="size-4" /> Marquer absente aujourd&apos;hui
                         </DropdownItem>
@@ -297,8 +297,8 @@ export default function DayTimeline({
                 }}
               >
                 {!row.hours && !row.pending && !row.absent && (
-                  <div aria-hidden className="pointer-events-none absolute inset-0 flex items-center justify-center bg-gray-50">
-                    <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-300">Repos</span>
+                  <div aria-hidden className="pointer-events-none absolute inset-0 flex items-center justify-center bg-base-200">
+                    <span className="text-[11px] font-semibold uppercase tracking-wide text-base-content/30">Repos</span>
                   </div>
                 )}
                 {!row.hours && row.absent && (
@@ -307,15 +307,15 @@ export default function DayTimeline({
                   </div>
                 )}
                 {row.hours && beforeW > 0 && (
-                  <div aria-hidden className="pointer-events-none absolute inset-y-0 left-0 bg-gray-50" style={{ width: beforeW }} />
+                  <div aria-hidden className="pointer-events-none absolute inset-y-0 left-0 bg-base-200" style={{ width: beforeW }} />
                 )}
                 {row.hours && afterStart < bodyW && (
-                  <div aria-hidden className="pointer-events-none absolute inset-y-0 bg-gray-50" style={{ left: afterStart, right: 0 }} />
+                  <div aria-hidden className="pointer-events-none absolute inset-y-0 bg-base-200" style={{ left: afterStart, right: 0 }} />
                 )}
                 {row.absent && <div aria-hidden className="pointer-events-none absolute inset-0 bg-warning-50/60" />}
                 {hourMarks.map((m) =>
                   m === gridStart ? null : (
-                    <div key={m} aria-hidden className="pointer-events-none absolute inset-y-0 border-l border-gray-100" style={{ left: x(m) }} />
+                    <div key={m} aria-hidden className="pointer-events-none absolute inset-y-0 border-l border-base-300" style={{ left: x(m) }} />
                   ),
                 )}
 

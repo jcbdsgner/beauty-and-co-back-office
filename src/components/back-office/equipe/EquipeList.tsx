@@ -62,7 +62,7 @@ export default function EquipeList({ members, requests, onOpen }: Props) {
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative min-w-64 flex-1">
           <svg
-            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400"
+            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-base-content/45"
             viewBox="0 0 20 20"
             fill="none"
             aria-hidden="true"
@@ -76,7 +76,7 @@ export default function EquipeList({ members, requests, onOpen }: Props) {
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Rechercher un nom, un e-mail, un téléphone"
             aria-label="Rechercher un membre"
-            className="h-11 w-full rounded-lg border border-gray-300 bg-white pl-9 pr-4 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10"
+            className="h-11 w-full rounded-field border border-base-300 bg-white pl-9 pr-4 text-sm text-base-content placeholder:text-base-content/40 focus:outline-2 focus:outline-offset-2 focus:outline-[#fdcfca]"
           />
         </div>
         <SegmentedControl
@@ -88,8 +88,8 @@ export default function EquipeList({ members, requests, onOpen }: Props) {
       </div>
 
       {rows.length === 0 ? (
-        <div className="rounded-2xl border border-gray-200 bg-white p-10 text-center">
-          <p className="text-theme-sm text-gray-500">
+        <div className="rounded-box border border-base-300 bg-white p-10 text-center">
+          <p className="text-sm text-base-content/60">
             Aucun membre ne correspond à cette recherche.
           </p>
         </div>
@@ -102,7 +102,7 @@ export default function EquipeList({ members, requests, onOpen }: Props) {
                 key={m.id}
                 type="button"
                 onClick={() => onOpen(m.id)}
-                className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 text-left shadow-theme-xs transition hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-theme-sm"
+                className="flex flex-col gap-3 rounded-xl border border-base-300 bg-white p-4 text-left transition hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-theme-sm"
               >
                 <div className="flex items-start justify-between gap-2">
                   <Avatar initials={initials(m)} size="sm" />
@@ -114,8 +114,8 @@ export default function EquipeList({ members, requests, onOpen }: Props) {
                 </div>
 
                 <div className="min-w-0">
-                  <p className="truncate font-semibold text-gray-800">{fullName(m)}</p>
-                  <p className="text-theme-xs text-gray-500">{CATEGORY_LABELS[m.category]}</p>
+                  <p className="truncate font-semibold text-base-content">{fullName(m)}</p>
+                  <p className="text-xs text-base-content/60">{CATEGORY_LABELS[m.category]}</p>
                 </div>
 
                 <div className="flex flex-wrap gap-1">
@@ -126,13 +126,13 @@ export default function EquipeList({ members, requests, onOpen }: Props) {
                   ))}
                 </div>
 
-                <div className="mt-auto space-y-1.5 border-t border-gray-100 pt-3 text-theme-xs">
-                  <p className="text-gray-500">{weekSalonSummary(m.id)}</p>
+                <div className="mt-auto space-y-1.5 border-t border-base-300 pt-3 text-xs">
+                  <p className="text-base-content/60">{weekSalonSummary(m.id)}</p>
                   <div className="flex items-center justify-between gap-2">
                     <Badge size="sm" color={ACCOUNT_TONE[m.account]}>
                       {ACCOUNT_LABELS[m.account]}
                     </Badge>
-                    <span className={m.active ? "text-gray-500" : "text-gray-400"}>
+                    <span className={m.active ? "text-base-content/60" : "text-base-content/45"}>
                       {m.active ? "Actif" : "Inactif"}
                     </span>
                   </div>

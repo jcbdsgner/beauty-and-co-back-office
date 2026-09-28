@@ -1,13 +1,21 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Plus } from "lucide-react";
+import { CalendarRange, ChevronRight, ListChecks, Plus, UsersRound } from "lucide-react";
 import PageHeader from "@/components/back-office/PageHeader";
 import Alert from "@/components/ui/alert/Alert";
 import SegmentedControl, {
   type SegmentedOption,
 } from "@/components/ui/segmented/SegmentedControl";
+import { Avatar } from "@/components/ui/atoms/avatar";
+import { Button } from "@/components/ui/atoms/button";
+import { SearchInput } from "@/components/ui/atoms/search-input";
+import { DatePicker } from "@/components/ui/molecules/date-picker";
+import { SegmentedToggle } from "@/components/ui/molecules/segmented-toggle";
+import { cn } from "@/lib/utils";
+import { useClientsData } from "@/context/ClientsContext";
 import { useLocation } from "@/context/LocationContext";
 import { usePlanningData } from "@/context/PlanningContext";
 import {
@@ -21,6 +29,7 @@ import {
   POSTE_TYPES,
   POSTE_TYPE_LABELS,
   frShortDate,
+  clientMatchesQuery,
   isClosed,
   salonConfig,
   salonName,
@@ -31,31 +40,39 @@ import {
   type Weekday,
 } from "@/lib/mock/beautyandco";
 import { accentForMemberId, accentForStaffName } from "@/lib/mock/staff-colors";
-import { fullName, members, memberById } from "@/lib/mock/staff";
+import { fullName, memberById } from "@/lib/mock/staff";
 import {
   RDV_STATUS_META,
   allRendezvous,
+  autoAssign,
   frFullDate,
+  minutesToTime,
+  timeToMinutes,
   rdvCountByStaffDay,
   rdvEnd,
-  rendezvousRows,
   type RdvDetail,
   type RdvPrestation,
   type RdvStatus,
 } from "@/lib/mock/rendezvous";
 import DayTimeline, { type TimelineRow } from "@/components/back-office/rendezvous/DayTimeline";
 import WeekTimeline, { type WeekRow } from "@/components/back-office/rendezvous/WeekTimeline";
-import ListView from "@/components/back-office/rendezvous/ListView";
-import BookingDialog from "@/components/back-office/rendezvous/BookingDialog";
+import DayList from "@/components/back-office/rendezvous/DayList";
+import ReservationCalendar from "@/components/back-office/rendezvous/ReservationCalendar";
+import { initialsOf } from "@/components/back-office/shared/PersonCard";
+import { ChipFilter, Legend } from "@/components/back-office/shared/board";
+import { PriseRdvModal } from "@/components/prise-rdv/prise-rdv-modal";
 import RendezVousDetail from "@/components/back-office/RendezVousDetail";
 import AbsenceDialog from "@/components/back-office/planning/AbsenceDialog";
 
 // Écran « Rendez-vous » — une destination, deux vues (Liste + Agenda).
 // 1. Où en est la propriétaire ? Coup d'œil courant (« qui vient aujourd'hui,
 //    à quelle heure, pour quoi, qui s'en occupe »), ou gestion d'un imprévu
-//    (affecter une praticienne, déplacer, annuler). Souvent pressée.
-// 2. Ce qui doit sauter aux yeux : la cliente qui vient, puis l'heure, puis ce
-//    qui demande une action — les prestations encore sans praticienne.
+//    (changer d'intervenante, déplacer, annuler). Souvent pressée.
+// 2. Ce qui doit sauter aux yeux : la cliente qui vient, puis l'heure, puis
+//    qui s'en occupe. Les praticiennes sont affectées automatiquement selon
+//    la disponibilité de l'équipe (`autoAssign`) : il n'y a rien à « affecter ».
+//    Seul signal d'action : une prestation qu'aucune praticienne ne peut
+//    prendre (absence posée après la réservation) — un rendez-vous à déplacer.
 // 3. Quand ça se passe mal : journée vide → les clientes réservent en ligne ;
 //    praticienne demandée absente → alerte sur la fiche ; salon fermé → bandeau ;
 //    rendez-vous annulés → toujours consultables via le filtre « Annulés ».
@@ -70,11 +87,6 @@ const NOW_TIME = "13:20";
 const SALON_OPTIONS: SegmentedOption<SalonScope>[] = [
   { value: "all", label: "Tous les salons" },
   ...salons.map((s) => ({ value: s.id as SalonScope, label: s.name })),
-];
-
-const VIEW_OPTIONS: SegmentedOption<"liste" | "agenda">[] = [
-  { value: "liste", label: "Liste" },
-  { value: "agenda", label: "Agenda" },
 ];
 
 const WEEKDAY_BY_JS_DAY: Weekday[] = ["dim", "lun", "mar", "mer", "jeu", "ven", "sam"];
@@ -168,7 +180,7 @@ function AgendaView({
   };
 
   // Rendez-vous non annulés de la praticienne visée par le dialogue d'absence,
-  // par jour — pour l'alerte de conflit (même logique que `equipe/PlanningPanel`).
+  // par jour — pour l'alerte de conflit (même logique que l'ancien onglet Planning d'Équipe).
   const absenceMember = absenceMemberId ? memberById(absenceMemberId) : null;
   const absenceRdvDays = useMemo(() => {
     if (!absenceMember) return [];
@@ -213,8 +225,8 @@ function AgendaView({
     if (pendingCount > 0) {
       base.unshift({
         key: "pending",
-        label: "À affecter",
-        sublabel: `${pendingCount} prestation${pendingCount > 1 ? "s" : ""} sans praticienne`,
+        label: "Sans praticienne",
+        sublabel: `${pendingCount} prestation${pendingCount > 1 ? "s" : ""} · personne de disponible`,
         accent: accentForStaffName(null),
         pending: true,
       });
@@ -251,7 +263,7 @@ function AgendaView({
             type="button"
             onClick={() => setSelectedIso((iso) => addDays(iso, period === "jour" ? -1 : -7))}
             aria-label="Période précédente"
-            className="flex size-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:bg-gray-50 hover:text-gray-800"
+            className="flex size-9 items-center justify-center rounded-full border border-base-300 text-base-content/60 transition hover:bg-base-200 hover:text-base-content"
           >
             ‹
           </button>
@@ -259,18 +271,18 @@ function AgendaView({
             type="button"
             onClick={() => setSelectedIso((iso) => addDays(iso, period === "jour" ? 1 : 7))}
             aria-label="Période suivante"
-            className="flex size-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:bg-gray-50 hover:text-gray-800"
+            className="flex size-9 items-center justify-center rounded-full border border-base-300 text-base-content/60 transition hover:bg-base-200 hover:text-base-content"
           >
             ›
           </button>
-          <span className="min-w-56 text-theme-sm font-semibold text-gray-800">
+          <span className="min-w-56 text-sm font-semibold text-base-content">
             {period === "jour" ? frFullDate(selectedIso) : `Semaine du ${frShortDate(monday)}`}
           </span>
           {selectedIso !== TODAY_ISO && (
             <button
               type="button"
               onClick={() => setSelectedIso(TODAY_ISO)}
-              className="rounded-lg px-2.5 py-1.5 text-theme-xs font-medium text-brand-600 transition hover:bg-brand-50"
+              className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-brand-600 transition hover:bg-accent"
             >
               Aujourd&apos;hui
             </button>
@@ -365,17 +377,17 @@ function CapacityBanner({
         return (
           <div
             key={id}
-            className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-theme-xs"
+            className="flex items-center gap-3 rounded-xl border border-base-300 bg-white px-4 py-2.5 text-xs"
           >
-            <span className="font-semibold text-gray-700">{salonName(id)}</span>
-            <span className="text-gray-300">·</span>
+            <span className="font-semibold text-base-content/80">{salonName(id)}</span>
+            <span className="text-base-content/30">·</span>
             {POSTE_TYPES.map((t) => {
               const cap = postes[t] ?? 0;
               if (cap === 0) return null;
               const used = occ[t];
               const full = used >= cap;
               return (
-                <span key={t} className={full ? "font-semibold text-warning-700" : "text-gray-600"}>
+                <span key={t} className={full ? "font-semibold text-warning-700" : "text-base-content/70"}>
                   {POSTE_TYPE_LABELS[t]} {used}/{cap}
                 </span>
               );
@@ -389,15 +401,32 @@ function CapacityBanner({
 
 /* -------------------------------------------------------------- shell */
 
-type ListFilter = "upcoming" | "today" | "past" | "cancelled" | "all";
+// Vues de l'écran — « Liste » et « Calendrier » sont celles de l'Accueil de
+// point-de-vente (qui fait autorité) ; « Par praticienne » est l'agenda
+// d'équipe du back-office (frise par praticienne, glisser-déposer), gardé en
+// plus : c'est là que la propriétaire déplace un rendez-vous.
+type RdvView = "liste" | "calendrier" | "equipe";
 
-const LIST_FILTERS: SegmentedOption<ListFilter>[] = [
-  { value: "upcoming", label: "À venir" },
-  { value: "today", label: "Aujourd'hui" },
-  { value: "past", label: "Passés" },
-  { value: "cancelled", label: "Annulés" },
-  { value: "all", label: "Tous" },
-];
+// Numéro de réservation tel qu'affiché (`RV-1787664806861-hupke9br1`) : l'id
+// complet, son suffixe (`hupke9br1`, `#hupke9br1`) ou la réf. courte le
+// retrouvent — correspondance exacte, comme point-de-vente.
+function reservationNumberMatches(r: RdvDetail, q: string): boolean {
+  const wanted = q.replace(/^#/, "").trim().toLowerCase();
+  if (!wanted) return false;
+  const id = r.id.toLowerCase();
+  return id === wanted || id.slice(id.lastIndexOf("-") + 1) === wanted || r.ref.replace(/^#/, "").toLowerCase() === wanted;
+}
+
+const isoToDate = (iso: string) => {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d);
+};
+const dateToIso = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const shortDate = (iso: string) =>
+  new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "2-digit", year: "2-digit" }).format(isoToDate(iso));
+
+const MAX_CLIENT_MATCHES = 4;
 
 export default function RendezVous() {
   const { scope, setScope } = useLocation();
@@ -405,18 +434,27 @@ export default function RendezVous() {
   // pour que les menus d'affectation (fiche RDV, nouveau rendez-vous) tiennent
   // compte d'une absence tout juste posée, sans attendre un rechargement.
   const { data: planningData } = usePlanningData();
-  const [rdvs, setRdvs] = useState<RdvDetail[]>(() => allRendezvous());
-  const [view, setView] = useState<"liste" | "agenda">("liste");
-  const [listFilter, setListFilter] = useState<ListFilter>("upcoming");
-  const [assignOnly, setAssignOnly] = useState(false);
-  const [staffFilter, setStaffFilter] = useState<string>("all");
+  const { rows: clientRows } = useClientsData();
+  const [rawRdvs, setRdvs] = useState<RdvDetail[]>(() => allRendezvous());
+  // Règle métier : chaque prestation est affectée d'office à une praticienne
+  // compétente, présente et libre. Recalculé à chaque changement (rendez-vous
+  // déplacé, prestation ajoutée, absence posée…) ; une affectation encore
+  // valable n'est jamais déplacée.
+  const rdvs = useMemo(() => autoAssign(rawRdvs, planningData), [rawRdvs, planningData]);
+  const [view, setView] = useState<RdvView>("liste");
+  const [query, setQuery] = useState("");
+  const [fromIso, setFromIso] = useState(TODAY_ISO);
+  const [toIso, setToIso] = useState(TODAY_ISO);
+  const [showCancelled, setShowCancelled] = useState(false);
+  const [conflictOnly, setConflictOnly] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [newOpen, setNewOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
-  // ?nouveau=1 : ouverture directe du dialog de réservation, utilisée par le
-  // bouton « Nouveau RDV » du tableau de bord (`dashboard/DashboardHeader`).
+  // ?nouveau=1 : ouverture directe de la réservation (bouton « Nouveau rendez-vous »
+  // du tableau de bord) ; ?client=<id> : payeuse préremplie (depuis sa fiche).
   const searchParams = useSearchParams();
+  const initialClientId = searchParams.get("client") ?? undefined;
   useEffect(() => {
     if (searchParams.get("nouveau") === "1") setNewOpen(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -427,26 +465,54 @@ export default function RendezVous() {
     window.setTimeout(() => setToast((m) => (m === msg ? null : m)), 3200);
   };
 
-  const rows = useMemo(() => rendezvousRows(rdvs, scope), [rdvs, scope]);
+  const [rangeStart, rangeEnd] = fromIso <= toIso ? [fromIso, toIso] : [toIso, fromIso];
+  const q = query.trim();
 
-  const assignCount = rows.filter((r) => r.needsAssign).length;
-
-  // Indépendant du salon affiché : une praticienne n'est rattachée à aucun
-  // salon fixe, la filtrer par salon ici n'aurait pas de sens.
-  const staffList = useMemo(() => members.filter((m) => m.roles.includes("praticienne")), []);
-
-  const filteredRows = useMemo(() => {
-    return rows.filter((r) => {
+  // Un numéro de rendez-vous est unique : il se retrouve quelles que soient
+  // les dates choisies. Sinon : période + salon + recherche (payeuse ou
+  // personne servie).
+  const visible = useMemo(() => {
+    const qq = q.toLowerCase();
+    return rdvs.filter((r) => {
+      if (qq && reservationNumberMatches(r, qq)) return true;
       const day = r.date.slice(0, 10);
-      if (listFilter === "upcoming" && r.status !== "à venir") return false;
-      if (listFilter === "today" && (day !== TODAY_ISO || r.status === "annulé")) return false;
-      if (listFilter === "past" && r.status !== "terminé" && r.status !== "absence") return false;
-      if (listFilter === "cancelled" && r.status !== "annulé") return false;
-      if (assignOnly && !r.needsAssign) return false;
-      if (staffFilter !== "all" && !r.staffNames.includes(staffFilter)) return false;
-      return true;
+      if (day < rangeStart || day > rangeEnd) return false;
+      if (scope !== "all" && r.salon !== scope) return false;
+      if (!showCancelled && r.status === "annulé") return false;
+      if (conflictOnly && !(r.status === "à venir" && r.prestations.some((p) => !p.staff))) return false;
+      if (!qq) return true;
+      const payer = clientRows("all").find((c) => c.id === r.client.id);
+      const payerMatch = payer ? clientMatchesQuery(payer, qq) : r.client.name.toLowerCase().includes(qq);
+      const beneficiaryMatch = r.prestations.some((p) => p.beneficiaryName.toLowerCase().includes(qq));
+      return payerMatch || beneficiaryMatch;
     });
-  }, [rows, listFilter, assignOnly, staffFilter]);
+  }, [rdvs, q, rangeStart, rangeEnd, scope, showCancelled, conflictOnly, clientRows]);
+
+  // La même recherche retrouve aussi la fiche cliente directement.
+  const clientMatches = useMemo(
+    () => (q ? clientRows("all").filter((c) => clientMatchesQuery(c, q)).slice(0, MAX_CLIENT_MATCHES) : []),
+    [clientRows, q],
+  );
+
+  const conflictCount = rdvs.filter(
+    (r) =>
+      r.status === "à venir" &&
+      r.date.slice(0, 10) >= TODAY_ISO &&
+      (scope === "all" || r.salon === scope) &&
+      r.prestations.some((p) => !p.staff),
+  ).length;
+
+  const singleDay = rangeStart === rangeEnd;
+  const effectiveView: RdvView = view === "calendrier" && !singleDay ? "liste" : view;
+  const periodLabel = singleDay
+    ? rangeStart === TODAY_ISO
+      ? "aujourd'hui"
+      : `le ${shortDate(rangeStart)}`
+    : "sur cette période";
+  const scopeIds: SalonId[] = scope === "all" ? salons.map((s) => s.id) : [scope];
+  const closedSalon = scope !== "all" && singleDay && isClosed(scope, rangeStart) ? salonName(scope) : null;
+  const closedWeekday = new Intl.DateTimeFormat("fr-FR", { weekday: "long" }).format(isoToDate(rangeStart));
+  const win = dayWindow(scopeIds, rangeStart);
 
   const selected = selectedId ? rdvs.find((r) => r.id === selectedId) ?? null : null;
 
@@ -455,7 +521,7 @@ export default function RendezVous() {
   const patch = (id: string, fn: (r: RdvDetail) => RdvDetail) =>
     setRdvs((list) => list.map((r) => (r.id === id ? fn(r) : r)));
 
-  const assign = (id: string, prestationId: string, staff: string | null) =>
+  const assign = (id: string, prestationId: string, staff: string) =>
     patch(id, (r) => ({
       ...r,
       prestations: r.prestations.map((p) => (p.id === prestationId ? { ...p, staff } : p)),
@@ -473,23 +539,30 @@ export default function RendezVous() {
   const removePrestation = (id: string, prestationId: string) =>
     patch(id, (r) => ({ ...r, prestations: r.prestations.filter((p) => p.id !== prestationId) }));
 
-  const cancelWithReason = (id: string, reason: string) =>
+  const cancelWithReason = (id: string, reason: string) => {
     patch(id, (r) => ({ ...r, status: "annulé", cancelReason: reason || undefined }));
+    flash("Réservation annulée — cliente prévenue par email.");
+  };
 
   const setStatus = (id: string, status: RdvStatus) => {
     patch(id, (r) => ({ ...r, status }));
-    if (status === "annulé") flash("Rendez-vous annulé — cliente prévenue par email.");
-    if (status === "à venir") flash("Rendez-vous rétabli — cliente prévenue par email.");
-  };
-
-  const remove = (id: string) => {
-    setRdvs((list) => list.filter((r) => r.id !== id));
-    setSelectedId(null);
-    flash("Rendez-vous supprimé — aucun email envoyé.");
+    if (status === "à venir") flash("Réservation rétablie — cliente prévenue par email.");
   };
 
   const move = (id: string, startIso: string) => {
-    patch(id, (r) => ({ ...r, date: startIso }));
+    // Toutes les prestations suivent, écart entre elles conservé ; les
+    // praticiennes sont réaffectées d'office si besoin (`autoAssign`).
+    patch(id, (r) => {
+      const delta = timeToMinutes(startIso.slice(11, 16)) - timeToMinutes(r.date.slice(11, 16));
+      return {
+        ...r,
+        date: startIso,
+        prestations: r.prestations.map((p) => ({
+          ...p,
+          start: minutesToTime(timeToMinutes(p.start) + delta),
+        })),
+      };
+    });
     flash("Rendez-vous déplacé — cliente prévenue par email.");
   };
 
@@ -499,101 +572,156 @@ export default function RendezVous() {
     flash("Rendez-vous créé.");
   };
 
-  return (
-    <div className="space-y-6">
-      <div>
-        <PageHeader
-          title="Rendez-vous"
-          actions={
-            <>
-              <SegmentedControl
-                options={SALON_OPTIONS}
-                value={scope}
-                onChange={setScope}
-                aria-label="Filtrer par salon"
-                variant="tinted"
-              />
-              <button
-                type="button"
-                onClick={() => setNewOpen(true)}
-                className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-theme-sm font-semibold text-white transition-colors hover:bg-brand-600"
-              >
-                <Plus className="h-[14px] w-[14px]" />
-                Nouveau rendez-vous
-              </button>
-            </>
-          }
-        />
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-          <SegmentedControl
-            options={VIEW_OPTIONS}
-            value={view}
-            onChange={setView}
-            aria-label="Vue Liste ou Agenda"
-          />
-        </div>
+  const viewOptions = [
+    { value: "liste", label: "Liste", icon: <ListChecks className="size-4" /> },
+    ...(singleDay ? [{ value: "calendrier", label: "Calendrier", icon: <CalendarRange className="size-4" /> }] : []),
+    { value: "equipe", label: "Par praticienne", icon: <UsersRound className="size-4" /> },
+  ];
 
-        {assignCount > 0 && (
-          <div className="mt-4">
+  return (
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Rendez-vous"
+        actions={
+          <>
+            <SegmentedControl
+              options={SALON_OPTIONS}
+              value={scope}
+              onChange={setScope}
+              aria-label="Filtrer par salon"
+              variant="tinted"
+            />
             <button
               type="button"
-              onClick={() => {
-                setView("liste");
-                setAssignOnly((v) => !v);
-              }}
-              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-theme-xs font-medium transition ${
-                assignOnly
-                  ? "border-warning-300 bg-warning-100 text-warning-800"
-                  : "border-warning-200 bg-warning-50 text-warning-700 hover:brightness-95"
-              }`}
+              onClick={() => setNewOpen(true)}
+              className="btn btn-primary btn-sm normal-case text-[15px] font-semibold active:scale-[0.97] disabled:!bg-base-200 disabled:!text-base-content/40 gap-2"
             >
-              <span className="tabular-nums font-semibold">{assignCount}</span>
-              {assignCount > 1 ? "prestations sans praticienne" : "prestation sans praticienne"}
+              <Plus className="h-[14px] w-[14px]" />
+              Nouveau rendez-vous
             </button>
-          </div>
-        )}
-      </div>
+          </>
+        }
+      />
 
-      {view === "liste" ? (
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <SegmentedControl
-              options={LIST_FILTERS}
-              value={listFilter}
-              onChange={setListFilter}
-              aria-label="Filtrer les rendez-vous par statut"
-            />
-            <select
-              value={staffFilter}
-              onChange={(e) => setStaffFilter(e.target.value)}
-              className="ml-1 h-8 rounded-lg border border-gray-200 bg-white px-2 text-theme-xs text-gray-700 focus:border-brand-300 focus:outline-hidden"
-            >
-              <option value="all">Toutes les praticiennes</option>
-              {staffList.map((m) => (
-                <option key={m.id} value={fullName(m)}>
-                  {fullName(m)}
-                </option>
-              ))}
-            </select>
+      {view === "equipe" ? (
+        <section className="flex flex-col gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 pl-1">
+            <span />
+            <SegmentedToggle value={view} onChange={(v) => setView(v as RdvView)} options={viewOptions} aria-label="Vue" />
           </div>
-          <ListView rows={filteredRows} onOpen={setSelectedId} />
-        </div>
+          <AgendaView rdvs={rdvs} scope={scope} onOpen={setSelectedId} onMove={move} />
+        </section>
       ) : (
-        <AgendaView rdvs={rdvs} scope={scope} onOpen={setSelectedId} onMove={move} />
-      )}
+        <section>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3 pl-1">
+            <span />
+            <SegmentedToggle value={effectiveView} onChange={(v) => setView(v as RdvView)} options={viewOptions} aria-label="Vue" />
+          </div>
 
-      {rows.length === 0 && view === "agenda" && (
-        <div className="rounded-2xl border border-gray-200 bg-white p-10 text-center text-theme-sm text-gray-500">
-          Aucun rendez-vous — les clientes réservent en ligne, ou{" "}
-          <button
-            type="button"
-            onClick={() => setNewOpen(true)}
-            className="font-medium text-brand-500 hover:text-brand-600"
-          >
-            créez-en un
-          </button>
-          .
-        </div>
+          {/* Recherche à gauche, dates Du/Au calées à droite (Figma 362:470 de point-de-vente). */}
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2.5">
+            <SearchInput
+              placeholder="Cliente ou n° de rendez-vous"
+              aria-label="Chercher une cliente ou un n° de rendez-vous"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="max-w-sm flex-1"
+            />
+            <div className="flex items-center gap-2">
+              <DatePicker value={isoToDate(fromIso)} onChange={(d) => setFromIso(dateToIso(d))} placeholder="Du" className="w-44" />
+              <span className="text-sm text-base-content/45">au</span>
+              <DatePicker value={isoToDate(toIso)} onChange={(d) => setToIso(dateToIso(d))} placeholder="Au" className="w-44" />
+              {(fromIso !== TODAY_ISO || toIso !== TODAY_ISO) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setFromIso(TODAY_ISO);
+                    setToIso(TODAY_ISO);
+                  }}
+                >
+                  Aujourd&apos;hui
+                </Button>
+              )}
+            </div>
+          </div>
+
+          <div className="mb-5 flex flex-wrap items-center gap-2">
+            <ChipFilter
+              value={showCancelled ? "annules" : "actifs"}
+              onChange={(v) => setShowCancelled(v === "annules")}
+              options={[
+                { value: "actifs", label: "Sans les annulés" },
+                { value: "annules", label: "Afficher les annulés" },
+              ]}
+            />
+            {conflictCount > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setConflictOnly((v) => !v);
+                  if (!conflictOnly) setToIso(addDays(TODAY_ISO, 14));
+                }}
+                aria-pressed={conflictOnly}
+                className={cn(
+                  "inline-flex h-9 items-center gap-2 rounded-field border px-3.5 text-[0.8rem] font-semibold transition",
+                  conflictOnly ? "border-warning bg-warning/15 text-warning" : "border-warning/40 text-warning hover:bg-warning/10",
+                )}
+              >
+                <span className="tabular-nums">{conflictCount}</span>
+                sans praticienne disponible — à déplacer
+              </button>
+            )}
+          </div>
+
+          {clientMatches.length > 0 && (
+            <div className="mb-5 flex flex-col gap-2">
+              <Legend size="section">Clientes</Legend>
+              <div className="grid grid-cols-4 gap-3">
+                {clientMatches.map((c) => (
+                  <Link
+                    key={c.id}
+                    href={`/clients/${c.id}`}
+                    className="flex items-center gap-3 rounded-lg border border-base-300 bg-base-100 p-3 transition hover:-translate-y-0.5 hover:border-secondary hover:shadow-[0px_7px_16px_0px_rgba(0,0,0,0.06)]"
+                  >
+                    <Avatar initial={initialsOf(c.name)} size={36} className="shrink-0 bg-accent text-xs font-semibold text-secondary" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold text-base-content">{c.name}</span>
+                      <span className="block truncate text-xs text-base-content/55">{c.phone}</span>
+                    </span>
+                    <ChevronRight aria-hidden className="size-4 shrink-0 text-base-content/35" />
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {visible.length === 0 ? (
+            <div className="rounded-field border border-dashed border-base-300 px-4 py-12 text-center">
+              <p className="text-[15px] font-semibold text-base-content/60">
+                {q ? "Aucun résultat" : closedSalon ? `${closedSalon} est fermé le ${closedWeekday}` : "Journée libre"}
+              </p>
+              <p className="mt-1 text-sm text-base-content/45">
+                {q
+                  ? `Aucun rendez-vous pour « ${q} » ${periodLabel}.`
+                  : closedSalon
+                    ? "Aucun rendez-vous ne s'y tient ce jour-là."
+                    : `Aucun rendez-vous ${periodLabel}.`}
+              </p>
+            </div>
+          ) : effectiveView === "liste" ? (
+            <DayList rdvs={visible} todayIso={TODAY_ISO} nowTime={NOW_TIME} onOpen={setSelectedId} />
+          ) : (
+            <ReservationCalendar
+              rdvs={visible}
+              opening={win.min}
+              closing={win.max}
+              showNow={rangeStart === TODAY_ISO}
+              nowTime={NOW_TIME}
+              onOpen={setSelectedId}
+            />
+          )}
+        </section>
       )}
 
       {selected && (
@@ -603,29 +731,29 @@ export default function RendezVous() {
           onClose={() => setSelectedId(null)}
           onAssign={(pid, staff) => assign(selected.id, pid, staff)}
           onStatusChange={(s) => setStatus(selected.id, s)}
-          onDelete={() => remove(selected.id)}
           rdvs={rdvs}
           onUpdatePrestation={(pid, patchFields) => updatePrestation(selected.id, pid, patchFields)}
           onAddPrestation={(line) => addPrestation(selected.id, line)}
           onRemovePrestation={(pid) => removePrestation(selected.id, pid)}
           onCancelWithReason={(reason) => cancelWithReason(selected.id, reason)}
-          onOpenBooking={() => setNewOpen(true)}
           planningData={planningData}
         />
       )}
 
       {newOpen && (
-        <BookingDialog
-          scope={scope}
+        <PriseRdvModal
+          open
+          defaultSalonId={scope === "all" ? null : scope}
           rdvs={rdvs}
-          onCancel={() => setNewOpen(false)}
-          onCreate={create}
           planningData={planningData}
+          initialClientId={initialClientId}
+          onClose={() => setNewOpen(false)}
+          onCreate={create}
         />
       )}
 
       {toast && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-lg bg-gray-900 px-4 py-2.5 text-theme-sm font-medium text-white shadow-lg">
+        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-box bg-neutral px-5 py-3 text-[15px] font-medium text-neutral-content shadow-[0px_12px_32px_-8px_rgba(0,0,0,0.4)]">
           {toast}
         </div>
       )}

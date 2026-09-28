@@ -7,7 +7,7 @@ import {
   prestationSeeds,
   serviceSeeds,
 } from "@/lib/mock/services";
-import { SERVICE_ICONS } from "../services/serviceIcons";
+import CategoryThumb from "../shared/CategoryThumb";
 
 // Multi-sélection de prestations du catalogue réel, groupées par service, avec
 // recherche. Partagée par les panneaux Forfaits et Packs.
@@ -56,8 +56,8 @@ export default function PrestationPicker({
   return (
     <div>
       <div className="mb-1.5 flex items-center justify-between">
-        <span className="text-sm font-medium text-gray-800">Prestations incluses</span>
-        <span className="text-theme-xs text-gray-500">
+        <span className="text-sm font-medium text-base-content">Prestations incluses</span>
+        <span className="text-xs text-base-content/60">
           {selected.length} sélectionnée{selected.length > 1 ? "s" : ""}
         </span>
       </div>
@@ -67,21 +67,20 @@ export default function PrestationPicker({
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Rechercher une prestation…"
-        className="mb-2 h-10 w-full rounded-lg border border-gray-300 bg-white px-3.5 text-theme-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10"
+        className="mb-2 h-10 w-full rounded-field border border-base-300 bg-white px-3.5 text-sm text-base-content placeholder:text-base-content/40 focus:outline-2 focus:outline-offset-2 focus:outline-[#fdcfca]"
       />
 
-      <div className="max-h-72 space-y-3 overflow-y-auto rounded-xl border border-gray-200 p-3">
+      <div className="max-h-72 space-y-3 overflow-y-auto rounded-xl border border-base-300 p-3">
         {groups.length === 0 ? (
-          <p className="px-1 py-6 text-center text-theme-sm text-gray-500">
+          <p className="px-1 py-6 text-center text-sm text-base-content/60">
             Aucune prestation ne correspond à « {query} ».
           </p>
         ) : (
           groups.map(({ service, prestations }) => {
-            const Icon = SERVICE_ICONS[service.icon];
             return (
               <div key={service.id}>
-                <p className="mb-1.5 flex items-center gap-1.5 text-theme-xs font-medium uppercase tracking-wide text-gray-400">
-                  <Icon className="size-3.5" />
+                <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-base-content/45">
+                  <CategoryThumb image={service.image} name={service.name} size={20} className="p-0.5" />
                   {service.name}
                 </p>
                 <ul className="space-y-1">
@@ -90,19 +89,19 @@ export default function PrestationPicker({
                     return (
                       <li key={p.id}>
                         <label
-                          className={`flex cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2 text-theme-sm transition ${
-                            on ? "bg-brand-50 text-brand-700" : "text-gray-700 hover:bg-gray-50"
+                          className={`flex cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2 text-sm transition ${
+                            on ? "bg-accent text-secondary" : "text-base-content/80 hover:bg-base-200"
                           }`}
                         >
                           <input
                             type="checkbox"
                             checked={on}
                             onChange={() => toggle(p.id)}
-                            className="h-4 w-4 shrink-0 rounded border-gray-300 text-brand-500 focus:ring-brand-500/20"
+                            className="checkbox checkbox-primary checkbox-sm shrink-0"
                           />
                           <span className="min-w-0 flex-1 truncate">{p.name}</span>
                           {showPricing && (
-                            <span className="shrink-0 tabular-nums text-theme-xs text-gray-400">
+                            <span className="shrink-0 tabular-nums text-xs text-base-content/45">
                               {fcfa(p.priceFcfa)} · {durationLabel(p.durationMin)}
                             </span>
                           )}

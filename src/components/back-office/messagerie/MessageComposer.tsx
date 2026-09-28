@@ -55,9 +55,9 @@ export default function MessageComposer({ conversation, onSend }: Props) {
   };
 
   return (
-    <div className="border-t border-gray-100 px-6 py-4">
+    <div className="border-t border-base-300 px-6 py-4">
       {blocked && (
-        <div className="mb-3 flex items-start gap-2 rounded-lg border border-warning-500 bg-warning-50 px-3 py-2 text-theme-xs text-gray-700">
+        <div className="mb-3 flex items-start gap-2 rounded-lg border border-warning-500 bg-warning-50 px-3 py-2 text-xs text-base-content/80">
           <WarningGlyph className="mt-0.5 h-4 w-4 shrink-0 text-warning-500" />
           <span>
             L&apos;envoi de SMS est momentanément indisponible (vérification opérateur en cours).
@@ -98,7 +98,7 @@ export default function MessageComposer({ conversation, onSend }: Props) {
               : `Répondre par ${channelLabel[channel]}…`
           }
           aria-label={`Répondre par ${channelLabel[channel]}`}
-          className="max-h-40 min-h-[44px] flex-1 resize-none rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-theme-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400"
+          className="max-h-40 min-h-[44px] flex-1 resize-none rounded-field border border-base-300 bg-white px-3 py-2.5 text-sm text-base-content placeholder:text-base-content/40 focus:outline-2 focus:outline-offset-2 focus:outline-[#fdcfca] disabled:cursor-not-allowed disabled:bg-base-200 disabled:text-base-content/45"
         />
         <button
           type="button"
@@ -111,7 +111,7 @@ export default function MessageComposer({ conversation, onSend }: Props) {
         </button>
       </div>
 
-      <p className="mt-2 text-theme-xs text-gray-400">⌘ + Entrée pour envoyer</p>
+      <p className="mt-2 text-xs text-base-content/45">⌘ + Entrée pour envoyer</p>
     </div>
   );
 }

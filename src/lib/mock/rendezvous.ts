@@ -3,14 +3,19 @@
 // (`@/lib/mock/rendezvous`). Réutilise les helpers de format de `beautyandco`.
 
 import {
+  clients,
   fcfa,
   groupThousands,
+  isClosed,
+  salonConfig,
   salonName,
   type PosteType,
   type SalonId,
   type SalonScope,
 } from "./beautyandco";
-import { productPrice } from "./services";
+import { presenceFor, TODAY_ISO, type PlanningData } from "./planning";
+import { prestationSeeds, productPrice, serviceSeeds } from "./services";
+import { canPerform, fullName, members } from "./staff";
 
 export { fcfa, groupThousands };
 export type { PosteType };
@@ -123,12 +128,13 @@ export type RdvPrestation = {
   durationMin: number;
   price: number; // FCFA
   posteType: PosteType; // poste de travail mobilisé (dérivé de la catégorie)
-  staff: string | null; // collaboratrice affectée à cette prestation (null = à affecter)
+  staff: string | null; // affectée automatiquement (null = aucune praticienne disponible, conflit)
   requestedStaff?: string | null; // praticienne demandée par la cliente sur le site
   secondStaff?: string | null; // 2ᵉ praticienne — prestation « à deux » (temps de chaise divisé)
   start: string; // "HH:MM" — horaire propre à cette prestation (explicite, ne se déduit plus par chaînage)
   beneficiaryName: string; // qui reçoit la prestation — le payeur (`RdvDetail.client.name`) par défaut, ou une autre personne
   beneficiaryClientId?: string | null; // renseigné si le bénéficiaire est une autre cliente du fichier
+  beneficiaryKind?: BeneficiaryKind; // « homme » pour un bénéficiaire homme ; Mini & Co vaut toujours « enfant » (cf. `reservationComposition`)
 };
 
 // Boisson/produit pré-commandé pour la visite — jamais une prestation, jamais
@@ -229,265 +235,7 @@ const pr = (
 });
 
 const RAW_SEEDS: RdvDetail[] = [
-  /* ---- Journée en cours : jeudi 3 septembre 2026 ---- */
-  {
-    id: "rdv-3001",
-    ref: "#7c1a09f2",
-    status: "à venir",
-    date: "2026-09-03T09:30:00",
-    salon: "almadies",
-    salonLabel: salonName("almadies"),
-    client: {
-      id: "c01",
-      name: "Awa Diop",
-      email: "awa.diop@gmail.com",
-      phone: "+221 77 512 46 08",
-      whatsapp: null,
-      loyaltyPoints: 480,
-    },
-    staffGlobal: "Sophie Ndione",
-    prestations: [
-      pr("p1", "coiffure-shampoing-sechage", "Coiffure", "Shampoing séchage", 60, 17_000, "Sophie Ndione"),
-    ],
-    questions: [{ id: "q1", question: "Êtes-vous voilée ?", answer: "Non" }],
-    advantages: [],
-    events: [
-      { at: "2026-09-01T08:40:00", label: "Rappel J-2 envoyé", detail: "Par SMS" },
-      { at: "2026-08-31T17:12:00", label: "Rendez-vous créé", detail: "Réservation en ligne" },
-    ],
-  },
-  {
-    id: "rdv-3002",
-    ref: "#a4d7b6c1",
-    status: "à venir",
-    date: "2026-09-03T10:00:00",
-    salon: "almadies",
-    salonLabel: salonName("almadies"),
-    client: {
-      id: "c03",
-      name: "Marième Sow",
-      email: "marieme.sow@gmail.com",
-      phone: "+221 76 640 27 15",
-      whatsapp: "+221 76 640 27 15",
-      loyaltyPoints: 150,
-    },
-    staffGlobal: null,
-    prestations: [
-      pr("p1", "coiffure-soin-complet", "Coiffure", "Soin complet", 130, 46_000, "Mariama Bâ"),
-      pr("p2", "coiffure-shampoing-brushing-shampoing-inclus-et-obligatoire", "Coiffure", "Shampoing brushing", 60, 23_000, null),
-    ],
-    questions: [
-      { id: "q1", question: "Une allergie connue à un soin capillaire ?", answer: "Non" },
-      { id: "q2", question: "Dernier soin capillaire il y a combien de temps ?", answer: "Environ 2 mois" },
-    ],
-    advantages: [{ kind: "pack", packPurchaseId: "pp-c03-express" }],
-    events: [
-      { at: "2026-08-28T14:02:00", label: "Rendez-vous créé", detail: "Pris au comptoir" },
-    ],
-  },
-  {
-    id: "rdv-2409",
-    ref: "#7cc59015",
-    status: "à venir",
-    date: "2026-09-03T15:00:00",
-    salon: "seaplaza",
-    salonLabel: salonName("seaplaza"),
-    client: {
-      id: "c11",
-      name: "Sokhna Mbaye",
-      email: "sokhna.mbaye@gmail.com",
-      phone: "+221 77 814 06 53",
-      whatsapp: "+221 77 814 06 53",
-      loyaltyPoints: 300,
-    },
-    staffGlobal: null,
-    prestations: [
-      pr(
-        "p1",
-        "onglerie-vernis-permanent-mains",
-        "Onglerie",
-        "Vernis permanent mains",
-        30,
-        17_000,
-        null,
-        "Coumba Faye",
-      ),
-    ],
-    questions: [
-      { id: "q1", question: "Un vernis permanent ou un gel à retirer ?", answer: "Oui" },
-    ],
-    advantages: [{ kind: "abonnement", abonnementId: "ab-c11-mains" }],
-    events: [
-      { at: "2026-08-29T21:11:00", label: "Rappel J-2 envoyé", detail: "Par email" },
-      { at: "2026-08-12T10:02:00", label: "Rendez-vous créé", detail: "Réservation en ligne · praticienne demandée : Coumba Faye" },
-    ],
-  },
-  {
-    id: "rdv-3003",
-    ref: "#b9e2f3a7",
-    status: "à venir",
-    date: "2026-09-03T11:30:00",
-    salon: "almadies",
-    salonLabel: salonName("almadies"),
-    client: {
-      id: "c05",
-      name: "Ndèye Fall",
-      email: "ndeye.fall@gmail.com",
-      phone: "+221 70 118 74 60",
-      whatsapp: "+221 70 118 74 60",
-      loyaltyPoints: 175,
-    },
-    staffGlobal: "Aïda Sarr",
-    prestations: [
-      pr("p1", "manucure-pedicure-manucure-russe-sans-vernis-sans-gel", "Manucure & pédicure", "Manucure russe", 30, 13_000, "Aïda Sarr"),
-    ],
-    questions: [{ id: "q1", question: "Êtes-vous diabétique ?", answer: "Non" }],
-    advantages: [],
-    events: [
-      { at: "2026-09-02T12:30:00", label: "Rendez-vous créé", detail: "Réservation en ligne" },
-    ],
-  },
-  {
-    id: "rdv-3004",
-    ref: "#c1f4a2b8",
-    status: "à venir",
-    date: "2026-09-03T14:30:00",
-    salon: "almadies",
-    salonLabel: salonName("almadies"),
-    client: {
-      id: "c06",
-      name: "Khady Guèye",
-      email: "khady.gueye@yahoo.fr",
-      phone: "+221 77 902 33 47",
-      whatsapp: null,
-      loyaltyPoints: 60,
-    },
-    staffGlobal: null,
-    prestations: [
-      pr("p1", "coiffure-tresses-cheveux", "Coiffure", "Tresses cheveux", 60, 19_000, null),
-    ],
-    questions: [{ id: "q1", question: "Avez-vous des tresses à retirer ?", answer: "Oui" }],
-    advantages: [],
-    events: [
-      { at: "2026-09-03T08:05:00", label: "Rendez-vous créé", detail: "Réservation en ligne" },
-    ],
-  },
-  {
-    id: "rdv-3005",
-    ref: "#d7a0c9e3",
-    status: "à venir",
-    date: "2026-09-03T16:00:00",
-    salon: "almadies",
-    salonLabel: salonName("almadies"),
-    client: {
-      id: "c04",
-      name: "Aïcha Ba",
-      email: "aicha.ba@orange.sn",
-      phone: "+221 77 331 58 92",
-      whatsapp: "+221 77 331 58 92",
-      loyaltyPoints: 90,
-    },
-    staffGlobal: null,
-    prestations: [
-      pr("p1", "coiffure-shampoing-brushing-shampoing-inclus-et-obligatoire", "Coiffure", "Shampoing brushing", 60, 23_000, null),
-    ],
-    questions: [],
-    advantages: [{ kind: "carte-cadeau", code: "BC-2026-1180", balance: 15_000 }],
-    events: [
-      { at: "2026-09-02T19:40:00", label: "Rappel J-1 envoyé", detail: "Par email" },
-      { at: "2026-08-30T11:15:00", label: "Rendez-vous créé", detail: "Réservation en ligne" },
-    ],
-  },
-
-  /* ---- Jours suivants ---- */
-  {
-    id: "rdv-2410",
-    ref: "#a1b2c3d4",
-    status: "à venir",
-    date: "2026-09-04T10:30:00",
-    salon: "almadies",
-    salonLabel: salonName("almadies"),
-    client: {
-      id: "c02",
-      name: "Fatou Ndiaye",
-      email: "fatou.ndiaye@yahoo.fr",
-      phone: "+221 78 204 11 39",
-      whatsapp: "+221 78 204 11 39",
-      loyaltyPoints: 260,
-    },
-    staffGlobal: "Mariama Bâ",
-    prestations: [
-      pr("p1", "coiffure-soin-complet", "Coiffure", "Soin complet", 130, 46_000, "Mariama Bâ"),
-      pr("p2", "coiffure-shampoing-brushing-shampoing-inclus-et-obligatoire", "Coiffure", "Shampoing brushing", 60, 23_000, "Mariama Bâ"),
-    ],
-    questions: [
-      { id: "q1", question: "Une allergie connue à un soin capillaire ?", answer: "Non" },
-      { id: "q2", question: "Dernier soin capillaire il y a combien de temps ?", answer: "Environ 6 semaines" },
-    ],
-    advantages: [{ kind: "pack", packPurchaseId: "pp-c02-express" }],
-    events: [
-      { at: "2026-09-01T09:15:00", label: "Rappel J-3 envoyé", detail: "Par SMS" },
-      { at: "2026-08-28T16:38:00", label: "Rendez-vous créé", detail: "Pris au comptoir" },
-    ],
-  },
-  {
-    id: "rdv-2411",
-    ref: "#e5f6a7b8",
-    status: "à venir",
-    date: "2026-09-05T14:00:00",
-    salon: "almadies",
-    salonLabel: salonName("almadies"),
-    client: {
-      id: "c01",
-      name: "Awa Diop",
-      email: "awa.diop@gmail.com",
-      phone: "+221 77 512 46 08",
-      whatsapp: null,
-      loyaltyPoints: 480,
-    },
-    staffGlobal: null,
-    prestations: [
-      pr("p1", "coiffure-shampoing-sechage", "Coiffure", "Shampoing séchage", 60, 17_000, "Sophie Ndione"),
-      pr("p2", "soin-du-visage-detox-me-facial", "Soin du visage", "Detox Me Facial", 60, 45_000, null),
-    ],
-    questions: [
-      { id: "q1", question: "Peau sensible ou réactive ?", answer: null },
-      { id: "q2", question: "Produits habituels à éviter ?", answer: null },
-    ],
-    advantages: [{ kind: "carte-cadeau", code: "BC-2026-4471", balance: 25_000 }],
-    events: [
-      { at: "2026-09-02T18:22:00", label: "Rendez-vous créé", detail: "Réservation en ligne" },
-    ],
-  },
-
-  /* ---- Passé ---- */
-  {
-    id: "rdv-2380",
-    ref: "#c9d0e1f2",
-    status: "terminé",
-    date: "2026-08-29T15:00:00",
-    salon: "seaplaza",
-    salonLabel: salonName("seaplaza"),
-    client: {
-      id: "c12",
-      name: "Rama Diallo",
-      email: "rama.diallo@yahoo.fr",
-      phone: "+221 78 233 79 10",
-      whatsapp: "+221 78 233 79 10",
-      loyaltyPoints: 80,
-    },
-    staffGlobal: "Coumba Faye",
-    prestations: [
-      pr("p1", "onglerie-vernis-permanent-mains", "Onglerie", "Vernis permanent mains", 30, 17_000, "Coumba Faye"),
-    ],
-    questions: [{ id: "q1", question: "Ongles fragilisés ?", answer: "Un peu, base fortifiante appliquée" }],
-    advantages: [],
-    events: [
-      { at: "2026-08-29T16:05:00", label: "Visite terminée", detail: "Encaissé · 17.000 FCFA" },
-      { at: "2026-08-29T15:00:00", label: "Cliente arrivée" },
-      { at: "2026-08-25T11:30:00", label: "Rendez-vous créé", detail: "Pris au comptoir" },
-    ],
-  },
+  /* ---- Annulations conservées (point-de-vente n'a aucune réservation annulée entière) ---- */
   {
     id: "rdv-2375",
     ref: "#0a1b2c3d",
@@ -523,11 +271,11 @@ const RAW_SEEDS: RdvDetail[] = [
     salonLabel: salonName("seaplaza"),
     client: {
       id: "c14",
-      name: "Yacine Thiam",
-      email: "yacine.thiam@gmail.com",
-      phone: "+221 77 640 18 22",
-      whatsapp: "+221 77 640 18 22",
-      loyaltyPoints: 45,
+      name: "Yacine Wade",
+      email: "yacine.wade@example.com",
+      phone: "+221 77 555 12 34",
+      whatsapp: "+221 77 555 12 34",
+      loyaltyPoints: 950,
     },
     staffGlobal: null,
     prestations: [
@@ -538,71 +286,6 @@ const RAW_SEEDS: RdvDetail[] = [
     events: [
       { at: "2026-09-03T10:20:00", label: "Rendez-vous annulé", detail: "Annulé au comptoir · la cliente a un empêchement" },
       { at: "2026-08-30T09:05:00", label: "Rendez-vous créé", detail: "Réservation en ligne" },
-    ],
-  },
-
-  /* ---- Démo : bénéficiaires multiples + extras (2026-09-04) ---- */
-  {
-    id: "rdv-3007",
-    ref: "#f4c8a913",
-    status: "à venir",
-    date: "2026-09-04T10:00:00",
-    salon: "almadies",
-    salonLabel: salonName("almadies"),
-    client: {
-      id: "c02",
-      name: "Fatou Ndiaye",
-      email: "fatou.ndiaye@yahoo.fr",
-      phone: "+221 78 204 11 39",
-      whatsapp: "+221 78 204 11 39",
-      loyaltyPoints: 260,
-    },
-    staffGlobal: null,
-    prestations: [
-      pr("p1", "manucure-pedicure-manucure-russe-sans-vernis-sans-gel", "Manucure & pédicure", "Manucure russe", 30, 13_000, "Aïda Sarr", null, { start: "10:00", beneficiaryName: "Fatou Ndiaye" }),
-      // Bénéficiaire distinct de la payeuse — sa fille, prestation en parallèle (pas de praticienne dédiée « Mini & Co » compétente présente ce jour-là).
-      pr("p2", "mini-co-mini-hair-treat-mini-co", "Mini & Co", "Mini Hair Treat (Mini&Co)", 90, 28_000, null, null, { start: "10:00", beneficiaryName: "Aïssa Ndiaye (fille)" }),
-    ],
-    extras: [
-      { id: "ex1", kind: "boisson", productId: "boisson-pure-glow", qty: 2 },
-      { id: "ex2", kind: "boisson", productId: "boisson-eclat-matcha", qty: 1 },
-    ],
-    questions: [],
-    advantages: [],
-    events: [
-      { at: "2026-09-01T11:00:00", label: "Rendez-vous créé", detail: "Réservation en ligne · pour elle et sa fille" },
-    ],
-  },
-  {
-    id: "rdv-3008",
-    ref: "#3b7e2d01",
-    status: "à venir",
-    date: "2026-09-04T13:00:00",
-    salon: "almadies",
-    salonLabel: salonName("almadies"),
-    client: {
-      id: "c06",
-      name: "Khady Guèye",
-      email: "khady.gueye@yahoo.fr",
-      phone: "+221 77 902 33 47",
-      whatsapp: null,
-      loyaltyPoints: 60,
-    },
-    staffGlobal: "Mariama Bâ",
-    prestations: [
-      // Prestation « à deux praticiennes » — temps de chaise divisé. Vendredi
-      // 4/09 : Mariama en renfort d'après-midi (12h-19h) et Sophie en journée
-      // complète, toutes deux présentes et compétentes à Almadies ce jour-là.
-      pr("p1", "coiffure-tissage-versatile", "Coiffure", "Tissage Versatile", 120, 56_000, "Mariama Bâ", null, {
-        secondStaff: "Sophie Ndione",
-        start: "13:00",
-        beneficiaryName: "Khady Guèye",
-      }),
-    ],
-    questions: [],
-    advantages: [],
-    events: [
-      { at: "2026-08-30T15:40:00", label: "Rendez-vous créé", detail: "Pris au comptoir · à deux praticiennes" },
     ],
   },
 ];
@@ -637,7 +320,415 @@ function normalize(r: RdvDetail): RdvDetail {
   return { ...r, prestations, extras: r.extras ?? [] };
 }
 
-const SEEDS: RdvDetail[] = RAW_SEEDS.map(normalize);
+/* ------------------------------------------------------------------ */
+/* Réservations reprises de point-de-vente (`lib/data/planning.ts`)    */
+/* ------------------------------------------------------------------ */
+//
+// Mêmes réservations, mêmes prestations, mêmes heures demandées, mêmes
+// bénéficiaires et extras que la caisse. Ce qui change à la traduction :
+// - jours relatifs ancrés sur `TODAY_ISO` (et non sur la vraie date) ; les
+//   salons du back-office étant fermés le dimanche, le « dimanche chargé » de
+//   point-de-vente et tout ce qui tombait un dimanche passent au samedi ;
+// - clientes : `cl-N` de point-de-vente → fiches du back-office (`PDV_CLIENT`) ;
+// - praticiennes : l'équipe de point-de-vente n'existe pas ici. Chaque
+//   prestation est recalée (`fitPdvSeeds`) sur l'équipe du back-office, comme
+//   le fait `fitSeedToSchedules` côté caisse : compétente, présente ce jour-là
+//   dans ce salon (planning + absences), jamais deux rendez-vous à la fois ;
+//   l'heure demandée d'abord, sinon le premier créneau libre de la journée.
+//   L'équipe et le planning de démo sont calés pour que toutes les
+//   réservations trouvent preneuse (cf. « Affectation automatique » plus bas).
+
+type PdvLine = {
+  id: string;
+  prestationId: string;
+  start: string;
+  durationMin: number; // déjà divisé par deux pour une prestation « à deux »
+  pair?: boolean; // réalisée à deux praticiennes côté point-de-vente
+  beneficiaryName?: string;
+  beneficiaryKind?: BeneficiaryKind;
+};
+
+type PdvReservation = {
+  id: string;
+  payer: string; // `cl-N` de point-de-vente
+  day: number; // décalage en jours par rapport à `TODAY_ISO`
+  salon: SalonId; // salon de la praticienne d'origine
+  deposit?: number; // acompte réglé en ligne, FCFA
+  createdMinutesAgo?: number; // réservation toute fraîche (« non vue » côté caisse)
+  extras?: Omit<RdvExtra, "id">[];
+  advantages?: RdvAdvantage[];
+  lines: PdvLine[];
+};
+
+// cl-7 (Sokhna) et cl-9 (Yacine) retombent sur les homonymes du fichier, qui
+// portent un abonnement / un historique.
+const PDV_CLIENT: Record<string, string> = {
+  "cl-1": "c01", "cl-2": "c02", "cl-3": "c03", "cl-4": "c04", "cl-5": "c05",
+  "cl-6": "c06", "cl-7": "c11", "cl-8": "c08", "cl-9": "c14", "cl-10": "c10",
+};
+
+const SP: SalonId = "seaplaza";
+const AL: SalonId = "almadies";
+
+const line = (
+  id: string,
+  prestationId: string,
+  start: string,
+  durationMin: number,
+  opts: Pick<PdvLine, "pair" | "beneficiaryName" | "beneficiaryKind"> = {},
+): PdvLine => ({ id, prestationId, start, durationMin, ...opts });
+
+const PDV_RESERVATIONS: PdvReservation[] = [
+  /* ── Aujourd'hui ── */
+  {
+    id: "RV-1787667600000-0qtafz9td", payer: "cl-7", day: 0, salon: SP, deposit: 5000,
+    advantages: [{ kind: "abonnement", abonnementId: "ab-c11-mains" }],
+    lines: [
+      line("rdv-1a", "coiffure-tissage-versatile", "10:00", 60, { pair: true }),
+      line("rdv-1b", "manucure-pedicure-manucure-spa-express", "10:00", 45, { beneficiaryName: "Awa" }),
+    ],
+  },
+  {
+    // La 2ᵉ prestation (épilation des sourcils) a été annulée côté caisse.
+    id: "RV-1787671200000-1hmkvyjmq", payer: "cl-6", day: 0, salon: SP,
+    lines: [line("rdv-2a", "soin-du-visage-glow-me-facial", "11:30", 60)],
+  },
+  {
+    id: "RV-1787674800000-28fvbxtg3", payer: "cl-8", day: 0, salon: AL, deposit: 8000,
+    extras: [
+      { kind: "boisson", productId: "boisson-pure-glow", qty: 1 },
+      { kind: "boisson", productId: "boisson-eclat-matcha", qty: 1 },
+    ],
+    lines: [line("rdv-3a", "spa-relax-me-time", "13:40", 80)],
+  },
+  {
+    id: "RV-1787678400000-2z95rx39g", payer: "cl-2", day: 0, salon: AL,
+    extras: [{ kind: "produit", productId: "nutritive-bain-riche-250ml", qty: 1 }],
+    advantages: [{ kind: "pack", packPurchaseId: "pp-c02-express" }],
+    lines: [line("rdv-4a", "coiffure-shampoing-brushing-shampoing-inclus-et-obligatoire", "10:00", 60)],
+  },
+  {
+    id: "RV-1787682000000-3q2g7wd2t", payer: "cl-1", day: 0, salon: AL, createdMinutesAgo: 4,
+    advantages: [{ kind: "carte-cadeau", code: "BC-2026-4471", balance: 25_000 }],
+    lines: [line("rdv-5a", "spa-soin-du-dos", "16:00", 90)],
+  },
+  {
+    id: "RV-1787685600000-4gvqnvmw6", payer: "cl-3", day: 0, salon: SP, createdMinutesAgo: 26,
+    advantages: [{ kind: "pack", packPurchaseId: "pp-c03-express" }],
+    lines: [
+      line("rdv-6a", "coiffure-silk-press", "13:00", 180),
+      line("rdv-6b", "mini-co-mini-jely-manucure", "13:00", 30, { beneficiaryName: "Salématou (7 ans)" }),
+    ],
+  },
+  {
+    id: "RV-1787743200000-gdwdrjzxy", payer: "cl-5", day: 0, salon: SP,
+    extras: [
+      { kind: "boisson", productId: "boisson-dragon-mystic", qty: 1 },
+      { kind: "boisson", productId: "boisson-ice-coffee-caramel", qty: 1 },
+    ],
+    lines: [
+      line("rdv-22a", "coiffure-tissage-versatile", "11:00", 60, { pair: true }),
+      line("rdv-22b", "coiffure-tissage-versatile", "11:00", 60, { pair: true, beneficiaryName: "Aïda" }),
+    ],
+  },
+  {
+    id: "RV-1787746800000-h4po7j9rb", payer: "cl-9", day: 0, salon: AL,
+    extras: [
+      { kind: "produit", productId: "antiseptique-saryna-keys", qty: 1 },
+      { kind: "produit", productId: "damage-repair-oil-saryna-keys", qty: 1 },
+    ],
+    lines: [
+      line("rdv-23a", "manucure-pedicure-manucure-spa-express", "11:35", 45),
+      line("rdv-23b", "manucure-pedicure-jelly-pedicure", "10:00", 65, { beneficiaryName: "Rokhaya" }),
+      line("rdv-23c", "manucure-pedicure-smooth-pedicure", "10:00", 80, { beneficiaryName: "Marème" }),
+    ],
+  },
+  {
+    id: "RV-1787750400000-hviynijko", payer: "cl-4", day: 0, salon: AL,
+    advantages: [{ kind: "carte-cadeau", code: "BC-2026-1180", balance: 15_000 }],
+    extras: [
+      { kind: "produit", productId: "k-elixir-oil-30ml", qty: 1 },
+      { kind: "produit", productId: "correcteur-fluide-swiss-perfection-haute-couvrance", qty: 1 },
+      { kind: "produit", productId: "peigne-bijou-eclat-de-mariee-finition-or-rose", qty: 1 },
+    ],
+    lines: [
+      line("rdv-24a", "coiffure-shampoing-sechage", "15:00", 60),
+      line("rdv-24b", "manucure-pedicure-manucure-spa-express", "15:00", 45, { beneficiaryName: "Moussa", beneficiaryKind: "homme" }),
+    ],
+  },
+  {
+    id: "RV-1787754000000-imc93hte1", payer: "cl-10", day: 0, salon: AL,
+    lines: [
+      line("rdv-25a", "mini-co-mini-jely-manucure", "11:05", 30, { beneficiaryName: "Khady (8 ans)" }),
+      line("rdv-25b", "mini-co-mini-cutie-pedicure", "11:00", 35, { beneficiaryName: "Aïcha (5 ans)" }),
+    ],
+  },
+
+  /* ── Il y a trois jours ── */
+  { id: "RV-1787757600000-jd5jjh37e", payer: "cl-3", day: -3, salon: AL, lines: [line("rdv-26a", "coiffure-coupe-transformation", "10:00", 40)] },
+  { id: "RV-1787761200000-k3ytzgd0r", payer: "cl-8", day: -3, salon: AL, lines: [line("rdv-27a", "soin-du-visage-hydrafacial-deep-clean", "12:00", 75)] },
+  { id: "RV-1787764800000-kus4ffmu4", payer: "cl-10", day: -3, salon: AL, lines: [line("rdv-28a", "manucure-pedicure-jelly-pedicure", "16:30", 65)] },
+
+  /* ── Avant-hier ── */
+  { id: "RV-1787689200000-57p13uwpj", payer: "cl-4", day: -2, salon: AL, lines: [line("rdv-7a", "manucure-pedicure-jelly-pedicure", "10:00", 65)] },
+  { id: "RV-1787692800000-5yibju6iw", payer: "cl-5", day: -2, salon: SP, lines: [line("rdv-8a", "coiffure-silk-press", "14:00", 180)] },
+  { id: "RV-1787696400000-6pblztgc9", payer: "cl-9", day: -2, salon: SP, lines: [line("rdv-9a", "soin-du-visage-hydrafacial-deep-clean", "11:00", 75)] },
+
+  /* ── Hier ── */
+  { id: "RV-1787700000000-7g4wfsq5m", payer: "cl-2", day: -1, salon: SP, lines: [line("rdv-10a", "coiffure-soin-complet", "10:00", 130)] },
+  { id: "RV-1787703600000-86y6vrzyz", payer: "cl-6", day: -1, salon: AL, lines: [line("rdv-11a", "spa-relax-me-time", "15:00", 80)] },
+  { id: "RV-1787707200000-8xrhbr9sc", payer: "cl-1", day: -1, salon: AL, lines: [line("rdv-12a", "manucure-pedicure-perfect-manucure-russe-gel-sur-ongles-naturels-gainage", "10:00", 90)] },
+
+  /* ── Demain ── */
+  {
+    id: "RV-1787710800000-9okrrqjlp", payer: "cl-3", day: 1, salon: SP, createdMinutesAgo: 72,
+    lines: [
+      line("rdv-13a", "coiffure-tissage-versatile", "10:00", 60, { pair: true }),
+      line("rdv-13b", "manucure-pedicure-manucure-spa-express", "10:30", 45),
+    ],
+  },
+  { id: "RV-1787714400000-afe27ptf2", payer: "cl-7", day: 1, salon: SP, lines: [line("rdv-14a", "soin-du-visage-golden-vip-facial", "14:00", 90)] },
+  { id: "RV-1787718000000-b67cnp38f", payer: "cl-8", day: 1, salon: AL, lines: [line("rdv-15a", "spa-soin-du-dos", "16:00", 90)] },
+
+  /* ── Après-demain ── */
+  {
+    id: "RV-1787721600000-bx0n3od1s", payer: "cl-5", day: 2, salon: AL,
+    lines: [
+      line("rdv-16a", "coiffure-coupe-transformation", "10:00", 40),
+      line("rdv-16b", "coiffure-silk-press", "11:00", 180),
+    ],
+  },
+  { id: "RV-1787725200000-cntxjnmv5", payer: "cl-9", day: 2, salon: AL, lines: [line("rdv-17a", "manucure-pedicure-smooth-pedicure", "13:00", 80)] },
+  { id: "RV-1787768400000-lllevewnh", payer: "cl-1", day: 2, salon: AL, lines: [line("rdv-29a", "spa-relax-me-time", "09:30", 80)] },
+
+  /* ── Dans trois jours ── */
+  { id: "RV-1787728800000-den7zmwoi", payer: "cl-4", day: 3, salon: SP, lines: [line("rdv-18a", "coiffure-tresses-cheveux", "09:30", 60)] },
+  {
+    id: "RV-1787732400000-e5gifm6hv", payer: "cl-1", day: 3, salon: SP,
+    lines: [
+      line("rdv-19a", "soin-du-visage-face-lift-and-glow-raffermissant-lift-et-glow", "11:00", 70),
+      line("rdv-19b", "epilation-epilation-sourcils", "12:30", 15),
+    ],
+  },
+  { id: "RV-1787772000000-mcepbe6gu", payer: "cl-7", day: 3, salon: AL, lines: [line("rdv-30a", "coiffure-tresses-cheveux", "14:30", 60)] },
+
+  /* ── Dans quatre / cinq / six jours ── */
+  { id: "RV-1787736000000-ew9svlgb8", payer: "cl-6", day: 4, salon: AL, lines: [line("rdv-20a", "spa-hot-stone-pierres-chaudes", "10:00", 60)] },
+  { id: "RV-1787775600000-n37zrdga7", payer: "cl-10", day: 4, salon: SP, lines: [line("rdv-31a", "coiffure-soin-complet", "13:30", 130)] },
+  { id: "RV-1787779200000-nu1a7cq3k", payer: "cl-3", day: 5, salon: AL, lines: [line("rdv-32a", "manucure-pedicure-perfect-manucure-russe-gel-sur-ongles-naturels-gainage", "10:00", 90)] },
+  { id: "RV-1787782800000-okuknbzwx", payer: "cl-9", day: 5, salon: AL, lines: [line("rdv-33a", "coiffure-tissage-versatile", "10:00", 60, { pair: true })] },
+  { id: "RV-1787739600000-fn33bkq4l", payer: "cl-2", day: 6, salon: SP, lines: [line("rdv-21a", "coiffure-ponytail", "14:00", 90)] },
+  { id: "RV-1787786400000-pbnv3b9qa", payer: "cl-5", day: 6, salon: AL, lines: [line("rdv-34a", "soin-du-visage-golden-vip-facial", "11:00", 90)] },
+
+  /* ── Le « dimanche chargé » de point-de-vente (une prestation par réservation) ── */
+  ...(
+    [
+      ["cl-1", "coiffure-silk-press", SP, "10:00"],
+      ["cl-2", "manucure-pedicure-manucure-spa-express", AL, "10:00"],
+      ["cl-3", "soin-du-visage-hydrafacial-deep-clean", SP, "11:00"],
+      ["cl-4", "coiffure-tresses-cheveux", SP, "10:30"],
+      ["cl-5", "spa-relax-me-time", AL, "11:00"],
+      ["cl-6", "coiffure-coupe-transformation", AL, "11:30"],
+      ["cl-7", "manucure-pedicure-jelly-pedicure", AL, "12:00"],
+      ["cl-8", "coiffure-soin-complet", AL, "12:30"],
+      ["cl-9", "epilation-epilation-sourcils", SP, "14:00"],
+      ["cl-10", "coiffure-silk-press", SP, "14:00"],
+      ["cl-1", "spa-soin-du-dos", AL, "14:30"],
+      ["cl-3", "manucure-pedicure-smooth-pedicure", AL, "15:00"],
+      ["cl-6", "coiffure-shampoing-sechage", AL, "15:00"],
+      ["cl-9", "soin-du-visage-golden-vip-facial", SP, "15:30"],
+      ["cl-4", "coiffure-tresses-cheveux", SP, "15:30"],
+      ["cl-2", "mini-co-mini-jely-manucure", AL, "16:30"],
+    ] as const
+  ).map(([payer, prestationId, salon, start], i): PdvReservation => ({
+    id: `RV-DIM-${String(i + 1).padStart(2, "0")}`,
+    payer,
+    day: 3, // le dimanche qui vient, ramené au samedi (cf. plus haut)
+    salon,
+    lines: [
+      line(
+        `rdv-dim-${i + 1}`,
+        prestationId,
+        start,
+        prestationSeeds.find((p) => p.id === prestationId)?.durationMin ?? 60,
+      ),
+    ],
+  })),
+];
+
+// « Maintenant » du monde de démo, en minutes — sert à dater les réservations
+// toutes fraîches (`createdMinutesAgo`).
+const NOW_MIN = timeToMinutes(NOW_ISO.slice(11, 16));
+
+const isoPlusDays = (iso: string, n: number) => {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
+};
+
+// Jour réel d'une réservation : décalage depuis `TODAY_ISO`, dimanche → samedi.
+const pdvDay = (offset: number) => {
+  const iso = isoPlusDays(TODAY_ISO, offset);
+  return new Date(`${iso}T12:00:00`).getDay() === 0 ? isoPlusDays(iso, -1) : iso;
+};
+
+const categoryOf = (prestationId: string) => {
+  const p = prestationSeeds.find((x) => x.id === prestationId);
+  return serviceSeeds.find((s) => s.id === p?.serviceId)?.name ?? "Autres";
+};
+
+function fitPdvSeeds(input: PdvReservation[]): RdvDetail[] {
+  const clientRows = clients("all");
+  const practitioners = members.filter((m) => m.active && m.roles.includes("praticienne"));
+  const busy = new Map<string, { start: number; end: number }[]>(); // memberId|iso
+
+  // Présente ce jour-là dans ce salon, toute la fenêtre dans ses horaires,
+  // hors coupure, et pas déjà prise.
+  const fits = (memberId: string, iso: string, salon: SalonId, start: number, dur: number) =>
+    coversWindow(memberId, salon, iso, start, dur) &&
+    !(busy.get(`${memberId}|${iso}`) ?? []).some((b) => start < b.end && b.start < start + dur);
+  const book = (memberId: string, iso: string, start: number, dur: number) => {
+    const key = `${memberId}|${iso}`;
+    busy.set(key, [...(busy.get(key) ?? []), { start, end: start + dur }]);
+  };
+  // La moins chargée d'abord, comme la prise de RDV de point-de-vente.
+  const candidates = (prestationId: string, iso: string) =>
+    practitioners
+      .filter((m) => canPerform(m.id, prestationId))
+      .sort(
+        (a, b) =>
+          (busy.get(`${a.id}|${iso}`)?.length ?? 0) - (busy.get(`${b.id}|${iso}`)?.length ?? 0),
+      );
+
+  type Placed = { staff: string | null; second: string | null; start: number; dur: number };
+  const place = (l: PdvLine, iso: string, salon: SalonId, commit: boolean): Placed => {
+    const wanted = timeToMinutes(l.start);
+    const hours = salonConfig(salon).hours;
+    const day = hours[(["dim", "lun", "mar", "mer", "jeu", "ven", "sam"] as const)[new Date(`${iso}T12:00:00`).getDay()]];
+    const open = day.closed ? wanted : timeToMinutes(day.open);
+    const close = day.closed ? wanted : timeToMinutes(day.close);
+    const times = [wanted];
+    for (let t = open; t < close; t += 15) if (t !== wanted) times.push(t);
+    const full = prestationSeeds.find((p) => p.id === l.prestationId)?.durationMin ?? l.durationMin;
+    const pool = candidates(l.prestationId, iso);
+
+    for (const start of times) {
+      for (const m of pool) {
+        if (!fits(m.id, iso, salon, start, l.durationMin)) continue;
+        if (!l.pair) {
+          if (commit) book(m.id, iso, start, l.durationMin);
+          return { staff: fullName(m), second: null, start, dur: l.durationMin };
+        }
+        const second = pool.find((o) => o.id !== m.id && fits(o.id, iso, salon, start, l.durationMin));
+        if (second) {
+          if (commit) {
+            book(m.id, iso, start, l.durationMin);
+            book(second.id, iso, start, l.durationMin);
+          }
+          return { staff: fullName(m), second: fullName(second), start, dur: l.durationMin };
+        }
+      }
+      // Pas de binôme à l'heure demandée : une seule praticienne, temps plein.
+      if (l.pair && start === wanted) {
+        const solo = pool.find((m) => fits(m.id, iso, salon, start, full));
+        if (solo) {
+          if (commit) book(solo.id, iso, start, full);
+          return { staff: fullName(solo), second: null, start, dur: full };
+        }
+      }
+    }
+    return { staff: null, second: null, start: wanted, dur: l.pair ? full : l.durationMin };
+  };
+
+  // Par jour puis par heure demandée, comme côté caisse.
+  const ordered = input
+    .map((r) => ({ r, iso: pdvDay(r.day) }))
+    .sort(
+      (a, b) =>
+        a.iso.localeCompare(b.iso) ||
+        Math.min(...a.r.lines.map((l) => timeToMinutes(l.start))) -
+          Math.min(...b.r.lines.map((l) => timeToMinutes(l.start))),
+    );
+
+  return ordered.map(({ r, iso }) => {
+    // Le salon d'origine, sauf si l'autre permet d'affecter davantage de
+    // prestations (la répartition des métiers entre salons diffère ici).
+    const other: SalonId = r.salon === AL ? SP : AL;
+    const score = (salon: SalonId) =>
+      isClosed(salon, iso) ? -1 : r.lines.filter((l) => place(l, iso, salon, false).staff).length;
+    const salon = score(other) > score(r.salon) ? other : r.salon;
+    const placed = r.lines.map((l) => ({ l, p: place(l, iso, salon, true) }));
+
+    const row = clientRows.find((c) => c.id === PDV_CLIENT[r.payer])!;
+    const client: RdvClient = {
+      id: row.id,
+      name: row.name,
+      email: row.email,
+      phone: row.phone,
+      whatsapp: row.phone,
+      loyaltyPoints: row.loyaltyPoints,
+    };
+    const prestations: RdvPrestation[] = placed.map(({ l, p }) => {
+      const cat = categoryOf(l.prestationId);
+      const item = prestationSeeds.find((x) => x.id === l.prestationId)!;
+      return {
+        id: l.id,
+        prestationId: l.prestationId,
+        category: cat,
+        name: item.name,
+        durationMin: p.dur,
+        price: item.priceFcfa,
+        posteType: posteTypeForCategory(cat),
+        staff: p.staff,
+        secondStaff: p.second,
+        start: minutesToTime(p.start),
+        beneficiaryName: l.beneficiaryName ?? client.name,
+        beneficiaryKind: l.beneficiaryKind,
+      };
+    });
+    const first = Math.min(...prestations.map((p) => timeToMinutes(p.start)));
+    const staffs = new Set(prestations.map((p) => p.staff));
+    const past = iso < TODAY_ISO;
+    const total = prestations.reduce((n, p) => n + p.price, 0);
+
+    const created =
+      r.createdMinutesAgo != null
+        ? `${TODAY_ISO}T${minutesToTime(NOW_MIN - r.createdMinutesAgo)}:00`
+        : `${isoPlusDays(iso, -2)}T18:30:00`;
+    const last = Math.max(...prestations.map((p) => timeToMinutes(p.start) + p.durationMin));
+    // Du plus récent au plus ancien.
+    const events: RdvEvent[] = [
+      ...(past
+        ? [
+            { at: `${iso}T${minutesToTime(last)}:00`, label: "Visite terminée", detail: `Encaissé · ${fcfa(total)}` },
+            { at: `${iso}T${minutesToTime(first)}:00`, label: "Cliente arrivée" },
+          ]
+        : []),
+      {
+        at: created,
+        label: "Rendez-vous créé",
+        detail: `Réservation en ligne${r.deposit ? ` · acompte de ${fcfa(r.deposit)} réglé` : ""}`,
+      },
+    ];
+
+    return {
+      id: r.id,
+      ref: `#${r.id.split("-").pop()!.slice(0, 8)}`,
+      status: past ? "terminé" : "à venir",
+      date: `${iso}T${minutesToTime(first)}:00`,
+      salon,
+      salonLabel: salonName(salon),
+      client,
+      staffGlobal: staffs.size === 1 ? [...staffs][0] : null,
+      prestations,
+      extras: (r.extras ?? []).map((e, i) => ({ ...e, id: `ex${i + 1}` })),
+      questions: [],
+      advantages: r.advantages ?? [],
+      events,
+    };
+  });
+}
+
+const SEEDS: RdvDetail[] = [...fitPdvSeeds(PDV_RESERVATIONS), ...RAW_SEEDS.map(normalize)];
 
 /* ------------------------------------------------------------------ */
 /* Dérivés                                                             */
@@ -667,7 +758,8 @@ export const rdvEnd = (r: Pick<RdvDetail, "date" | "prestations">): string => {
   return `${day}T${minutesToTime(endMin)}:00`;
 };
 
-// Au moins une prestation sans praticienne, sur un rendez-vous non clos.
+// Au moins une prestation qu'aucune praticienne ne peut prendre, sur un
+// rendez-vous non clos — un conflit (cf. `autoAssign`), pas une tâche courante.
 export const needsAssign = (r: Pick<RdvDetail, "status" | "prestations">) =>
   !RDV_STATUS_META[r.status].closed && r.prestations.some((p) => p.staff === null);
 
@@ -728,6 +820,165 @@ export function isStaffFreeForWindow(
   );
 }
 
+/* ------------------------------------------------------------------ */
+/* Affectation automatique                                             */
+/* ------------------------------------------------------------------ */
+//
+// Règle métier : une prestation n'attend jamais qu'on lui choisisse une
+// praticienne. Elle est affectée d'office à une praticienne compétente,
+// présente ce jour-là dans le salon du rendez-vous (horaires, coupure,
+// absences du planning) et libre sur toute sa fenêtre — la moins chargée de
+// la journée d'abord, comme la prise de RDV de point-de-vente. La propriétaire
+// peut ensuite changer d'intervenante, jamais « désaffecter ».
+//
+// `staff === null` ne subsiste donc que dans un cas d'exception : personne ne
+// peut la prendre (absence posée après la réservation, équipe complète). C'est
+// un conflit à résoudre (déplacer le rendez-vous), plus une tâche d'affectation.
+
+type Window = { start: number; end: number };
+
+const overlaps = (ws: Window[], start: number, end: number) =>
+  ws.some((w) => start < w.end && w.start < end);
+
+// La praticienne peut-elle tenir cette fenêtre d'après son planning ?
+export function coversWindow(
+  memberId: string,
+  salon: SalonId,
+  iso: string,
+  startMin: number,
+  durationMin: number,
+  data?: PlanningData,
+): boolean {
+  const pres = presenceFor(memberId, iso, data);
+  if (pres.state !== "present" || pres.salonId !== salon) return false;
+  const end = startMin + durationMin;
+  if (startMin < timeToMinutes(pres.start) || end > timeToMinutes(pres.end)) return false;
+  if (pres.breakStart && pres.breakEnd) {
+    if (startMin < timeToMinutes(pres.breakEnd) && timeToMinutes(pres.breakStart) < end) return false;
+  }
+  return true;
+}
+
+const practitionerPool = () =>
+  members.filter((m) => m.active && m.roles.includes("praticienne"));
+
+// Praticiennes (noms complets) pouvant prendre cette prestation à ce créneau,
+// la moins chargée ce jour-là d'abord. `excludeRdvId` : le rendez-vous en
+// cours d'édition ne se bloque pas lui-même ; `exclude` : noms à écarter
+// (ex. la 1ʳᵉ praticienne quand on cherche la 2ᵉ).
+export function availablePractitioners(
+  list: RdvDetail[],
+  prestationId: string,
+  salon: SalonId,
+  iso: string,
+  startMin: number,
+  durationMin: number,
+  opts: { data?: PlanningData; excludeRdvId?: string; exclude?: (string | null)[] } = {},
+): string[] {
+  const load = (name: string) => staffBusyWindows(list, name, iso, opts.excludeRdvId).length;
+  return practitionerPool()
+    .filter((m) => canPerform(m.id, prestationId))
+    .filter((m) => coversWindow(m.id, salon, iso, startMin, durationMin, opts.data))
+    .map(fullName)
+    .filter((name) => !opts.exclude?.includes(name))
+    .filter((name) => isStaffFreeForWindow(list, name, iso, startMin, durationMin, opts.excludeRdvId))
+    .sort((a, b) => load(a) - load(b));
+}
+
+// Garantit la règle sur toute une liste de rendez-vous : chaque prestation
+// d'un rendez-vous non clos garde sa praticienne si elle reste valable
+// (compétente, présente, pas déjà prise ailleurs), sinon en reçoit une
+// automatiquement. Les rendez-vous clos et annulés ne bougent pas. Renvoie les
+// mêmes objets quand rien ne change.
+export function autoAssign(list: RdvDetail[], data?: PlanningData): RdvDetail[] {
+  const byName = new Map(practitionerPool().map((m) => [fullName(m), m.id]));
+  const busy = new Map<string, Window[]>(); // nom|iso
+  const key = (name: string, iso: string) => `${name}|${iso}`;
+  const book = (name: string, iso: string, start: number, end: number) =>
+    busy.set(key(name, iso), [...(busy.get(key(name, iso)) ?? []), { start, end }]);
+  const isFree = (name: string, iso: string, start: number, end: number) =>
+    !overlaps(busy.get(key(name, iso)) ?? [], start, end);
+
+  const open = (r: RdvDetail) => !RDV_STATUS_META[r.status].closed;
+  const order = list
+    .map((r, i) => ({ r, i }))
+    .filter(({ r }) => r.status !== "annulé")
+    .sort((a, b) => a.r.date.localeCompare(b.r.date));
+
+  // 1. Ce qui est clos compte comme occupé, tel quel.
+  for (const { r } of order) {
+    if (open(r)) continue;
+    const iso = r.date.slice(0, 10);
+    for (const p of r.prestations) {
+      const start = timeToMinutes(p.start);
+      for (const n of [p.staff, p.secondStaff]) if (n) book(n, iso, start, start + p.durationMin);
+    }
+  }
+
+  // 2. Affectations existantes encore valables, dans l'ordre chronologique.
+  const valid = (r: RdvDetail, p: RdvPrestation, name: string | null | undefined) => {
+    if (!name) return false;
+    const id = byName.get(name);
+    if (!id || !canPerform(id, p.prestationId)) return false;
+    const iso = r.date.slice(0, 10);
+    const start = timeToMinutes(p.start);
+    return (
+      coversWindow(id, r.salon, iso, start, p.durationMin, data) &&
+      isFree(name, iso, start, start + p.durationMin)
+    );
+  };
+  const kept = new Map<string, { staff: boolean; second: boolean }>(); // rdvId|prestationId
+  for (const { r } of order) {
+    if (!open(r)) continue;
+    const iso = r.date.slice(0, 10);
+    for (const p of r.prestations) {
+      const start = timeToMinutes(p.start);
+      const staff = valid(r, p, p.staff);
+      if (staff) book(p.staff!, iso, start, start + p.durationMin);
+      const second = staff && valid(r, p, p.secondStaff);
+      if (second) book(p.secondStaff!, iso, start, start + p.durationMin);
+      kept.set(`${r.id}|${p.id}`, { staff, second });
+    }
+  }
+
+  // 3. Le reste reçoit la première praticienne disponible.
+  const pick = (r: RdvDetail, p: RdvPrestation, exclude: (string | null)[]) => {
+    const iso = r.date.slice(0, 10);
+    const start = timeToMinutes(p.start);
+    const load = (n: string) => busy.get(key(n, iso))?.length ?? 0;
+    const name =
+      practitionerPool()
+        .filter((m) => canPerform(m.id, p.prestationId))
+        .filter((m) => coversWindow(m.id, r.salon, iso, start, p.durationMin, data))
+        .map(fullName)
+        .filter((n) => !exclude.includes(n) && isFree(n, iso, start, start + p.durationMin))
+        .sort((a, b) => load(a) - load(b))[0] ?? null;
+    if (name) book(name, iso, start, start + p.durationMin);
+    return name;
+  };
+
+  const out = [...list];
+  for (const { r, i } of order) {
+    if (!open(r)) continue;
+    let changed = false;
+    const prestations = r.prestations.map((p) => {
+      const k = kept.get(`${r.id}|${p.id}`)!;
+      if (k.staff && (k.second || !p.secondStaff)) return p;
+      changed = true;
+      const staff = k.staff ? p.staff : pick(r, p, [p.secondStaff ?? null]);
+      // « À deux » : la 2ᵉ praticienne est remplacée si possible, sinon la
+      // prestation reste à une seule praticienne.
+      const secondStaff =
+        p.secondStaff && staff ? (k.second ? p.secondStaff : pick(r, p, [staff])) : null;
+      return { ...p, staff, secondStaff };
+    });
+    if (!changed) continue;
+    const staffs = new Set(prestations.map((p) => p.staff));
+    out[i] = { ...r, prestations, staffGlobal: staffs.size === 1 ? [...staffs][0] : null };
+  }
+  return out;
+}
+
 // « 3 h 10 » / « 45 min »
 export const durationLabel = (min: number) => {
   const h = Math.floor(min / 60);
@@ -753,7 +1004,7 @@ export type RdvRow = {
   durationMin: number;
   staffNames: string[]; // praticiennes distinctes affectées (principale + 2ᵉ praticienne)
   staffLabel: string;
-  pendingAssign: number; // prestations sans praticienne
+  pendingAssign: number; // prestations sans praticienne disponible (conflit)
   posteTypes: PosteType[];
   beneficiaryCount: number; // personnes distinctes visées par ce rendez-vous
   composition: string; // "" si une seule personne, sinon « 3 personnes »
@@ -786,7 +1037,7 @@ const toRow = (r: RdvDetail): RdvRow => {
     staffNames,
     staffLabel:
       staffNames.length === 0
-        ? "À affecter"
+        ? "Aucune praticienne"
         : staffNames.length === 1
           ? staffNames[0]
           : `${staffNames.length} praticiennes`,
@@ -869,3 +1120,42 @@ export function rdvCountByStaffDay(
       a.staffFirstName.localeCompare(b.staffFirstName, "fr"),
   );
 }
+
+/* ------------------------------------------------------------------ */
+/* Composition d'une réservation (point-de-vente fait autorité)        */
+/* ------------------------------------------------------------------ */
+
+export type BeneficiaryKind = "femme" | "homme" | "enfant";
+
+// Clé d'une personne servie — même dérivation que point-de-vente
+// (`beneficiaryClientId ?? beneficiaryName`, le payeur sinon).
+export const beneficiaryKey = (p: RdvPrestation, payerName: string) =>
+  p.beneficiaryClientId ?? (p.beneficiaryName && p.beneficiaryName !== payerName ? p.beneficiaryName : "__payer__");
+
+// Mini & Co vaut toujours « enfant » ; sinon `beneficiaryKind` tranche.
+export const beneficiaryKindOf = (p: RdvPrestation): BeneficiaryKind =>
+  p.category.startsWith("Mini & Co") ? "enfant" : (p.beneficiaryKind ?? "femme");
+
+/** « 1 femme + 1 enfant » — la ligne de composition des cartes et de la fiche
+ *  (`reservationComposition` de point-de-vente). */
+export function reservationComposition(r: Pick<RdvDetail, "prestations" | "client">): string {
+  const people = new Map<string, BeneficiaryKind>();
+  for (const p of r.prestations) {
+    const key = beneficiaryKey(p, r.client.name);
+    if (!people.has(key)) people.set(key, beneficiaryKindOf(p));
+  }
+  const counts = { femme: 0, homme: 0, enfant: 0 };
+  for (const kind of people.values()) counts[kind] += 1;
+  const parts: string[] = [];
+  if (counts.femme > 0) parts.push(`${counts.femme} femme${counts.femme > 1 ? "s" : ""}`);
+  if (counts.homme > 0) parts.push(`${counts.homme} homme${counts.homme > 1 ? "s" : ""}`);
+  if (counts.enfant > 0) parts.push(`${counts.enfant} enfant${counts.enfant > 1 ? "s" : ""}`);
+  return parts.join(" + ") || "1 femme";
+}
+
+/** Début et fin de la visite, « HH:MM ». */
+export const rdvStartTime = (r: Pick<RdvDetail, "date" | "prestations">) =>
+  r.prestations.length
+    ? minutesToTime(Math.min(...r.prestations.map((p) => timeToMinutes(p.start))))
+    : r.date.slice(11, 16);
+export const rdvEndTime = (r: Pick<RdvDetail, "date" | "prestations">) => rdvEnd(r).slice(11, 16);

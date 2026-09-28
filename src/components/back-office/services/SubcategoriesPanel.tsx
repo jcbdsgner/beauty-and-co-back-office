@@ -12,9 +12,9 @@ type Props = {
 };
 
 const inputClass =
-  "h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-theme-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10";
+  "h-9 w-full rounded-field border border-base-300 bg-white px-3 text-sm text-base-content placeholder:text-base-content/40 focus:outline-2 focus:outline-offset-2 focus:outline-[#fdcfca]";
 
-// Sous-catégories d'une catégorie — lanes optionnelles du tableau Kanban
+// Sous-catégories d'une catégorie — intertitres optionnels de sa section
 // (ex. Coiffure → Défrisage, Tissages & extensions…). Liste éditable en
 // blocs : renommage en ligne, réordonnancement par flèches, suppression
 // (les prestations qui y étaient rattachées retombent en « Autres », jamais
@@ -66,7 +66,7 @@ export default function SubcategoriesPanel({ service, onUpdate, onDeleteSubcateg
   return (
     <SectionCard
       title="Sous-catégories"
-      description="Regroupe les prestations de cette catégorie en lanes sur le tableau (ex. Défrisage, Tissages…). Facultatif."
+      description="Regroupe les prestations de cette catégorie sous des intertitres (ex. Défrisage, Tissages…). Facultatif."
     >
       {service.subcategories.length === 0 ? (
         <EmptyList>Aucune sous-catégorie — les prestations s&apos;affichent à plat.</EmptyList>
@@ -75,15 +75,15 @@ export default function SubcategoriesPanel({ service, onUpdate, onDeleteSubcateg
           {service.subcategories.map((s, i) => (
             <li
               key={s.id}
-              className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2"
+              className="flex items-center gap-2 rounded-lg border border-base-300 px-3 py-2"
             >
-              <div className="flex shrink-0 flex-col text-gray-400">
+              <div className="flex shrink-0 flex-col text-base-content/45">
                 <button
                   type="button"
                   onClick={() => move(s.id, -1)}
                   disabled={i === 0}
                   aria-label={`Monter ${s.name}`}
-                  className="rounded p-0.5 hover:bg-gray-100 hover:text-gray-700 disabled:pointer-events-none disabled:opacity-30"
+                  className="rounded p-0.5 hover:bg-muted hover:text-base-content/80 disabled:pointer-events-none disabled:opacity-30"
                 >
                   <svg width="12" height="12" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                     <path d="M10 15V5M5 10l5-5 5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -94,7 +94,7 @@ export default function SubcategoriesPanel({ service, onUpdate, onDeleteSubcateg
                   onClick={() => move(s.id, 1)}
                   disabled={i === service.subcategories.length - 1}
                   aria-label={`Descendre ${s.name}`}
-                  className="rounded p-0.5 hover:bg-gray-100 hover:text-gray-700 disabled:pointer-events-none disabled:opacity-30"
+                  className="rounded p-0.5 hover:bg-muted hover:text-base-content/80 disabled:pointer-events-none disabled:opacity-30"
                 >
                   <svg width="12" height="12" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                     <path d="M10 5v10M5 10l5 5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -118,15 +118,15 @@ export default function SubcategoriesPanel({ service, onUpdate, onDeleteSubcateg
                 <button
                   type="button"
                   onClick={() => startRename(s.id, s.name)}
-                  className="flex-1 truncate text-left text-theme-sm text-gray-800 hover:text-brand-600"
+                  className="flex-1 truncate text-left text-sm text-base-content hover:text-brand-600"
                 >
                   {s.name}
                 </button>
               )}
 
               {confirmId === s.id ? (
-                <span className="flex shrink-0 items-center gap-2 text-theme-xs">
-                  <span className="text-gray-500">Supprimer&nbsp;?</span>
+                <span className="flex shrink-0 items-center gap-2 text-xs">
+                  <span className="text-base-content/60">Supprimer&nbsp;?</span>
                   <button
                     type="button"
                     onClick={() => {
@@ -140,7 +140,7 @@ export default function SubcategoriesPanel({ service, onUpdate, onDeleteSubcateg
                   <button
                     type="button"
                     onClick={() => setConfirmId(null)}
-                    className="font-medium text-gray-500 hover:underline"
+                    className="font-medium text-base-content/60 hover:underline"
                   >
                     Non
                   </button>
@@ -150,7 +150,7 @@ export default function SubcategoriesPanel({ service, onUpdate, onDeleteSubcateg
                   type="button"
                   onClick={() => setConfirmId(s.id)}
                   aria-label={`Supprimer la sous-catégorie ${s.name}`}
-                  className="shrink-0 rounded-lg p-1.5 text-gray-400 transition hover:bg-error-50 hover:text-error-600"
+                  className="shrink-0 rounded-lg p-1.5 text-base-content/45 transition hover:bg-error-50 hover:text-error-600"
                 >
                   <TrashBinIcon className="size-4" />
                 </button>

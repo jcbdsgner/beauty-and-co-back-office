@@ -63,7 +63,7 @@ export default function MemberIdentityForm({ member, onSave, onSetActive }: Prop
           Enregistrer
         </button>
         {justSaved && !dirty && (
-          <span className="inline-flex items-center gap-1.5 text-theme-sm font-medium text-success-600">
+          <span className="inline-flex items-center gap-1.5 text-sm font-medium text-success-600">
             <CheckCircleIcon className="size-4" />
             Enregistré
           </span>
@@ -76,14 +76,14 @@ export default function MemberIdentityForm({ member, onSave, onSetActive }: Prop
 
       <div className="mt-6 flex items-start justify-between gap-6">
         <div className="min-w-0">
-          <p className="text-sm font-medium text-gray-800">Membre actif</p>
-          <p className="mt-0.5 text-theme-xs text-gray-500">
+          <p className="text-sm font-medium text-base-content">Membre actif</p>
+          <p className="mt-0.5 text-xs text-base-content/60">
             Un membre désactivé disparaît du Planning et de la réservation, mais
             garde tout son historique.
           </p>
           {confirmOff && (
-            <p className="mt-2 flex items-center gap-2 text-theme-xs">
-              <span className="text-gray-500">Désactiver {fullName(member)} ?</span>
+            <p className="mt-2 flex items-center gap-2 text-xs">
+              <span className="text-base-content/60">Désactiver {fullName(member)} ?</span>
               <button
                 type="button"
                 onClick={() => {
@@ -97,7 +97,7 @@ export default function MemberIdentityForm({ member, onSave, onSetActive }: Prop
               <button
                 type="button"
                 onClick={() => setConfirmOff(false)}
-                className="font-medium text-gray-500 hover:underline"
+                className="font-medium text-base-content/60 hover:underline"
               >
                 Annuler
               </button>

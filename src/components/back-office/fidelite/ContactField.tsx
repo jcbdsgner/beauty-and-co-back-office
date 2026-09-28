@@ -51,10 +51,10 @@ export default function ContactField({
 
   return (
     <fieldset className="space-y-3">
-      <legend className="mb-1.5 text-sm font-medium text-gray-800">{label}</legend>
+      <legend className="mb-1.5 text-sm font-medium text-base-content">{label}</legend>
 
       <div className="flex gap-2">
-        <label className="flex items-center gap-2 text-theme-sm text-gray-700">
+        <label className="flex items-center gap-2 text-sm text-base-content/80">
           <input
             type="radio"
             checked={mode === "client"}
@@ -63,7 +63,7 @@ export default function ContactField({
           />
           Cliente du fichier
         </label>
-        <label className="flex items-center gap-2 text-theme-sm text-gray-700">
+        <label className="flex items-center gap-2 text-sm text-base-content/80">
           <input
             type="radio"
             checked={mode === "free"}
@@ -78,7 +78,7 @@ export default function ContactField({
         <select
           value={value.clientId ?? ""}
           onChange={(e) => pickClient(e.target.value)}
-          className="h-11 w-full rounded-lg border border-gray-300 bg-white px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10"
+          className="h-11 w-full rounded-field border border-base-300 bg-white px-4 text-sm text-base-content focus:outline-2 focus:outline-offset-2 focus:outline-[#fdcfca]"
         >
           {roster.map((c) => (
             <option key={c.id} value={c.id}>

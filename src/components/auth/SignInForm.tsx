@@ -27,14 +27,14 @@ export default function SignInForm() {
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-500 text-sm font-bold text-white">
             B&amp;C
           </span>
-          <span className="text-lg font-bold text-gray-900">
+          <span className="text-lg font-bold text-base-content">
             Beauty<span className="text-brand-500">AndCo</span>
           </span>
         </Link>
 
         <div className="mb-6">
-          <h1 className="mb-2 text-title-sm font-semibold text-gray-800">Connexion</h1>
-          <p className="text-sm text-gray-500">
+          <h1 className="mb-2 text-title-sm font-semibold text-base-content">Connexion</h1>
+          <p className="text-sm text-base-content/60">
             Saisissez votre adresse e-mail et votre mot de passe pour accéder au
             back-office.
           </p>
@@ -92,7 +92,7 @@ export default function SignInForm() {
               />
               <Link
                 href="/forgot-password"
-                className="text-sm text-brand-600 hover:text-brand-700"
+                className="text-sm text-brand-600 hover:text-secondary"
               >
                 Mot de passe oublié&nbsp;?
               </Link>
@@ -104,7 +104,7 @@ export default function SignInForm() {
           </div>
         </form>
 
-        <p className="mt-6 text-theme-xs text-gray-400">
+        <p className="mt-6 text-xs text-base-content/45">
           Démonstration front-end — données fictives, aucune authentification
           réelle. « Se connecter » ouvre le tableau de bord.
         </p>

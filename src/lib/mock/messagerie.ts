@@ -92,7 +92,7 @@ export const smsOutboundAvailable = false;
 export const conversations: Conversation[] = [
   {
     id: "c-awa",
-    name: "Awa Diop",
+    name: "Awa Sarr",
     phone: "+221 77 123 45 67",
     salon: "almadies",
     clientId: "c01",
@@ -120,7 +120,7 @@ export const conversations: Conversation[] = [
   },
   {
     id: "c-aicha",
-    name: "Aïcha Ba",
+    name: "Bineta Diagne",
     phone: "+221 76 402 19 88",
     salon: "almadies",
     clientId: "c04",
@@ -140,7 +140,7 @@ export const conversations: Conversation[] = [
         channel: "sms",
         direction: "out",
         at: "2026-09-03T09:34",
-        text: "Oui Aïcha, la pose de cils est disponible aux Almadies à partir de 20.000 FCFA.",
+        text: "Oui Bineta, la pose de cils est disponible aux Almadies à partir de 20.000 FCFA.",
         status: "failed",
       },
     ],
@@ -158,7 +158,7 @@ export const conversations: Conversation[] = [
   },
   {
     id: "c-sokhna",
-    name: "Sokhna Mbaye",
+    name: "Sokhna Ndiaye",
     phone: "+221 77 401 88 52",
     salon: "seaplaza",
     channels: ["chat"],
@@ -192,7 +192,7 @@ export const conversations: Conversation[] = [
   },
   {
     id: "c-marieme",
-    name: "Marième Sow",
+    name: "Coumba Thiam",
     phone: "+221 76 555 21 09",
     salon: "almadies",
     clientId: "c03",
@@ -204,7 +204,7 @@ export const conversations: Conversation[] = [
         channel: "whatsapp",
         direction: "out",
         at: "2026-09-02T09:15",
-        text: "Bonjour Marième, votre rendez-vous manucure de demain 12h aux Almadies est bien confirmé.",
+        text: "Bonjour Coumba, votre rendez-vous manucure de demain 12h aux Almadies est bien confirmé.",
         status: "read",
       },
       {
@@ -227,7 +227,7 @@ export const conversations: Conversation[] = [
   },
   {
     id: "c-fatou",
-    name: "Fatou Ndiaye",
+    name: "Fatou Camara",
     phone: "+221 77 908 33 21",
     salon: "seaplaza",
     channels: ["sms", "call"],
@@ -247,7 +247,7 @@ export const conversations: Conversation[] = [
   },
   {
     id: "c-ndeye",
-    name: "Ndèye Fall",
+    name: "Mariam Kane",
     phone: "+221 76 220 47 63",
     salon: "almadies",
     channels: ["call", "whatsapp"],

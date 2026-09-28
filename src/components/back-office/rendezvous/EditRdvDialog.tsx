@@ -9,7 +9,7 @@ import { prestationSeeds, prestationsForSalon, serviceSeeds, type Prestation } f
 import {
   durationLabel,
   fcfa,
-  isStaffFreeForWindow,
+  availablePractitioners,
   posteTypeForCategory,
   timeToMinutes,
   type RdvDetail,
@@ -35,7 +35,7 @@ const categoryLabel = (serviceId: string | null) =>
   serviceSeeds.find((s) => s.id === serviceId)?.name ?? "Autres prestations";
 
 const field =
-  "h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-theme-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10";
+  "h-10 w-full rounded-field border border-base-300 bg-white px-3 text-sm text-base-content focus:outline-2 focus:outline-offset-2 focus:outline-[#fdcfca]";
 
 function useGroupedPrestations(salon: SalonId) {
   return useMemo(() => {
@@ -93,13 +93,21 @@ function LineRow({
 
   const save = () => {
     if (!chosen) return;
-    const names = [staff, secondStaff].filter((n): n is string => Boolean(n));
-    const startMin = timeToMinutes(start);
-    const conflict = names.find(
-      (name) => !isStaffFreeForWindow(rdvs, name, date, startMin, chosen.durationMin, rdvId),
-    );
+    // Praticiennes libres sur la nouvelle fenêtre (compétentes, présentes,
+    // sans autre rendez-vous — celui-ci exclu). « Automatique » prend la
+    // première ; une praticienne choisie doit y figurer.
+    const free = availablePractitioners(rdvs, chosen.id, salon, date, timeToMinutes(start), chosen.durationMin, {
+      data: planningData,
+      excludeRdvId: rdvId,
+    });
+    const resolved = staff ?? free[0] ?? null;
+    if (!resolved) {
+      setError("Aucune praticienne compétente n'est libre sur ce créneau — choisissez un autre horaire.");
+      return;
+    }
+    const conflict = [resolved, secondStaff].find((n) => n && !free.includes(n));
     if (conflict) {
-      setError(`${conflict} a déjà un rendez-vous sur ce créneau.`);
+      setError(`${conflict} n'est pas disponible sur ce créneau (absente, hors horaires ou déjà prise).`);
       return;
     }
     setError(null);
@@ -111,15 +119,16 @@ function LineRow({
       durationMin: chosen.durationMin,
       price: chosen.priceFcfa,
       posteType: posteTypeForCategory(category),
-      staff,
+      staff: resolved,
       secondStaff,
       start,
       beneficiaryName,
     });
+    setStaff(resolved);
   };
 
   return (
-    <div className="space-y-2 rounded-xl border border-gray-200 p-3">
+    <div className="space-y-2 rounded-xl border border-base-300 p-3">
       <div className="grid grid-cols-2 gap-2">
         <select
           value={serviceId}
@@ -163,7 +172,7 @@ function LineRow({
         }}
         className={field}
       >
-        <option value="__any__">Première praticienne disponible</option>
+        <option value="__any__">Automatique — selon les disponibilités</option>
         {staffOptions.map((m) => (
           <option key={m.id} value={fullName(m)}>
             {fullName(m)}
@@ -184,13 +193,13 @@ function LineRow({
           ))}
         </select>
       )}
-      {error && <p className="text-theme-xs text-error-600">{error}</p>}
+      {error && <p className="text-xs text-error-600">{error}</p>}
       <div className="flex items-center gap-2 pt-1">
         <button
           type="button"
           disabled={!dirty || !chosen}
           onClick={save}
-          className={`${btnPrimary} !px-3 !py-1.5 text-theme-xs`}
+          className={`${btnPrimary} !px-3 !py-1.5 text-xs`}
         >
           Enregistrer
         </button>
@@ -198,7 +207,7 @@ function LineRow({
           <button
             type="button"
             onClick={onRemove}
-            className="ml-auto rounded-lg px-2.5 py-1.5 text-theme-xs font-medium text-error-600 hover:bg-error-50"
+            className="ml-auto rounded-lg px-2.5 py-1.5 text-xs font-medium text-error-600 hover:bg-error-50"
           >
             Retirer
           </button>
@@ -211,11 +220,15 @@ function LineRow({
 function AddLineForm({
   salon,
   date,
+  rdvs,
+  rdvId,
   planningData,
   onAdd,
 }: {
   salon: SalonId;
   date: string;
+  rdvs: RdvDetail[];
+  rdvId: string;
   planningData?: PlanningData;
   onAdd: (line: RdvPrestation) => void;
 }) {
@@ -224,12 +237,27 @@ function AddLineForm({
   const [start, setStart] = useState("09:00");
   const [staff, setStaff] = useState<string | null>(null);
   const [beneficiaryName, setBeneficiaryName] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   const chosen = list.find((p) => p.id === serviceId) ?? null;
   const staffOptions = chosen ? presentPractitionersForPrestation(chosen.id, salon, date, planningData) : [];
 
   const add = () => {
     if (!chosen) return;
+    const free = availablePractitioners(rdvs, chosen.id, salon, date, timeToMinutes(start), chosen.durationMin, {
+      data: planningData,
+      excludeRdvId: rdvId,
+    });
+    const resolved = staff ?? free[0] ?? null;
+    if (!resolved || !free.includes(resolved)) {
+      setError(
+        resolved
+          ? `${resolved} n'est pas disponible sur ce créneau (absente, hors horaires ou déjà prise).`
+          : "Aucune praticienne compétente n'est libre sur ce créneau — choisissez un autre horaire.",
+      );
+      return;
+    }
+    setError(null);
     const category = categoryLabel(chosen.serviceId);
     onAdd({
       id: newEditLineId(),
@@ -239,7 +267,7 @@ function AddLineForm({
       durationMin: chosen.durationMin,
       price: chosen.priceFcfa,
       posteType: posteTypeForCategory(category),
-      staff,
+      staff: resolved,
       start,
       beneficiaryName: beneficiaryName.trim() || "Nouvelle personne",
     });
@@ -249,7 +277,7 @@ function AddLineForm({
   };
 
   return (
-    <div className="space-y-2 rounded-xl border border-dashed border-gray-300 p-3">
+    <div className="space-y-2 rounded-xl border border-dashed border-base-300 p-3">
       <div className="grid grid-cols-2 gap-2">
         <select value={serviceId} onChange={(e) => (setServiceId(e.target.value), setStaff(null))} className={field}>
           <option value="">Choisir une prestation…</option>
@@ -279,7 +307,7 @@ function AddLineForm({
             onChange={(e) => setStaff(e.target.value === "__any__" ? null : e.target.value)}
             className={field}
           >
-            <option value="__any__">Première praticienne disponible</option>
+            <option value="__any__">Automatique — selon les disponibilités</option>
             {staffOptions.map((m) => (
               <option key={m.id} value={fullName(m)}>
                 {fullName(m)}
@@ -292,10 +320,11 @@ function AddLineForm({
         type="button"
         disabled={!chosen}
         onClick={add}
-        className={`${btnPrimary} !px-3 !py-1.5 text-theme-xs`}
+        className={`${btnPrimary} !px-3 !py-1.5 text-xs`}
       >
         + Ajouter cette prestation
       </button>
+      {error && <p className="text-xs text-error-600">{error}</p>}
     </div>
   );
 }
@@ -331,8 +360,8 @@ export default function EditRdvDialog({
   return (
     <Modal isOpen={open} onClose={onClose} showCloseButton={false} className="max-w-xl m-4">
       <div className="max-h-[80vh] overflow-y-auto p-6">
-        <h3 className="text-lg font-semibold text-gray-800">Modifier le rendez-vous</h3>
-        <p className="mt-1 text-theme-sm text-gray-500">
+        <h3 className="text-lg font-semibold text-base-content">Modifier le rendez-vous</h3>
+        <p className="mt-1 text-sm text-base-content/60">
           {detail.client.name} · {detail.ref}
         </p>
 
@@ -351,10 +380,17 @@ export default function EditRdvDialog({
               onRemove={() => onRemoveLine(p.id)}
             />
           ))}
-          <AddLineForm salon={salon} date={date} planningData={planningData} onAdd={onAddLine} />
+          <AddLineForm
+            salon={salon}
+            date={date}
+            rdvs={rdvs}
+            rdvId={detail.id}
+            planningData={planningData}
+            onAdd={onAddLine}
+          />
         </div>
 
-        <div className="mt-6 border-t border-gray-100 pt-5">
+        <div className="mt-6 border-t border-base-300 pt-5">
           {confirmCancel ? (
             <div className="space-y-3">
               <TextInput
@@ -371,7 +407,7 @@ export default function EditRdvDialog({
                     setConfirmCancel(false);
                     setReason("");
                   }}
-                  className="inline-flex items-center rounded-lg bg-error-600 px-4 py-2.5 text-theme-sm font-medium text-white hover:bg-error-700"
+                  className="inline-flex items-center rounded-lg bg-error-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-error-700"
                 >
                   Annuler le rendez-vous
                 </button>
@@ -384,14 +420,14 @@ export default function EditRdvDialog({
             <button
               type="button"
               onClick={() => setConfirmCancel(true)}
-              className="text-theme-sm font-medium text-error-600 hover:underline"
+              className="text-sm font-medium text-error-600 hover:underline"
             >
               Annuler ce rendez-vous
             </button>
           )}
         </div>
 
-        <div className="mt-6 flex items-center gap-2 border-t border-gray-100 pt-5">
+        <div className="mt-6 flex items-center gap-2 border-t border-base-300 pt-5">
           <button type="button" className={btnPrimary} onClick={onClose}>
             Terminé
           </button>

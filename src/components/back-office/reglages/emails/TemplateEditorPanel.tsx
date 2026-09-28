@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Dialog } from "@/components/ui/molecules/dialog";
+import { useMemo, useRef, useState } from "react";
 import { CheckLineIcon, CloseLineIcon, LockIcon, TrashBinIcon } from "@/icons";
 import {
   CUSTOM_TRIGGER,
@@ -43,17 +44,7 @@ export default function TemplateEditorPanel({
 
   const bodyRef = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
-    };
-  }, [onClose]);
+  // Échap, clic sur le fond et verrou de défilement : portés par le `Dialog` Radix.
 
   const title = existing ? existing.name : "Nouveau modèle";
 
@@ -101,32 +92,26 @@ export default function TemplateEditorPanel({
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex justify-end">
-      <div
-        className="absolute inset-0 bg-gray-900/40"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        className="relative flex h-full w-[560px] flex-col bg-white shadow-theme-lg"
-      >
+    <Dialog
+      open
+      variant="side"
+      onClose={onClose}
+      labelledBy="template-editor-title"
+      className="relative flex h-full max-w-[560px] flex-col"
+    >
         {/* en-tête */}
-        <div className="flex items-start justify-between gap-4 border-b border-gray-100 px-6 py-5">
+        <div className="flex items-start justify-between gap-4 border-b border-base-300 px-6 py-5">
           <div className="min-w-0">
-            <p className="text-theme-xs font-medium text-gray-400">
+            <p className="text-xs font-medium text-base-content/45">
               {existing ? "Modifier le modèle" : "Créer un modèle"}
             </p>
-            <h2 className="mt-0.5 truncate text-lg font-semibold text-gray-800">{title}</h2>
+            <h2 id="template-editor-title" className="mt-0.5 truncate text-lg font-semibold text-base-content">{title}</h2>
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Fermer"
-            className="-mr-1 rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-50 hover:text-gray-700"
+            className="-mr-1 rounded-lg p-1.5 text-base-content/45 transition hover:bg-base-200 hover:text-base-content/80"
           >
             <CloseLineIcon className="size-5" />
           </button>
@@ -135,8 +120,8 @@ export default function TemplateEditorPanel({
         {/* corps défilant */}
         <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
           {isSystem && (
-            <div className="flex items-start gap-2.5 rounded-xl bg-gray-50 px-4 py-3 text-theme-xs text-gray-600">
-              <LockIcon className="mt-0.5 size-4 shrink-0 text-gray-400" />
+            <div className="flex items-start gap-2.5 rounded-xl bg-base-200 px-4 py-3 text-xs text-base-content/70">
+              <LockIcon className="mt-0.5 size-4 shrink-0 text-base-content/45" />
               <span>
                 Modèle {templateKindLabel("system").toLowerCase()} : vous pouvez adapter
                 l&apos;objet et le texte, mais pas le renommer, le supprimer ni changer son
@@ -146,7 +131,7 @@ export default function TemplateEditorPanel({
           )}
 
           <div>
-            <label htmlFor="tpl-name" className="mb-1.5 block text-sm font-medium text-gray-800">
+            <label htmlFor="tpl-name" className="mb-1.5 block text-sm font-medium text-base-content">
               Nom du modèle
             </label>
             <input
@@ -161,7 +146,7 @@ export default function TemplateEditorPanel({
           </div>
 
           <div>
-            <label htmlFor="tpl-subject" className="mb-1.5 block text-sm font-medium text-gray-800">
+            <label htmlFor="tpl-subject" className="mb-1.5 block text-sm font-medium text-base-content">
               Objet
             </label>
             <input
@@ -175,7 +160,7 @@ export default function TemplateEditorPanel({
           </div>
 
           <div>
-            <label htmlFor="tpl-body" className="mb-1.5 block text-sm font-medium text-gray-800">
+            <label htmlFor="tpl-body" className="mb-1.5 block text-sm font-medium text-base-content">
               Corps du message
             </label>
             <textarea
@@ -185,12 +170,12 @@ export default function TemplateEditorPanel({
               onChange={(e) => setBody(e.target.value)}
               rows={12}
               placeholder="Texte de l'email…"
-              className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm leading-relaxed text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10"
+              className="w-full rounded-field border border-base-300 bg-white px-4 py-3 text-sm leading-relaxed text-base-content placeholder:text-base-content/40 focus:outline-2 focus:outline-offset-2 focus:outline-[#fdcfca]"
             />
           </div>
 
           <div>
-            <p className="mb-2 text-theme-xs font-medium text-gray-500">
+            <p className="mb-2 text-xs font-medium text-base-content/60">
               Variables disponibles — cliquez pour insérer dans le corps du message.
             </p>
             <div className="flex flex-wrap gap-2">
@@ -200,7 +185,7 @@ export default function TemplateEditorPanel({
                   type="button"
                   onClick={() => insertVariable(v.token)}
                   title={v.label}
-                  className="rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1 font-mono text-theme-xs text-gray-600 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-600"
+                  className="rounded-lg border border-base-300 bg-base-200 px-2.5 py-1 font-mono text-xs text-base-content/70 transition hover:border-brand-300 hover:bg-accent hover:text-brand-600"
                 >
                   {v.token}
                 </button>
@@ -210,12 +195,12 @@ export default function TemplateEditorPanel({
         </div>
 
         {/* pied */}
-        <div className="flex items-center justify-between gap-3 border-t border-gray-100 px-6 py-4">
+        <div className="flex items-center justify-between gap-3 border-t border-base-300 px-6 py-4">
           <div>
             {existing && !isSystem && (
               confirmDelete ? (
-                <span className="flex items-center gap-2 text-theme-xs">
-                  <span className="text-gray-500">Supprimer&nbsp;?</span>
+                <span className="flex items-center gap-2 text-xs">
+                  <span className="text-base-content/60">Supprimer&nbsp;?</span>
                   <button
                     type="button"
                     onClick={() => onDelete(existing.id)}
@@ -226,7 +211,7 @@ export default function TemplateEditorPanel({
                   <button
                     type="button"
                     onClick={() => setConfirmDelete(false)}
-                    className="font-medium text-gray-500 hover:underline"
+                    className="font-medium text-base-content/60 hover:underline"
                   >
                     Non
                   </button>
@@ -235,7 +220,7 @@ export default function TemplateEditorPanel({
                 <button
                   type="button"
                   onClick={() => setConfirmDelete(true)}
-                  className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-theme-xs font-medium text-gray-500 transition hover:bg-error-50 hover:text-error-600"
+                  className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-base-content/60 transition hover:bg-error-50 hover:text-error-600"
                 >
                   <TrashBinIcon className="size-4" />
                   Supprimer
@@ -259,7 +244,6 @@ export default function TemplateEditorPanel({
             </button>
           </div>
         </div>
-      </div>
-    </div>
+    </Dialog>
   );
 }

@@ -52,7 +52,7 @@ export default function Rapports() {
         actions={
           <div className="flex flex-wrap items-center gap-x-6 gap-y-3 print:hidden">
             <div className="flex items-center gap-2">
-              <span className="text-theme-xs font-medium uppercase tracking-wide text-gray-400">
+              <span className="text-xs font-medium uppercase tracking-wide text-base-content/45">
                 Salon
               </span>
               <SegmentedControl
@@ -64,7 +64,7 @@ export default function Rapports() {
               />
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-theme-xs font-medium uppercase tracking-wide text-gray-400">
+              <span className="text-xs font-medium uppercase tracking-wide text-base-content/45">
                 Période
               </span>
               <PeriodFilter value={period} onChange={setPeriod} />
@@ -85,10 +85,10 @@ export default function Rapports() {
 
         <div className="space-y-4">
           <div>
-            <p className="hidden text-theme-xs text-gray-500 print:block">
+            <p className="hidden text-xs text-base-content/60 print:block">
               Beauty &amp; Co — édité le {today.label}
             </p>
-            <h2 className="text-lg font-semibold text-gray-800">{report.title}</h2>
+            <h2 className="text-lg font-semibold text-base-content">{report.title}</h2>
           </div>
           <ReportTable report={report} />
         </div>

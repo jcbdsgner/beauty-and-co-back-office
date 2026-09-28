@@ -23,24 +23,24 @@ export default function ResetPasswordForm() {
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-500 text-sm font-bold text-white">
             B&amp;C
           </span>
-          <span className="text-lg font-bold text-gray-900">
+          <span className="text-lg font-bold text-base-content">
             Beauty<span className="text-brand-500">AndCo</span>
           </span>
         </Link>
 
         <Link
           href="/signin"
-          className="mb-4 inline-flex items-center gap-1 text-sm text-gray-500 transition-colors hover:text-gray-700"
+          className="mb-4 inline-flex items-center gap-1 text-sm text-base-content/60 transition-colors hover:text-base-content/80"
         >
           <ChevronLeftIcon />
           Retour à la connexion
         </Link>
 
         <div className="mb-6">
-          <h1 className="mb-2 text-title-sm font-semibold text-gray-800">
+          <h1 className="mb-2 text-title-sm font-semibold text-base-content">
             Nouveau mot de passe
           </h1>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-base-content/60">
             Choisissez un mot de passe que vous n&apos;utilisez nulle part
             ailleurs.
           </p>

@@ -44,9 +44,9 @@ export default function HoursEditor({
         const d = hours[w];
         const err = dayHasError(d);
         return (
-          <li key={w} className="rounded-xl border border-gray-200 px-4 py-3">
+          <li key={w} className="rounded-xl border border-base-300 px-4 py-3">
             <div className="flex items-center gap-4">
-              <span className="w-24 shrink-0 text-sm font-medium text-gray-800">
+              <span className="w-24 shrink-0 text-sm font-medium text-base-content">
                 {WEEKDAY_LABELS[w]}
               </span>
               <Toggle
@@ -55,9 +55,9 @@ export default function HoursEditor({
                 aria-label={`${WEEKDAY_LABELS[w]} — ${d.closed ? "fermé" : "ouvert"}`}
               />
               {d.closed ? (
-                <span className="text-theme-sm text-gray-400">Fermé</span>
+                <span className="text-sm text-base-content/45">Fermé</span>
               ) : (
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-theme-sm text-gray-600">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-base-content/70">
                   <input
                     type="time"
                     aria-label={`${WEEKDAY_LABELS[w]} — ouverture`}
@@ -75,7 +75,7 @@ export default function HoursEditor({
                   />
                   {d.breakStart != null && d.breakEnd != null ? (
                     <span className="flex items-center gap-2">
-                      <span className="text-gray-400">coupure</span>
+                      <span className="text-base-content/45">coupure</span>
                       <input
                         type="time"
                         aria-label={`${WEEKDAY_LABELS[w]} — début de coupure`}
@@ -96,7 +96,7 @@ export default function HoursEditor({
                         onClick={() =>
                           setDay(w, { closed: false, open: d.open, close: d.close })
                         }
-                        className="text-theme-xs font-medium text-gray-400 hover:text-error-600"
+                        className="text-xs font-medium text-base-content/45 hover:text-error-600"
                       >
                         Retirer
                       </button>
@@ -107,7 +107,7 @@ export default function HoursEditor({
                       onClick={() =>
                         setDay(w, { ...d, breakStart: "13:00", breakEnd: "14:00" })
                       }
-                      className="text-theme-xs font-medium text-brand-600 hover:underline"
+                      className="text-xs font-medium text-brand-600 hover:underline"
                     >
                       + Coupure déjeuner
                     </button>
@@ -116,7 +116,7 @@ export default function HoursEditor({
               )}
             </div>
             {err && (
-              <p className="mt-2 pl-28 text-theme-xs text-error-600">
+              <p className="mt-2 pl-28 text-xs text-error-600">
                 L&apos;heure de fermeture doit suivre l&apos;heure d&apos;ouverture.
               </p>
             )}

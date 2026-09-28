@@ -44,10 +44,10 @@ function Row({
   const label = (id: string) => prestations.find((p) => p.id === id)?.label ?? id;
 
   return (
-    <li className="rounded-xl border border-gray-200 px-4 py-3.5">
+    <li className="rounded-xl border border-base-300 px-4 py-3.5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-gray-800">
+          <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-base-content">
             {contactName(purchase.buyer)}
             {used && (
               <Badge size="sm" color="light">
@@ -55,13 +55,13 @@ function Row({
               </Badge>
             )}
           </p>
-          <p className="mt-0.5 text-theme-xs text-gray-500">
+          <p className="mt-0.5 text-xs text-base-content/60">
             {pack.label} · acheté le {frLongDate(purchase.purchasedAt)} ·{" "}
             {pack.prestationIds.length - remaining.length}/{pack.prestationIds.length} consommée
             {pack.prestationIds.length > 1 ? "s" : ""}
           </p>
           {remaining.length > 0 && (
-            <p className="mt-1 text-theme-xs text-gray-500">
+            <p className="mt-1 text-xs text-base-content/60">
               Reste : {remaining.map(label).join(", ")}
             </p>
           )}
@@ -71,7 +71,7 @@ function Row({
           <button
             type="button"
             onClick={() => { setOpen((v) => !v); setChecked([]); }}
-            className="shrink-0 rounded-lg px-2.5 py-1.5 text-theme-xs font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+            className="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium text-base-content/70 hover:bg-base-200 hover:text-base-content"
           >
             Consommer une prestation
           </button>
@@ -79,14 +79,14 @@ function Row({
       </div>
 
       {open && !used && (
-        <div className="mt-3 rounded-xl bg-gray-50 p-4">
-          <p className="text-theme-xs text-gray-500">
+        <div className="mt-3 rounded-xl bg-base-200 p-4">
+          <p className="text-xs text-base-content/60">
             À la confirmation d&apos;une visite. La consommation est définitive.
           </p>
           <ul className="mt-2 space-y-1.5">
             {remaining.map((id) => (
               <li key={id}>
-                <label className="flex items-center gap-2 text-theme-sm text-gray-700">
+                <label className="flex items-center gap-2 text-sm text-base-content/80">
                   <input
                     type="checkbox"
                     checked={checked.includes(id)}
@@ -95,7 +95,7 @@ function Row({
                         c.includes(id) ? c.filter((x) => x !== id) : [...c, id],
                       )
                     }
-                    className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500/20"
+                    className="checkbox checkbox-primary checkbox-sm"
                   />
                   {label(id)}
                 </label>
@@ -196,10 +196,10 @@ export default function PackSalesPanel({
         </ul>
       )}
 
-      <div className="mt-6 border-t border-gray-100 pt-6">
+      <div className="mt-6 border-t border-base-300 pt-6">
         {adding ? (
           <div className="space-y-4">
-            <h3 className="text-theme-sm font-semibold text-gray-800">Enregistrer une vente</h3>
+            <h3 className="text-sm font-semibold text-base-content">Enregistrer une vente</h3>
             <ContactField value={buyer} onChange={setBuyer} label="Acheteur" />
             <SelectField
               label="Pack"

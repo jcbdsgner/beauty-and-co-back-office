@@ -1,53 +1,51 @@
 "use client";
 
 import Link from "next/link";
-import { FileBarChart2, History, Package, Star } from "lucide-react";
+import { ChevronRight, FileBarChart2, History, Package, Star } from "lucide-react";
 
-// Widget « Accès Rapides » du tableau de bord — ajouté le 2026-09-21 sur le
-// node Figma 286:363 (voir CLAUDE.md « Refonte dashboard sur Figma »). Reprend
-// et absorbe les raccourcis de l'ancienne section « Autres écrans » (Rapports,
-// Satisfaction, Journal), rejointe ici par Stock, en grille 2×2 — le mockup
-// n'a pas de place pour la note de satisfaction ni les descriptions qui
-// accompagnaient ces cartes auparavant, volontairement laissées de côté.
-
-const SHORTCUTS: {
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
-  lines: string[];
-}[] = [
-  { href: "/rapports", icon: FileBarChart2, lines: ["Rapports", "d'activité"] },
-  { href: "/satisfaction", icon: Star, lines: ["Avis clients"] },
-  { href: "/stock", icon: Package, lines: ["Gestion des", "stocks"] },
-  { href: "/journal", icon: History, lines: ["Journal", "d'équipe"] },
+// « Autres écrans » : les écrans de consultation occasionnelle retirés de la
+// sidebar (Rapports, Avis clients, Journal) + Stock. Liste de liens sobre en
+// bas de page plutôt que de grandes tuiles au même poids que les décisions :
+// c'est de la navigation, pas du contenu du jour.
+const SHORTCUTS = [
+  { href: "/rapports", icon: FileBarChart2, label: "Rapports d'activité", hint: "Composer un rapport par salon, praticienne ou période" },
+  { href: "/satisfaction", icon: Star, label: "Avis clients", hint: "Note moyenne et derniers commentaires" },
+  { href: "/stock", icon: Package, label: "Stock", hint: "Niveaux, seuils et réassort" },
+  { href: "/journal", icon: History, label: "Journal d'équipe", hint: "Qui a fait quoi, et quand" },
 ];
 
 export default function AccesRapides() {
   return (
-    <div className="rounded-xl border border-[#efe9e8] bg-white p-6 shadow-[var(--shadow-card)]">
-      <h3 className="text-lg font-semibold text-[#2d2626]">Accès Rapides</h3>
-      <div className="mt-4 grid grid-cols-2 gap-3">
+    <nav
+      aria-labelledby="shortcuts-title"
+      className="rounded-box border border-base-300 bg-base-100 pt-5 pb-2"
+    >
+      <h2 id="shortcuts-title" className="px-6 text-[20px] font-semibold text-base-content">
+        Autres écrans
+      </h2>
+      <ul className="mt-2">
         {SHORTCUTS.map((s) => {
           const Icon = s.icon;
           return (
-            <Link
-              key={s.href}
-              href={s.href}
-              className="group flex flex-col gap-2 rounded-lg border border-[#efe9e8] bg-[#f9f8f8] p-4 transition-colors hover:border-brand-200 hover:bg-brand-50/60"
-            >
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#efe9e8] bg-white text-brand-600">
-                <Icon className="h-3.5 w-3.5" />
-              </span>
-              <span className="text-[12px] font-semibold leading-4 text-[#2d2626] group-hover:text-brand-700">
-                {s.lines.map((line) => (
-                  <span key={line} className="block">
-                    {line}
-                  </span>
-                ))}
-              </span>
-            </Link>
+            <li key={s.href}>
+              <Link
+                href={s.href}
+                className="group flex items-center gap-3.5 px-6 py-3 transition-colors hover:bg-base-200 focus-visible:bg-base-200 focus-visible:outline-none"
+              >
+                <Icon className="size-[18px] shrink-0 text-brand-600" aria-hidden />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[15px] font-medium text-base-content">{s.label}</span>
+                  <span className="block truncate text-sm text-base-content/60">{s.hint}</span>
+                </span>
+                <ChevronRight
+                  className="size-4 shrink-0 text-base-content/30 transition-colors group-hover:text-base-content/60"
+                  aria-hidden
+                />
+              </Link>
+            </li>
           );
         })}
-      </div>
-    </div>
+      </ul>
+    </nav>
   );
 }

@@ -1,43 +1,42 @@
 "use client";
 
-import { popularServices, type SalonScope } from "@/lib/mock/beautyandco";
+import { groupThousands, popularServices, type SalonScope } from "@/lib/mock/beautyandco";
 
-// Restylé sur le Figma node 286:249 : bandeau titre + sous-titre + pastille
-// « Tendances du mois », barres pleine largeur (pas de rang numéroté ni de
-// compteur brut — juste le nom et le %, cf. mock). Données réelles inchangées
-// (`popularServices(scope)`), seule la mise en forme change.
+// Prestations les plus demandées sur 30 jours glissants (suit le filtre
+// salon). Repère de fond, posé en bas de l'accueil : il ne change pas d'une
+// heure à l'autre et n'appelle aucun geste immédiat.
 export default function PopularServices({ scope }: { scope: SalonScope }) {
   const { items } = popularServices(scope);
+  const max = Math.max(...items.map((s) => s.count));
 
   return (
-    <div className="rounded-xl border border-[#efe9e8] bg-white p-6 shadow-[0px_2px_8px_-2px_rgba(90,66,66,0.04),0px_1px_3px_0px_rgba(90,66,66,0.02)]">
-      <div>
-        <h3 className="text-[18px] font-semibold text-[#2d2626]">Prestations Populaires</h3>
-        <p className="mt-0.5 text-[13px] text-[#6a6060]">
-          Répartition des demandes sur les 30 derniers jours
-        </p>
-      </div>
+    <section
+      aria-labelledby="popular-title"
+      className="rounded-box border border-base-300 bg-base-100 px-6 pt-5 pb-6"
+    >
+      <header className="flex items-baseline justify-between gap-3">
+        <h2 id="popular-title" className="text-[20px] font-semibold text-base-content">
+          Prestations les plus demandées
+        </h2>
+        <span className="text-sm text-base-content/60">30 derniers jours</span>
+      </header>
 
-      <div className="mt-5 flex flex-col gap-4">
+      <ol className="mt-4 space-y-3.5">
         {items.map((service) => (
-          <div key={service.name}>
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-[12px] font-semibold tracking-wide text-[#2d2626]">
-                {service.name}
-              </span>
-              <span className="shrink-0 text-[12px] font-bold tracking-wide text-[#5a4242]">
-                {service.share}&nbsp;%
-              </span>
-            </div>
-            <div className="mt-1.5 h-2.5 overflow-hidden rounded-full bg-[#eee]">
-              <div
-                className="h-full rounded-full bg-brand-500"
-                style={{ width: `${service.share}%` }}
+          <li key={service.name} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5">
+            <span className="truncate text-[15px] text-base-content">{service.name}</span>
+            <span className="text-sm tabular-nums text-base-content/60">
+              {groupThousands(service.count)} réservations · {service.share}&nbsp;%
+            </span>
+            <span aria-hidden className="col-span-2 h-1.5 overflow-hidden rounded-full bg-base-200">
+              <span
+                className="block h-full rounded-full bg-brand-500"
+                style={{ width: `${(service.count / max) * 100}%` }}
               />
-            </div>
-          </div>
+            </span>
+          </li>
         ))}
-      </div>
-    </div>
+      </ol>
+    </section>
   );
 }

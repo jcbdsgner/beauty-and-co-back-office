@@ -44,33 +44,33 @@ function PayControl({
 }) {
   const [cycles, setCycles] = useState(1);
   return (
-    <div className="mt-3 rounded-xl bg-gray-50 p-4">
-      <p className="text-theme-sm font-medium text-gray-800">
+    <div className="mt-3 rounded-xl bg-base-200 p-4">
+      <p className="text-sm font-medium text-base-content">
         Encaisser {cycles} cycle{cycles > 1 ? "s" : ""}
       </p>
       <div className="mt-2 flex items-center gap-3">
-        <div className="inline-flex items-center rounded-lg border border-gray-300 bg-white">
+        <div className="inline-flex items-center rounded-lg border border-base-300 bg-white">
           <button
             type="button"
             onClick={() => setCycles((c) => Math.max(MIN_CYCLES, c - 1))}
-            className="px-3 py-1.5 text-gray-600 hover:text-gray-900 disabled:opacity-40"
+            className="px-3 py-1.5 text-base-content/70 hover:text-base-content disabled:opacity-40"
             disabled={cycles <= MIN_CYCLES}
             aria-label="Un cycle de moins"
           >
             −
           </button>
-          <span className="w-10 text-center text-theme-sm font-medium tabular-nums">{cycles}</span>
+          <span className="w-10 text-center text-sm font-medium tabular-nums">{cycles}</span>
           <button
             type="button"
             onClick={() => setCycles((c) => Math.min(MAX_CYCLES, c + 1))}
-            className="px-3 py-1.5 text-gray-600 hover:text-gray-900 disabled:opacity-40"
+            className="px-3 py-1.5 text-base-content/70 hover:text-base-content disabled:opacity-40"
             disabled={cycles >= MAX_CYCLES}
             aria-label="Un cycle de plus"
           >
             +
           </button>
         </div>
-        <span className="text-theme-sm text-gray-600">
+        <span className="text-sm text-base-content/70">
           {fcfa(amountDueForCycles(forfait, cycles))} · prochaine échéance le{" "}
           {frLongDate(estimatePrepaidDueDate(cycles, cycleDays))}
         </span>
@@ -107,25 +107,25 @@ function Row({
   const total = getForfaitPrestations(forfait);
 
   return (
-    <li className="rounded-xl border border-gray-200 px-4 py-3.5">
+    <li className="rounded-xl border border-base-300 px-4 py-3.5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-gray-800">
+          <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-base-content">
             {contactName(ab.subscriber)}
             <Badge size="sm" color={meta.tone}>
               {meta.label}
             </Badge>
           </p>
-          <p className="mt-0.5 text-theme-xs text-gray-500">
+          <p className="mt-0.5 text-xs text-base-content/60">
             {forfait.label} · {fcfa(forfait.priceFcfa)} / {forfait.cycleLabel.toLowerCase()}
           </p>
           {ab.beneficiary && (
-            <p className="mt-0.5 text-theme-xs text-gray-500">
+            <p className="mt-0.5 text-xs text-base-content/60">
               Bénéficiaire : {contactName(ab.beneficiary)}
             </p>
           )}
           {status !== "revoked" && (
-            <p className="mt-1 text-theme-xs text-gray-500">
+            <p className="mt-1 text-xs text-base-content/60">
               Prochaine échéance le {frLongDate(computeNextDueDate(ab, forfait.cycleDays))} ·{" "}
               {remaining.length}/{total.length} prestation{total.length > 1 ? "s" : ""} disponible
               {remaining.length > 1 ? "s" : ""} ce cycle
@@ -138,13 +138,13 @@ function Row({
             <button
               type="button"
               onClick={() => setOpen(open === "pay" ? null : "pay")}
-              className="rounded-lg px-2.5 py-1.5 text-theme-xs font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+              className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-base-content/70 hover:bg-base-200 hover:text-base-content"
             >
               Marquer payé
             </button>
             {open === "revoke" ? (
-              <span className="flex items-center gap-2 text-theme-xs">
-                <span className="text-gray-500">Révoquer&nbsp;?</span>
+              <span className="flex items-center gap-2 text-xs">
+                <span className="text-base-content/60">Révoquer&nbsp;?</span>
                 <button
                   type="button"
                   onClick={() => { onRevoke(); setOpen(null); }}
@@ -155,7 +155,7 @@ function Row({
                 <button
                   type="button"
                   onClick={() => setOpen(null)}
-                  className="font-medium text-gray-500 hover:underline"
+                  className="font-medium text-base-content/60 hover:underline"
                 >
                   Non
                 </button>
@@ -164,7 +164,7 @@ function Row({
               <button
                 type="button"
                 onClick={() => setOpen("revoke")}
-                className="rounded-lg px-2.5 py-1.5 text-theme-xs font-medium text-gray-600 hover:bg-error-50 hover:text-error-600"
+                className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-base-content/70 hover:bg-error-50 hover:text-error-600"
               >
                 Révoquer
               </button>
@@ -281,7 +281,7 @@ export default function AbonnementsPanel({
 
       {revoked.length > 0 && (
         <div className="mt-6">
-          <p className="mb-2 text-theme-xs font-medium uppercase tracking-wide text-gray-400">
+          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-base-content/45">
             Abonnements révoqués
           </p>
           <ul className="space-y-2">
@@ -290,7 +290,7 @@ export default function AbonnementsPanel({
               return (
                 <li
                   key={ab.id}
-                  className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-theme-sm text-gray-500"
+                  className="rounded-xl border border-base-300 bg-base-200 px-4 py-3 text-sm text-base-content/60"
                 >
                   {contactName(ab.subscriber)} · {f?.label ?? ab.forfaitId} · révoqué le{" "}
                   {ab.revokedAt ? frLongDate(ab.revokedAt) : "—"}
@@ -301,10 +301,10 @@ export default function AbonnementsPanel({
         </div>
       )}
 
-      <div className="mt-6 border-t border-gray-100 pt-6">
+      <div className="mt-6 border-t border-base-300 pt-6">
         {adding ? (
           <div className="space-y-4">
-            <h3 className="text-theme-sm font-semibold text-gray-800">Souscrire un forfait</h3>
+            <h3 className="text-sm font-semibold text-base-content">Souscrire un forfait</h3>
             <ContactField value={subscriber} onChange={setSubscriber} label="Souscripteur" />
             <SelectField
               label="Forfait"

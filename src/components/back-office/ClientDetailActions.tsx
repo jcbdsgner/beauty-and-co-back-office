@@ -21,9 +21,9 @@ export default function ClientDetailActions({ clientName, noun }: Props) {
 
   if (confirming) {
     return (
-      <div className="flex items-center gap-2 text-theme-xs">
-        <span className="text-gray-500">
-          Supprimer <span className="font-medium text-gray-700">{clientName}</span> ?
+      <div className="flex items-center gap-2 text-xs">
+        <span className="text-base-content/60">
+          Supprimer <span className="font-medium text-base-content/80">{clientName}</span> ?
         </span>
         <button
           type="button"
@@ -35,7 +35,7 @@ export default function ClientDetailActions({ clientName, noun }: Props) {
         <button
           type="button"
           onClick={() => setConfirming(false)}
-          className="font-medium text-gray-500 hover:underline"
+          className="font-medium text-base-content/60 hover:underline"
         >
           Annuler
         </button>
@@ -47,7 +47,7 @@ export default function ClientDetailActions({ clientName, noun }: Props) {
     <button
       type="button"
       onClick={() => setConfirming(true)}
-      className="inline-flex items-center gap-1.5 text-theme-xs font-medium text-gray-400 transition-colors hover:text-error-600"
+      className="inline-flex items-center gap-1.5 text-xs font-medium text-base-content/45 transition-colors hover:text-error-600"
     >
       <TrashBinIcon className="h-3.5 w-3.5" />
       Supprimer {noun === "client" ? "le client" : "la cliente"}

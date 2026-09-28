@@ -66,7 +66,7 @@ export default function MemberActivityPanel({
       // automatiquement dans Planning, on y renvoie la propriétaire.
       setNotice({
         text: "Congé enregistré. Vérifiez la couverture dans Planning.",
-        href: "/equipe?vue=planning",
+        href: "/equipe/planning",
         linkLabel: "Ouvrir le Planning",
       });
     }
@@ -83,7 +83,7 @@ export default function MemberActivityPanel({
       />
 
       {notice && (
-        <p className="flex flex-wrap items-center gap-2 rounded-lg bg-gray-900 px-4 py-2.5 text-theme-sm font-medium text-white">
+        <p className="flex flex-wrap items-center gap-2 rounded-box bg-neutral px-5 py-3 text-[15px] font-medium text-neutral-content">
           {notice.text}
           {notice.href && notice.linkLabel && (
             <Link href={notice.href} className="underline hover:no-underline">
@@ -102,20 +102,20 @@ export default function MemberActivityPanel({
         description="Charge de rendez-vous programmée pour cette collaboratrice."
       >
         {upcoming === 0 ? (
-          <p className="text-theme-sm text-gray-500">
+          <p className="text-sm text-base-content/60">
             {isPractitioner
               ? "Aucun rendez-vous programmé pour le moment."
               : "Ce poste ne prend pas de rendez-vous."}
           </p>
         ) : (
-          <p className="text-theme-sm text-gray-700">
-            <span className="text-title-sm font-bold text-gray-800">{upcoming}</span>{" "}
+          <p className="text-sm text-base-content/80">
+            <span className="text-title-sm font-bold text-base-content">{upcoming}</span>{" "}
             rendez-vous à venir.
           </p>
         )}
         <Link
           href="/rendez-vous"
-          className="mt-4 inline-block text-theme-sm font-medium text-brand-600 hover:text-brand-700"
+          className="mt-4 inline-block text-sm font-medium text-brand-600 hover:text-secondary"
         >
           Ouvrir les rendez-vous →
         </Link>
@@ -142,7 +142,7 @@ function SatisfactionBlock({
   if (sat.count === 0) {
     return (
       <SectionCard title="Satisfaction client" description={description}>
-        <p className="text-theme-sm text-gray-500">
+        <p className="text-sm text-base-content/60">
           Pas encore d&apos;avis sur les {sat.windowLabel}.
         </p>
       </SectionCard>
@@ -157,25 +157,25 @@ function SatisfactionBlock({
     <SectionCard title="Satisfaction client" description={description}>
       {sat.lowSample ? (
         <div>
-          <p className="text-sm font-medium text-gray-800">
+          <p className="text-sm font-medium text-base-content">
             {sat.count} avis sur la période
           </p>
-          <p className="mt-0.5 text-theme-xs text-gray-500">
+          <p className="mt-0.5 text-xs text-base-content/60">
             Trop peu pour une moyenne fiable — lisez plutôt les commentaires.
           </p>
         </div>
       ) : (
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <span className="flex items-baseline gap-1.5">
-            <span className="text-title-sm font-bold leading-none text-gray-800">
+            <span className="text-title-sm font-bold leading-none text-base-content">
               {fr1(avg)}
             </span>
-            <span className="text-lg font-semibold text-gray-400">/ 5</span>
+            <span className="text-lg font-semibold text-base-content/45">/ 5</span>
           </span>
           <RatingStars value={avg} size="md" />
           {sat.trend != null && sat.trend !== 0 && (
             <span
-              className={`flex items-center gap-0.5 rounded-full px-2 py-0.5 text-theme-xs font-medium ${
+              className={`flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs font-medium ${
                 up ? "bg-success-50 text-success-600" : "bg-error-50 text-error-600"
               }`}
             >
@@ -184,7 +184,7 @@ function SatisfactionBlock({
               {fr1(Math.abs(sat.trend))} pt
             </span>
           )}
-          <span className="text-theme-xs text-gray-400">
+          <span className="text-xs text-base-content/45">
             sur {sat.count} avis · {sat.windowLabel}
           </span>
         </div>
@@ -196,17 +196,17 @@ function SatisfactionBlock({
             <li
               key={c.id}
               className={`rounded-xl border px-4 py-3 ${
-                c.rating <= 2 ? "border-error-200 bg-error-50/50" : "border-gray-200"
+                c.rating <= 2 ? "border-error-200 bg-error-50/50" : "border-base-300"
               }`}
             >
               <div className="flex items-center gap-2">
                 <RatingStars value={c.rating} size="sm" />
-                <span className="text-theme-xs font-medium text-gray-500">
+                <span className="text-xs font-medium text-base-content/60">
                   {c.rating}/5
                 </span>
               </div>
-              <p className="mt-1.5 text-theme-sm text-gray-700">«&nbsp;{c.comment}&nbsp;»</p>
-              <p className="mt-1.5 text-theme-xs text-gray-400">
+              <p className="mt-1.5 text-sm text-base-content/80">«&nbsp;{c.comment}&nbsp;»</p>
+              <p className="mt-1.5 text-xs text-base-content/45">
                 {c.client} · {c.service} · {frShortDate(c.date)}
               </p>
             </li>
@@ -216,7 +216,7 @@ function SatisfactionBlock({
 
       <Link
         href="/satisfaction"
-        className="mt-4 inline-block text-theme-sm font-medium text-brand-600 hover:text-brand-700"
+        className="mt-4 inline-block text-sm font-medium text-brand-600 hover:text-secondary"
       >
         Voir la satisfaction détaillée →
       </Link>

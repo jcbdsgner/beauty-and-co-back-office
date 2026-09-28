@@ -141,7 +141,9 @@ type StockSeed = {
 // réparti entre réserve / Almadies / Sea Plaza (répartition inventée — point-de-vente
 // ne suit qu'un total, sans détail par emplacement) ; `weekly` / `min` / `companyMin`
 // sont également inventés pour que les projections et seuils restent fonctionnels.
-// Kérastase = produit importé (leadDays 21) ; boissons = réappro local (leadDays 4).
+// Kérastase = produit importé (leadDays 21). Pas de boissons ici (2026-09-27) :
+// comme côté point-de-vente (ADR 0016), le bar ne se compte pas au verre — les
+// boissons sont une famille à part, sans stock (`boissonSeeds` de `./services`).
 const STOCK_SEEDS: StockSeed[] = [
   {
     productId: "nutritive-8hmns-serum-90ml", min: 3, companyMin: 7, leadDays: 21, weeksHistory: 8, seasonalPct: 100,
@@ -701,62 +703,6 @@ const STOCK_SEEDS: StockSeed[] = [
       reserve: { onHand: 10, weekly: 0 },
       almadies: { onHand: 18, weekly: 3 },
       seaplaza: { onHand: 6, weekly: 2 },
-    },
-  },
-  {
-    productId: "boisson-pure-glow", min: 12, companyMin: 28, leadDays: 4, weeksHistory: 8, seasonalPct: 100,
-    byLocation: {
-      reserve: { onHand: 12, weekly: 0 },
-      almadies: { onHand: 15, weekly: 6 },
-      seaplaza: { onHand: 5, weekly: 4 },
-    },
-  },
-  {
-    productId: "boisson-dragon-mystic", min: 11, companyMin: 25, leadDays: 4, weeksHistory: 8, seasonalPct: 100,
-    byLocation: {
-      reserve: { onHand: 10, weekly: 0 },
-      almadies: { onHand: 14, weekly: 5.2 },
-      seaplaza: { onHand: 4, weekly: 3.5 },
-    },
-  },
-  {
-    productId: "boisson-pause-tropical", min: 9, companyMin: 21, leadDays: 4, weeksHistory: 8, seasonalPct: 100,
-    byLocation: {
-      reserve: { onHand: 8, weekly: 0 },
-      almadies: { onHand: 12, weekly: 3.6 },
-      seaplaza: { onHand: 4, weekly: 2.4 },
-    },
-  },
-  {
-    productId: "boisson-eclat-matcha", min: 12, companyMin: 28, leadDays: 4, weeksHistory: 8, seasonalPct: 100,
-    byLocation: {
-      reserve: { onHand: 10, weekly: 0 },
-      almadies: { onHand: 15, weekly: 4.1 },
-      seaplaza: { onHand: 5, weekly: 2.8 },
-    },
-  },
-  {
-    productId: "boisson-ice-coffee-caramel", min: 11, companyMin: 25, leadDays: 4, weeksHistory: 8, seasonalPct: 100,
-    byLocation: {
-      reserve: { onHand: 9, weekly: 0 },
-      almadies: { onHand: 13, weekly: 3.5 },
-      seaplaza: { onHand: 4, weekly: 2.3 },
-    },
-  },
-  {
-    productId: "boisson-soin-glace-ice-tea", min: 14, companyMin: 32, leadDays: 4, weeksHistory: 8, seasonalPct: 100,
-    byLocation: {
-      reserve: { onHand: 10, weekly: 0 },
-      almadies: { onHand: 19, weekly: 5.6 },
-      seaplaza: { onHand: 6, weekly: 3.8 },
-    },
-  },
-  {
-    productId: "boisson-pretty-latte", min: 9, companyMin: 21, leadDays: 4, weeksHistory: 8, seasonalPct: 100,
-    byLocation: {
-      reserve: { onHand: 6, weekly: 0 },
-      almadies: { onHand: 12, weekly: 4 },
-      seaplaza: { onHand: 4, weekly: 2.7 },
     },
   },
   // Autres marques + accessoires — vendus au détail, sans recette (pas de gamme

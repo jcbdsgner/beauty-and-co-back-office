@@ -83,7 +83,7 @@ export default function AddMemberFlow({ allMembers, onCancel, onCreate, onDone }
         title="Membre créé"
         description={`${fullName(created)} fait maintenant partie de l'équipe.`}
       >
-        <p className="text-theme-sm text-gray-500">
+        <p className="text-sm text-base-content/60">
           Souhaitez-vous lui envoyer tout de suite une invitation à rejoindre la
           plateforme&nbsp;? Vous pourrez aussi le faire plus tard depuis sa fiche.
         </p>
@@ -101,7 +101,7 @@ export default function AddMemberFlow({ allMembers, onCancel, onCreate, onDone }
           </button>
         </div>
         {!created.email && (
-          <p className="mt-2 text-theme-xs text-warning-600">
+          <p className="mt-2 text-xs text-warning-600">
             Aucune adresse e-mail renseignée : l&apos;invitation devra attendre.
           </p>
         )}
@@ -120,8 +120,8 @@ export default function AddMemberFlow({ allMembers, onCancel, onCreate, onDone }
 
       <section className="space-y-3">
         <div>
-          <h2 className="text-lg font-semibold text-gray-800">Compétences</h2>
-          <p className="mt-1 text-theme-sm text-gray-500">
+          <h2 className="text-lg font-semibold text-base-content">Compétences</h2>
+          <p className="mt-1 text-sm text-base-content/60">
             Les prestations que cette personne sait réaliser — elles conditionnent
             son apparition à la réservation.
           </p>
@@ -135,8 +135,8 @@ export default function AddMemberFlow({ allMembers, onCancel, onCreate, onDone }
 
       <section className="space-y-3">
         <div>
-          <h2 className="text-lg font-semibold text-gray-800">Horaires habituels</h2>
-          <p className="mt-1 text-theme-sm text-gray-500">
+          <h2 className="text-lg font-semibold text-base-content">Horaires habituels</h2>
+          <p className="mt-1 text-sm text-base-content/60">
             La trame appliquée chaque semaine par le Planning.
           </p>
         </div>

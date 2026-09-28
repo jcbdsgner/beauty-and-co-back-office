@@ -7,6 +7,9 @@ import { SidebarProvider } from '@/context/SidebarContext';
 const poppins = Poppins({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
+  // Exposée en variable CSS pour `--font-heading` / `--font-sans` (composants
+  // repris de point-de-vente), en plus de la classe posée sur <body>.
+  variable: "--font-poppins",
 });
 
 export const metadata: Metadata = {
@@ -24,8 +27,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr">
-      <body className={`${poppins.className} bg-gray-50`}>
+    <html lang="fr" className={`${poppins.variable} antialiased`}>
+      <body className={`${poppins.className} bg-base-200`}>
         <SidebarProvider>{children}</SidebarProvider>
       </body>
     </html>

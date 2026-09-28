@@ -117,7 +117,7 @@ export default function StockDetail({
   if (!product) {
     return (
       <DetailModal title="Fiche produit" onClose={onBack}>
-        <p className="text-theme-sm text-gray-500">Produit inconnu.</p>
+        <p className="text-sm text-base-content/60">Produit inconnu.</p>
       </DetailModal>
     );
   }
@@ -137,18 +137,18 @@ export default function StockDetail({
               onRemove={() => onSetPhoto(productId, null)}
             />
             <div>
-              <h1 className="text-2xl font-semibold text-gray-800">{product.name}</h1>
-              <p className="mt-1 text-theme-sm text-gray-500">
+              <h1 className="text-2xl font-semibold text-base-content">{product.name}</h1>
+              <p className="mt-1 text-sm text-base-content/60">
                 Compté en {product.defaultUnit} · délai fournisseur {leadDaysFor(productId)} j
               </p>
             </div>
           </div>
 
           <div className="text-right">
-            <p className="text-theme-xs font-medium uppercase tracking-wide text-gray-400">
+            <p className="text-xs font-medium uppercase tracking-wide text-base-content/45">
               Stock entreprise
             </p>
-            <p className="text-2xl font-semibold text-gray-800">
+            <p className="text-2xl font-semibold text-base-content">
               {companyTotal === null ? "—" : groupThousands(companyTotal)}
             </p>
             {companyCoverage !== null ? (
@@ -165,7 +165,7 @@ export default function StockDetail({
                 ≈ {companyCoverage} j de couverture
               </Badge>
             ) : (
-              <span className="text-theme-xs text-gray-400">Pas de sortie mesurée</span>
+              <span className="text-xs text-base-content/45">Pas de sortie mesurée</span>
             )}
           </div>
         </div>
@@ -188,20 +188,20 @@ export default function StockDetail({
           title="Niveaux & seuils"
           description="Réserve centrale et salons. Les seuils sont modifiables pour cette session uniquement."
         >
-          <ul className="divide-y divide-gray-100">
+          <ul className="divide-y divide-base-300">
             {hasReserve && (
               <li className="flex items-center justify-between gap-4 py-3">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-800">Réserve centrale</p>
-                  <p className="text-theme-xs text-gray-500">Non affectée à un salon</p>
+                  <p className="text-sm font-medium text-base-content">Réserve centrale</p>
+                  <p className="text-xs text-base-content/60">Non affectée à un salon</p>
                 </div>
-                <span className="shrink-0 text-sm text-gray-800">
+                <span className="shrink-0 text-sm text-base-content">
                   {reserveLevel === null ? (
                     <span className="text-warning-600">Jamais inventoriée</span>
                   ) : (
                     <>
                       {groupThousands(reserveLevel)}{" "}
-                      <span className="text-gray-400">{product.defaultUnit}</span>
+                      <span className="text-base-content/45">{product.defaultUnit}</span>
                     </>
                   )}
                 </span>
@@ -211,15 +211,15 @@ export default function StockDetail({
             {salonRows.map((s) => (
               <li key={s.salonId} className="flex items-center justify-between gap-4 py-3">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-800">{salonName(s.salonId)}</p>
-                  <p className="text-theme-xs text-gray-500">
+                  <p className="text-sm font-medium text-base-content">{salonName(s.salonId)}</p>
+                  <p className="text-xs text-base-content/60">
                     {s.onHand === null
                       ? "Jamais inventorié"
                       : `${groupThousands(s.onHand)} en rayon`}
                     {s.below && <span className="text-error-600"> · sous le seuil</span>}
                   </p>
                 </div>
-                <label className="flex shrink-0 items-center gap-2 text-theme-xs text-gray-500">
+                <label className="flex shrink-0 items-center gap-2 text-xs text-base-content/60">
                   Seuil salon
                   <ThresholdInput
                     value={s.threshold}
@@ -232,22 +232,22 @@ export default function StockDetail({
             ))}
           </ul>
 
-          <div className="mt-4 flex items-center justify-between gap-4 rounded-xl bg-gray-50 px-4 py-3">
+          <div className="mt-4 flex items-center justify-between gap-4 rounded-xl bg-base-200 px-4 py-3">
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-gray-800">Total entreprise</p>
+              <p className="text-sm font-semibold text-base-content">Total entreprise</p>
               {companyBelow ? (
-                <p className="text-theme-xs text-error-600">
+                <p className="text-xs text-error-600">
                   Sous le seuil — commande fournisseur conseillée
                 </p>
               ) : (
-                <p className="text-theme-xs text-gray-500">Réserve + salons</p>
+                <p className="text-xs text-base-content/60">Réserve + salons</p>
               )}
             </div>
             <div className="flex shrink-0 items-center gap-4">
-              <span className="text-lg font-semibold text-gray-800">
+              <span className="text-lg font-semibold text-base-content">
                 {companyTotal === null ? "—" : groupThousands(companyTotal)}
               </span>
-              <label className="flex items-center gap-2 text-theme-xs text-gray-500">
+              <label className="flex items-center gap-2 text-xs text-base-content/60">
                 Seuil entreprise
                 <ThresholdInput
                   value={companyThreshold}
@@ -272,7 +272,7 @@ export default function StockDetail({
 
           {hasReserve && salonLocs.length > 0 && (
             <>
-              <div className="-mx-6 my-6 border-t border-gray-100" />
+              <div className="-mx-6 my-6 border-t border-base-300" />
               <TransferForm
                 productId={productId}
                 salonLocs={salonLocs}
@@ -303,7 +303,7 @@ export default function StockDetail({
           description={`Sur les 8 dernières semaines · ${scopeLabel}.`}
         >
           {consoTotal === 0 ? (
-            <p className="text-theme-sm text-gray-500">
+            <p className="text-sm text-base-content/60">
               Aucune sortie mesurée sur la période.
             </p>
           ) : (
@@ -323,24 +323,24 @@ export default function StockDetail({
           description="Quantité prélevée à chaque visite, d'après la recette de consommation."
         >
           {uses.length === 0 ? (
-            <p className="text-theme-sm text-gray-500">
+            <p className="text-sm text-base-content/60">
               Ce produit n&apos;entre dans aucune recette : il n&apos;est que vendu
               au détail.
             </p>
           ) : (
-            <ul className="divide-y divide-gray-100">
+            <ul className="divide-y divide-base-300">
               {uses.map((u) => (
                 <li
                   key={u.id}
-                  className="flex items-center justify-between gap-3 py-2.5 text-theme-sm"
+                  className="flex items-center justify-between gap-3 py-2.5 text-sm"
                 >
                   <Link
                     href="/services"
-                    className="text-gray-700 transition hover:text-brand-600 hover:underline"
+                    className="text-base-content/80 transition hover:text-brand-600 hover:underline"
                   >
                     {u.name}
                   </Link>
-                  <span className="shrink-0 text-gray-500">
+                  <span className="shrink-0 text-base-content/60">
                     {groupThousands(u.qty)} {u.unit} / visite
                   </span>
                 </li>
@@ -375,33 +375,33 @@ export default function StockDetail({
 
           <dl className="mt-5 grid grid-cols-3 gap-4">
             <div>
-              <dt className="text-theme-xs text-gray-400">Rupture estimée</dt>
-              <dd className="mt-1 text-lg font-semibold text-gray-800">
+              <dt className="text-xs text-base-content/45">Rupture estimée</dt>
+              <dd className="mt-1 text-lg font-semibold text-base-content">
                 {projection.runoutDate ? frShortDate(projection.runoutDate) : "—"}
               </dd>
             </div>
             <div>
-              <dt className="text-theme-xs text-gray-400">Quantité à commander</dt>
-              <dd className="mt-1 text-lg font-semibold text-gray-800">
+              <dt className="text-xs text-base-content/45">Quantité à commander</dt>
+              <dd className="mt-1 text-lg font-semibold text-base-content">
                 {projection.reorderQty > 0
                   ? `${groupThousands(projection.reorderQty)} ${product.defaultUnit}`
                   : "—"}
               </dd>
             </div>
             <div>
-              <dt className="text-theme-xs text-gray-400">Commander avant le</dt>
-              <dd className="mt-1 text-lg font-semibold text-gray-800">
+              <dt className="text-xs text-base-content/45">Commander avant le</dt>
+              <dd className="mt-1 text-lg font-semibold text-base-content">
                 {projection.reorderBy ? frShortDate(projection.reorderBy) : "—"}
               </dd>
             </div>
           </dl>
 
-          <p className="mt-4 text-theme-xs text-gray-400">
+          <p className="mt-4 text-xs text-base-content/45">
             Base : {projectionModelLabel(model)}.
           </p>
 
           {projection.runoutDate === null && (
-            <p className="mt-2 text-theme-sm text-gray-500">
+            <p className="mt-2 text-sm text-base-content/60">
               Aucune sortie récente : pas de rupture prévisible.
             </p>
           )}
@@ -413,21 +413,21 @@ export default function StockDetail({
           description="Les 12 derniers mouvements, tous emplacements confondus."
         >
           {movements.length === 0 ? (
-            <p className="text-theme-sm text-gray-500">Aucun mouvement enregistré.</p>
+            <p className="text-sm text-base-content/60">Aucun mouvement enregistré.</p>
           ) : (
-            <ul className="divide-y divide-gray-100">
+            <ul className="divide-y divide-base-300">
               {movements.slice(0, 12).map((m) => (
                 <li
                   key={m.id}
-                  className="flex items-center justify-between gap-3 py-2.5 text-theme-sm"
+                  className="flex items-center justify-between gap-3 py-2.5 text-sm"
                 >
                   <div className="min-w-0">
-                    <span className="text-gray-700">{movementReasonLabel(m.reason)}</span>
-                    <span className="text-gray-400"> · {locationName(m.location)}</span>
-                    {m.note && <span className="text-gray-400"> · {m.note}</span>}
+                    <span className="text-base-content/80">{movementReasonLabel(m.reason)}</span>
+                    <span className="text-base-content/45"> · {locationName(m.location)}</span>
+                    {m.note && <span className="text-base-content/45"> · {m.note}</span>}
                   </div>
                   <div className="flex shrink-0 items-center gap-3">
-                    <span className="text-gray-400">{frShortDate(m.date)}</span>
+                    <span className="text-base-content/45">{frShortDate(m.date)}</span>
                     <span
                       className={`font-medium ${
                         m.qty >= 0 ? "text-success-600" : "text-error-600"
@@ -471,16 +471,16 @@ function ProductPhoto({
 
   return (
     <div className="shrink-0">
-      <div className="relative h-20 w-20 overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
+      <div className="relative h-20 w-20 overflow-hidden rounded-xl border border-base-300 bg-base-200">
         {photo ? (
           <Image src={photo} alt="" fill sizes="80px" unoptimized className="object-cover" />
         ) : (
-          <span className="flex h-full w-full items-center justify-center text-gray-300">
+          <span className="flex h-full w-full items-center justify-center text-base-content/30">
             <BoxIcon className="size-8" />
           </span>
         )}
       </div>
-      <div className="mt-1.5 flex items-center gap-2 text-theme-xs">
+      <div className="mt-1.5 flex items-center gap-2 text-xs">
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
@@ -492,7 +492,7 @@ function ProductPhoto({
           <button
             type="button"
             onClick={onRemove}
-            className="text-gray-400 transition hover:text-error-600 hover:underline"
+            className="text-base-content/45 transition hover:text-error-600 hover:underline"
           >
             Retirer
           </button>
@@ -540,7 +540,7 @@ function ThresholdInput({
       onKeyDown={(e) => {
         if (e.key === "Enter") e.currentTarget.blur();
       }}
-      className="h-8 w-16 rounded-lg border border-gray-300 bg-white px-2 text-center text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10"
+      className="h-8 w-16 rounded-field border border-base-300 bg-white px-2 text-center text-sm text-base-content focus:outline-2 focus:outline-offset-2 focus:outline-[#fdcfca]"
     />
   );
 }
@@ -597,8 +597,8 @@ function AdjustForm({
 
   return (
     <div>
-      <p className="text-sm font-medium text-gray-800">Ajuster un niveau</p>
-      <p className="mt-0.5 text-theme-xs text-gray-500">
+      <p className="text-sm font-medium text-base-content">Ajuster un niveau</p>
+      <p className="mt-0.5 text-xs text-base-content/60">
         Après un comptage, une réception fournisseur ou une casse.
       </p>
       <div className="mt-3 grid grid-cols-2 gap-4">
@@ -687,8 +687,8 @@ function TransferForm({
 
   return (
     <div>
-      <p className="text-sm font-medium text-gray-800">Transférer vers un salon</p>
-      <p className="mt-0.5 text-theme-xs text-gray-500">
+      <p className="text-sm font-medium text-base-content">Transférer vers un salon</p>
+      <p className="mt-0.5 text-xs text-base-content/60">
         Sort de la réserve centrale, entre dans le salon.
       </p>
       <div className="mt-3 grid grid-cols-2 gap-4">
@@ -736,13 +736,13 @@ function ConsoBar({
   const pct = total > 0 ? Math.round((value / total) * 100) : 0;
   return (
     <div>
-      <div className="mb-1 flex items-center justify-between text-theme-sm">
-        <span className="text-gray-700">{label}</span>
-        <span className="text-gray-500">
+      <div className="mb-1 flex items-center justify-between text-sm">
+        <span className="text-base-content/80">{label}</span>
+        <span className="text-base-content/60">
           {groupThousands(value)} · {pct} %
         </span>
       </div>
-      <div className="h-2 overflow-hidden rounded-full bg-gray-100">
+      <div className="h-2 overflow-hidden rounded-full bg-muted">
         <div className="h-full rounded-full bg-brand-500" style={{ width: `${pct}%` }} />
       </div>
     </div>

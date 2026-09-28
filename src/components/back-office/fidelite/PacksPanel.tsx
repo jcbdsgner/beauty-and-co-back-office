@@ -6,20 +6,19 @@ import {
   getPackIndividualTotal,
   getPackPrestations,
   getPackPrice,
-  getPackSavings,
   newPackId,
   type Pack,
 } from "@/lib/mock/packs";
+import { Plus } from "lucide-react";
+import { TextInput, Toggle, SettingRow } from "./ui";
 import {
-  SectionCard,
-  TextInput,
-  EditableRow,
-  EmptyList,
-  Toggle,
-  SettingRow,
-  btnPrimary,
-  btnGhost,
-} from "./ui";
+  EditorPanel,
+  EmptyRow,
+  ItemHeader,
+  ItemRow,
+  SettingsGroup,
+  btnOutline,
+} from "../reglages/kit";
 import PrestationPicker from "./PrestationPicker";
 
 type FormState = {
@@ -62,8 +61,8 @@ export default function PacksPanel({
   onChange: (next: Pack[]) => void;
 }) {
   const [form, setForm] = useState<FormState>(EMPTY);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [confirmId, setConfirmId] = useState<string | null>(null);
+  // `undefined` = panneau fermé, `null` = création, id = modification.
+  const [editingId, setEditingId] = useState<string | null | undefined>(undefined);
 
   const preview = previewDerived(form.prestationIds);
   const valid =
@@ -73,7 +72,7 @@ export default function PacksPanel({
 
   const resetForm = () => {
     setForm(EMPTY);
-    setEditingId(null);
+    setEditingId(undefined);
   };
 
   const submit = () => {
@@ -92,7 +91,6 @@ export default function PacksPanel({
   };
 
   const startEdit = (p: Pack) => {
-    setConfirmId(null);
     setEditingId(p.id);
     setForm({
       label: p.label,
@@ -103,116 +101,112 @@ export default function PacksPanel({
     });
   };
 
-  const remove = (id: string) => {
-    onChange(packs.filter((p) => p.id !== id));
-    setConfirmId(null);
-    if (editingId === id) resetForm();
-  };
+  const remove = (id: string) => onChange(packs.filter((p) => p.id !== id));
 
   return (
-    <SectionCard
+    <SettingsGroup
       title="Packs prépayés"
-      description="Un pack : des prestations payées d'avance, consommées visite après visite. Il n'expire jamais et ne se recharge pas. Prix = −20 % sur la somme à l'unité, arrondi à 500 FCFA."
+      description="Des prestations payées d'avance, consommées visite après visite. Sans expiration ni recharge. Prix : −20 % sur la somme à l'unité, arrondi à 500 FCFA."
+      action={
+        <button
+          type="button"
+          onClick={() => {
+            setForm(EMPTY);
+            setEditingId(null);
+          }}
+          className={`${btnOutline} gap-1.5`}
+        >
+          <Plus className="size-4" aria-hidden />
+          Ajouter un pack
+        </button>
+      }
     >
       {packs.length === 0 ? (
-        <EmptyList>Aucun pack proposé.</EmptyList>
+        <EmptyRow>Aucun pack proposé.</EmptyRow>
       ) : (
-        <ul className="space-y-2.5">
-          {packs.map((p) => {
-            const price = getPackPrice(p);
-            const savings = getPackSavings(p);
-            const names = getPackPrestations(p).map((x) => x.label).join(", ");
-            return (
-              <EditableRow
-                key={p.id}
-                title={`${p.label} · ${fcfa(price)}${
-                  p.priceOverrideFcfa != null ? " (prix forcé)" : ""
-                }`}
-                subtitle={
-                  savings > 0
-                    ? `${names} · ${fcfa(getPackIndividualTotal(p))} à l'unité, soit ${fcfa(savings)} d'économie`
-                    : names
-                }
-                confirming={confirmId === p.id}
-                onEdit={() => startEdit(p)}
-                onAskDelete={() => setConfirmId(p.id)}
-                onConfirmDelete={() => remove(p.id)}
-                onCancelDelete={() => setConfirmId(null)}
-                deleteLabel={`Supprimer le pack ${p.label}`}
-              />
-            );
-          })}
-        </ul>
+        <>
+          <ItemHeader label="Pack" columns={["À l'unité", "Prix du pack"]} />
+          {packs.map((p) => (
+            <ItemRow
+              key={p.id}
+              title={p.label}
+              meta={getPackPrestations(p)
+                .map((x) => x.label)
+                .join(" · ")}
+              columns={[
+                <span key="u" className="text-base-content/50 line-through decoration-base-content/30">
+                  {fcfa(getPackIndividualTotal(p))}
+                </span>,
+                <span key="p" className="font-semibold text-base-content">
+                  {fcfa(getPackPrice(p))}
+                  {p.priceOverrideFcfa != null && (
+                    <span className="block text-xs font-normal text-base-content/50">prix forcé</span>
+                  )}
+                </span>,
+              ]}
+              onEdit={() => startEdit(p)}
+              onDelete={() => remove(p.id)}
+              deleteLabel={`Supprimer le pack ${p.label}`}
+            />
+          ))}
+        </>
       )}
 
-      <div className="mt-6 border-t border-gray-100 pt-6">
-        <h3 className="text-theme-sm font-semibold text-gray-800">
-          {editingId ? "Modifier le pack" : "Ajouter un pack"}
-        </h3>
-
-        <div className="mt-4 space-y-3">
-          <TextInput
-            label="Nom"
-            placeholder="Pack Éclat Express"
-            value={form.label}
-            onChange={(v) => setForm((f) => ({ ...f, label: v }))}
-          />
-          <TextInput
-            label="Description"
-            placeholder="Ce que contient le pack, en une phrase"
-            value={form.description}
-            onChange={(v) => setForm((f) => ({ ...f, description: v }))}
-          />
-
-          <PrestationPicker
-            selected={form.prestationIds}
-            onChange={(ids) => setForm((f) => ({ ...f, prestationIds: ids }))}
-          />
-
-          <div className="rounded-xl bg-gray-50 px-4 py-3 text-theme-sm">
-            <div className="flex items-center justify-between text-gray-500">
-              <span>Somme à l&apos;unité</span>
-              <span className="tabular-nums">{fcfa(preview.total)}</span>
-            </div>
-            <div className="mt-1 flex items-center justify-between font-medium text-gray-800">
-              <span>Prix packagé (−20 %)</span>
-              <span className="tabular-nums">{fcfa(preview.packaged)}</span>
-            </div>
+      <EditorPanel
+        open={editingId !== undefined}
+        title={editingId ? "Modifier le pack" : "Nouveau pack"}
+        onClose={resetForm}
+        onSubmit={submit}
+        submitLabel={editingId ? "Enregistrer" : "Ajouter le pack"}
+        canSubmit={valid}
+      >
+        <TextInput
+          label="Nom"
+          placeholder="Pack Éclat Express"
+          value={form.label}
+          onChange={(v) => setForm((f) => ({ ...f, label: v }))}
+        />
+        <TextInput
+          label="Description"
+          placeholder="Ce que contient le pack, en une phrase"
+          value={form.description}
+          onChange={(v) => setForm((f) => ({ ...f, description: v }))}
+        />
+        <PrestationPicker
+          selected={form.prestationIds}
+          onChange={(ids) => setForm((f) => ({ ...f, prestationIds: ids }))}
+        />
+        <dl className="space-y-1.5 rounded-box bg-base-200 px-4 py-3 text-sm">
+          <div className="flex justify-between text-base-content/60">
+            <dt>Somme à l&apos;unité</dt>
+            <dd className="tabular-nums">{fcfa(preview.total)}</dd>
           </div>
-
-          <SettingRow
-            title="Forcer un prix"
-            description="Ignorer la formule et fixer le prix du pack à la main."
-            control={
-              <Toggle
-                checked={form.forcePrice}
-                onChange={(v) => setForm((f) => ({ ...f, forcePrice: v }))}
-                aria-label="Forcer un prix pour le pack"
-              />
-            }
-          />
-          {form.forcePrice && (
-            <TextInput
-              label="Prix forcé (FCFA)"
-              inputMode="numeric"
-              placeholder={String(preview.packaged)}
-              value={form.priceOverrideFcfa}
-              onChange={(v) => setForm((f) => ({ ...f, priceOverrideFcfa: v }))}
+          <div className="flex justify-between font-semibold text-base-content">
+            <dt>Prix du pack (−20 %)</dt>
+            <dd className="tabular-nums">{fcfa(preview.packaged)}</dd>
+          </div>
+        </dl>
+        <SettingRow
+          title="Forcer un prix"
+          description="Ignorer la formule et fixer le prix du pack à la main."
+          control={
+            <Toggle
+              checked={form.forcePrice}
+              onChange={(v) => setForm((f) => ({ ...f, forcePrice: v }))}
+              aria-label="Forcer un prix pour le pack"
             />
-          )}
-        </div>
-
-        <div className="mt-4 flex items-center gap-2">
-          <button type="button" onClick={submit} disabled={!valid} className={btnPrimary}>
-            {editingId ? "Enregistrer" : "Ajouter le pack"}
-          </button>
-          {editingId && (
-            <button type="button" onClick={resetForm} className={btnGhost}>
-              Annuler
-            </button>
-          )}
-        </div>
-      </div>
-    </SectionCard>
+          }
+        />
+        {form.forcePrice && (
+          <TextInput
+            label="Prix forcé (FCFA)"
+            inputMode="numeric"
+            placeholder={String(preview.packaged)}
+            value={form.priceOverrideFcfa}
+            onChange={(v) => setForm((f) => ({ ...f, priceOverrideFcfa: v }))}
+          />
+        )}
+      </EditorPanel>
+    </SettingsGroup>
   );
 }

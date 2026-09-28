@@ -76,7 +76,7 @@ const DOMAIN_ICON: Record<JournalDomain, React.ComponentType<{ className?: strin
 };
 
 const TONE_TILE: Record<JournalTone, string> = {
-  info: "bg-gray-100 text-gray-500",
+  info: "bg-muted text-base-content/60",
   notable: "bg-warning-50 text-warning-600",
   sensitive: "bg-error-50 text-error-600",
 };
@@ -105,25 +105,25 @@ function EntryRow({ entry }: { entry: JournalEntry }) {
       </span>
       <div className="pointer-events-none min-w-0 flex-1">
         <div className="flex items-baseline justify-between gap-3">
-          <p className="flex min-w-0 items-center gap-2 text-theme-sm">
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-50 text-[12px] font-semibold text-brand-700">
+          <p className="flex min-w-0 items-center gap-2 text-sm">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent text-[12px] font-semibold text-secondary">
               {initials}
             </span>
-            <span className="font-semibold text-gray-900">{entry.actorName}</span>
-            <span className="shrink-0 rounded-full bg-gray-100 px-1.5 py-0.5 text-theme-xs font-medium text-gray-500">
+            <span className="font-semibold text-base-content">{entry.actorName}</span>
+            <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-xs font-medium text-base-content/60">
               {ACTOR_ROLE_LABELS[entry.actorRole]}
             </span>
           </p>
-          <span className="shrink-0 text-theme-xs text-gray-400">
+          <span className="shrink-0 text-xs text-base-content/45">
             {journalClock(entry.at)}
           </span>
         </div>
-        <p className="mt-1 text-theme-sm text-gray-700">
-          <span className="text-gray-500">{entry.action}</span>
+        <p className="mt-1 text-sm text-base-content/80">
+          <span className="text-base-content/60">{entry.action}</span>
           {" — "}
-          <span className="font-medium text-gray-800">{entry.detail}</span>
+          <span className="font-medium text-base-content">{entry.detail}</span>
         </p>
-        <p className="mt-1 flex items-center gap-2 text-theme-xs text-gray-400">
+        <p className="mt-1 flex items-center gap-2 text-xs text-base-content/45">
           <span>{DOMAIN_LABELS[entry.domain]}</span>
           {entry.tone === "sensitive" && (
             <span className="font-semibold uppercase tracking-wide text-error-500">
@@ -138,7 +138,7 @@ function EntryRow({ entry }: { entry: JournalEntry }) {
   if (entry.href) {
     return (
       <li
-        className={`group relative flex gap-4 border-l-2 px-5 py-4 transition-colors hover:bg-gray-50 ${TONE_BORDER[entry.tone]}`}
+        className={`group relative flex gap-4 border-l-2 px-5 py-4 transition-colors hover:bg-base-200 ${TONE_BORDER[entry.tone]}`}
       >
         <Link
           href={entry.href}
@@ -159,14 +159,14 @@ function EntryRow({ entry }: { entry: JournalEntry }) {
 
 function EmptyRole({ role, salonLabel }: { role: ActorRole; salonLabel: string }) {
   return (
-    <div className="flex flex-col items-center rounded-2xl border border-gray-200 bg-white px-6 py-14 text-center">
-      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-gray-100 text-gray-400">
+    <div className="flex flex-col items-center rounded-box border border-base-300 bg-white px-6 py-14 text-center">
+      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-muted text-base-content/45">
         <ListIcon className="h-5 w-5" />
       </span>
-      <h3 className="mt-4 text-base font-semibold text-gray-800">
+      <h3 className="mt-4 text-base font-semibold text-base-content">
         Aucune action de {ACTOR_ROLE_FILTER_LABELS[role].toLowerCase()}
       </h3>
-      <p className="mt-1 max-w-sm text-theme-sm text-gray-500">
+      <p className="mt-1 max-w-sm text-sm text-base-content/60">
         Rien n&apos;a encore été enregistré pour ce rôle
         {salonLabel !== "Tous les salons" ? ` à ${salonLabel}` : ""}.
       </p>
@@ -176,17 +176,17 @@ function EmptyRole({ role, salonLabel }: { role: ActorRole; salonLabel: string }
 
 function EmptyFilter({ onReset }: { onReset: () => void }) {
   return (
-    <div className="flex flex-col items-center rounded-2xl border border-gray-200 bg-white px-6 py-14 text-center">
-      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-gray-100 text-gray-400">
+    <div className="flex flex-col items-center rounded-box border border-base-300 bg-white px-6 py-14 text-center">
+      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-muted text-base-content/45">
         <ListIcon className="h-5 w-5" />
       </span>
-      <h3 className="mt-4 text-base font-semibold text-gray-800">
+      <h3 className="mt-4 text-base font-semibold text-base-content">
         Aucune action sur cette période
       </h3>
       <button
         type="button"
         onClick={onReset}
-        className="mt-3 text-theme-sm font-medium text-brand-700 hover:underline"
+        className="mt-3 text-sm font-medium text-secondary hover:underline"
       >
         Élargir aux 30 derniers jours
       </button>
@@ -246,7 +246,7 @@ export default function Journal() {
         actions={
           <>
             <div className="flex items-center gap-2">
-              <span className="text-theme-xs font-medium uppercase tracking-wide text-gray-400">
+              <span className="text-xs font-medium uppercase tracking-wide text-base-content/45">
                 Salon
               </span>
               <SegmentedControl
@@ -258,7 +258,7 @@ export default function Journal() {
               />
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-theme-xs font-medium uppercase tracking-wide text-gray-400">
+              <span className="text-xs font-medium uppercase tracking-wide text-base-content/45">
                 Période
               </span>
               <JournalPeriodPicker value={period} onChange={setPeriod} />
@@ -269,7 +269,7 @@ export default function Journal() {
 
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
         <div className="flex items-center gap-2">
-          <span className="text-theme-xs font-medium uppercase tracking-wide text-gray-400">
+          <span className="text-xs font-medium uppercase tracking-wide text-base-content/45">
             Voir les actions
           </span>
           <SegmentedControl
@@ -280,7 +280,7 @@ export default function Journal() {
           />
         </div>
         <div className="relative w-full max-w-xs">
-          <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">
+          <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-base-content/45">
             <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
               <path
                 fillRule="evenodd"
@@ -296,7 +296,7 @@ export default function Journal() {
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Rechercher une personne, une action…"
             aria-label="Rechercher dans le journal"
-            className="h-10 w-full rounded-lg border border-gray-200 bg-white py-2 pl-10 pr-3 text-theme-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10"
+            className="h-10 w-full rounded-field border border-base-300 bg-white py-2 pl-10 pr-3 text-sm text-base-content placeholder:text-base-content/40 focus:outline-2 focus:outline-offset-2 focus:outline-[#fdcfca]"
           />
         </div>
       </div>
@@ -312,16 +312,16 @@ export default function Journal() {
         />
       ) : (
         <>
-          <p className="text-theme-sm text-gray-500">
+          <p className="text-sm text-base-content/60">
             {visible.length} action{visible.length > 1 ? "s" : ""} {periodLabel}
           </p>
           <div className="space-y-6">
             {groups.map((g) => (
               <section key={g.day}>
-                <h2 className="mb-2 px-1 text-theme-xs font-semibold uppercase tracking-wide text-gray-400">
+                <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-base-content/45">
                   {g.label}
                 </h2>
-                <ul className="divide-y divide-gray-100 overflow-hidden rounded-2xl border border-gray-200 bg-white">
+                <ul className="divide-y divide-base-300 overflow-hidden rounded-box border border-base-300 bg-white">
                   {g.items.map((entry) => (
                     <EntryRow key={entry.id} entry={entry} />
                   ))}

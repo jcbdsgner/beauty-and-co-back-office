@@ -17,14 +17,14 @@ export default function ForgotPasswordForm() {
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-500 text-sm font-bold text-white">
             B&amp;C
           </span>
-          <span className="text-lg font-bold text-gray-900">
+          <span className="text-lg font-bold text-base-content">
             Beauty<span className="text-brand-500">AndCo</span>
           </span>
         </Link>
 
         <Link
           href="/signin"
-          className="mb-4 inline-flex items-center gap-1 text-sm text-gray-500 transition-colors hover:text-gray-700"
+          className="mb-4 inline-flex items-center gap-1 text-sm text-base-content/60 transition-colors hover:text-base-content/80"
         >
           <ChevronLeftIcon />
           Retour à la connexion
@@ -32,17 +32,17 @@ export default function ForgotPasswordForm() {
 
         {sent ? (
           <div>
-            <h1 className="mb-2 text-title-sm font-semibold text-gray-800">
+            <h1 className="mb-2 text-title-sm font-semibold text-base-content">
               Vérifiez votre boîte mail
             </h1>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-base-content/60">
               Si un compte est associé à cette adresse, un lien de
               réinitialisation vient d&apos;être envoyé. Le lien expire dans une
               heure.
             </p>
             <Link
               href="/signin"
-              className="mt-6 inline-block text-sm text-brand-600 hover:text-brand-700"
+              className="mt-6 inline-block text-sm text-brand-600 hover:text-secondary"
             >
               Revenir à la connexion
             </Link>
@@ -50,10 +50,10 @@ export default function ForgotPasswordForm() {
         ) : (
           <>
             <div className="mb-6">
-              <h1 className="mb-2 text-title-sm font-semibold text-gray-800">
+              <h1 className="mb-2 text-title-sm font-semibold text-base-content">
                 Mot de passe oublié&nbsp;?
               </h1>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-base-content/60">
                 Saisissez votre adresse e-mail : nous vous enverrons un lien pour
                 choisir un nouveau mot de passe.
               </p>

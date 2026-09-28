@@ -73,37 +73,37 @@ export default function ConversationList({
   };
 
   return (
-    <div className="flex h-full w-[360px] shrink-0 flex-col rounded-2xl border border-gray-200 bg-white">
+    <div className="flex h-full w-[360px] shrink-0 flex-col rounded-box border border-base-300 bg-white">
       {/* En-tête : titre + recherche + filtre par canal */}
-      <div className="border-b border-gray-100 px-4 pb-4 pt-4">
+      <div className="border-b border-base-300 px-4 pb-4 pt-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <ChatIcon className="h-5 w-5 text-brand-500" />
-            <h2 className="text-lg font-semibold text-gray-800">Conversations</h2>
+            <h2 className="text-lg font-semibold text-base-content">Conversations</h2>
           </div>
           <button
             type="button"
             onClick={refresh}
             aria-label="Actualiser la liste"
-            className="text-gray-400 transition-colors hover:text-gray-600"
+            className="text-base-content/45 transition-colors hover:text-base-content/70"
           >
             <RefreshGlyph className={`h-4 w-4 ${spinning ? "animate-spin" : ""}`} />
           </button>
         </div>
 
         {scopeLabel && (
-          <p className="mt-0.5 text-theme-xs text-gray-400">{scopeLabel}</p>
+          <p className="mt-0.5 text-xs text-base-content/45">{scopeLabel}</p>
         )}
 
         <div className="relative mt-3">
-          <SearchGlyph className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <SearchGlyph className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-base-content/45" />
           <input
             type="search"
             value={query}
             onChange={(e) => onQuery(e.target.value)}
             placeholder="Rechercher (nom ou téléphone)…"
             aria-label="Rechercher une conversation"
-            className="h-10 w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 text-theme-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10"
+            className="h-10 w-full rounded-field border border-base-300 bg-white pl-9 pr-3 text-sm text-base-content placeholder:text-base-content/40 focus:outline-2 focus:outline-offset-2 focus:outline-[#fdcfca]"
           />
         </div>
 
@@ -121,17 +121,17 @@ export default function ConversationList({
       {/* Liste */}
       {items.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
-          <p className="text-theme-sm font-medium text-gray-700">
+          <p className="text-sm font-medium text-base-content/80">
             {hasConversations ? "Aucune conversation ne correspond" : "Aucune conversation"}
           </p>
-          <p className="mt-1 text-theme-xs text-gray-400">
+          <p className="mt-1 text-xs text-base-content/45">
             {hasConversations
               ? "Modifiez le canal ou la recherche."
               : "Les appels et messages des clientes s'afficheront ici."}
           </p>
         </div>
       ) : (
-        <ul className="flex-1 divide-y divide-gray-100 overflow-y-auto">
+        <ul className="flex-1 divide-y divide-base-300 overflow-y-auto">
           {items.map((c) => {
             const active = c.id === selectedId;
             const unread = needsReply(c) || missedCall(c);
@@ -143,12 +143,12 @@ export default function ConversationList({
                   onClick={() => onSelect(c.id)}
                   aria-current={active ? "true" : undefined}
                   className={`flex w-full gap-3 px-4 py-3 text-left transition-colors ${
-                    active ? "bg-brand-50/60" : "hover:bg-gray-50"
+                    active ? "bg-accent/60" : "hover:bg-base-200"
                   }`}
                 >
                   <span
-                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-theme-sm font-semibold ${
-                      c.name ? "bg-brand-50 text-brand-600" : "bg-gray-100 text-gray-400"
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
+                      c.name ? "bg-accent text-brand-600" : "bg-muted text-base-content/45"
                     }`}
                   >
                     {initials(c.name)}
@@ -157,13 +157,13 @@ export default function ConversationList({
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center justify-between gap-2">
                       <span
-                        className={`truncate text-theme-sm ${
-                          unread ? "font-semibold text-gray-900" : "font-medium text-gray-800"
+                        className={`truncate text-sm ${
+                          unread ? "font-semibold text-base-content" : "font-medium text-base-content"
                         }`}
                       >
                         {displayName(c)}
                       </span>
-                      <span className="shrink-0 text-theme-xs text-gray-400">
+                      <span className="shrink-0 text-xs text-base-content/45">
                         {formatListStamp(last.at)}
                       </span>
                     </span>
@@ -171,11 +171,11 @@ export default function ConversationList({
                     <span className="mt-0.5 flex items-center gap-1.5">
                       <ChannelIcon
                         channel={lastChannelOf(c)}
-                        className="h-3.5 w-3.5 shrink-0 text-gray-400"
+                        className="h-3.5 w-3.5 shrink-0 text-base-content/45"
                       />
                       <span
-                        className={`truncate text-theme-xs ${
-                          unread ? "text-gray-600" : "text-gray-500"
+                        className={`truncate text-xs ${
+                          unread ? "text-base-content/70" : "text-base-content/60"
                         }`}
                       >
                         {previewText(c)}

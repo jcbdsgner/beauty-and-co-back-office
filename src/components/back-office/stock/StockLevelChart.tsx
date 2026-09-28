@@ -75,11 +75,11 @@ export default function StockLevelChart({ history }: { history: LevelHistoryPoin
   };
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
-      <div className="flex items-start justify-between gap-4 border-b border-gray-100 px-6 py-5">
+    <div className="overflow-hidden rounded-box border border-base-300 bg-white">
+      <div className="flex items-start justify-between gap-4 border-b border-base-300 px-6 py-5">
         <div>
-          <h2 className="text-lg font-semibold text-gray-800">Évolution du stock</h2>
-          <p className="mt-1 text-theme-sm text-gray-500">
+          <h2 className="text-lg font-semibold text-base-content">Évolution du stock</h2>
+          <p className="mt-1 text-sm text-base-content/60">
             {flat
               ? "Niveau stable sur la période — pas de mouvement enregistré."
               : "10 dernières semaines · réserve centrale + salons."}

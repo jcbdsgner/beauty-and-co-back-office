@@ -3,14 +3,13 @@ import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSidebar } from "../context/SidebarContext";
+import { cn } from "@/lib/utils";
 import {
   CalendarCheck2,
   FileUser,
   Gift,
   LayoutDashboard,
   MessageCircle,
-  Package,
   Settings,
   Sparkles,
   UserRoundGroup,
@@ -23,6 +22,8 @@ type NavItem = { name: string; icon: React.ReactNode; path: string };
 // accessibles ailleurs (Salons → menu compte du header). Ils restent
 // atteignables via des raccourcis sur le tableau de bord (Rapports,
 // Satisfaction, Journal) et le menu compte (Salons) — voir Dashboard.tsx.
+// Stock retiré à son tour (2026-09-27) : déjà présent dans les « Accès
+// Rapides » du tableau de bord (dashboard/AccesRapides.tsx).
 const menuItems: NavItem[] = [
   { icon: <LayoutDashboard />, name: "Tableau de bord", path: "/" },
   { icon: <CalendarCheck2 />, name: "Rendez-vous", path: "/rendez-vous" },
@@ -30,93 +31,59 @@ const menuItems: NavItem[] = [
   { icon: <FileUser />, name: "Clients", path: "/clients" },
   { icon: <UserRoundGroup />, name: "Équipe", path: "/equipe" },
   { icon: <Sparkles />, name: "Services", path: "/services" },
-  { icon: <Package />, name: "Stock", path: "/stock" },
   { icon: <Gift />, name: "Fidélité", path: "/fidelite" },
   { icon: <Settings />, name: "Réglages", path: "/reglages" },
 ];
 
+// Sidebar du Figma « Point de vente » (node 381:497, remise le 2026-09-27 à la
+// place du rail 104px de point-de-vente, sur demande) : 260px, toujours
+// dépliée, wordmark centré au-dessus d'un séparateur, un lien icône 18px +
+// libellé 16px par module, actif en pastille pleine `#886666`. Le placeholder
+// texte du Figma est rendu par le vrai wordmark SVG de la marque.
 const AppSidebar: React.FC = () => {
-  const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const pathname = usePathname();
-
-  const showText = isExpanded || isHovered || isMobileOpen;
-  const collapsed = !isExpanded && !isHovered && !isMobileOpen;
 
   const isActive = (path: string) =>
     path === "/" ? pathname === "/" : pathname === path || pathname.startsWith(`${path}/`);
 
   return (
-    <aside
-      className={`fixed left-0 top-0 z-50 mt-16 flex h-screen flex-col border-r border-[#efe9e8] bg-white px-3 text-gray-900 shadow-[1px_0_2px_rgba(0,0,0,0.04)] transition-all duration-300 ease-in-out lg:mt-0 print:hidden
-        ${isExpanded || isMobileOpen ? "w-[260px] px-5" : isHovered ? "w-[260px] px-5" : "w-[80px]"}
-        ${isMobileOpen ? "translate-x-0" : "-translate-x-full"}
-        lg:translate-x-0`}
-      onMouseEnter={() => !isExpanded && setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      <div
-        className={`flex items-center border-b border-[#efe9e8] py-5 ${collapsed ? "lg:justify-center" : "justify-center"}`}
-      >
-        <Link
-          href="/"
-          aria-label="Beauty & Co — tableau de bord"
-          className="flex items-center"
-        >
-          {showText ? (
-            <Image
-              src="/images/logo/beautyandco-wordmark.svg"
-              alt="Beauty & Co"
-              width={497}
-              height={230}
-              priority
-              className="h-11 w-auto"
-            />
-          ) : (
-            <Image
-              src="/images/logo/beautyandco-mark.jpg"
-              alt="Beauty & Co"
-              width={1200}
-              height={1197}
-              priority
-              className="h-11 w-11 rounded-full object-contain ring-2 ring-white shadow-[var(--shadow-card)]"
-            />
-          )}
+    <aside className="fixed top-0 left-0 z-50 flex h-screen w-[260px] flex-col border-r border-[#efe9e8] bg-white px-5 drop-shadow-[1px_0px_1px_rgba(0,0,0,0.04)] print:hidden">
+      <div className="flex shrink-0 items-center justify-center border-b border-[#efe9e8] py-5">
+        <Link href="/" aria-label="Beauty & Co — tableau de bord" className="flex items-center">
+          <Image
+            src="/images/logo/beautyandco-wordmark.svg"
+            alt="Beauty & Co"
+            width={497}
+            height={230}
+            priority
+            className="h-11 w-[95px] object-contain"
+          />
         </Link>
       </div>
 
-      <div className="mt-4 flex flex-1 flex-col overflow-y-auto pb-6 no-scrollbar">
-        <nav>
-          <ul className="flex flex-col gap-2">
-            {menuItems.map((nav) => {
-              const active = isActive(nav.path);
-              return (
-                <li key={nav.name}>
-                  <Link
-                    href={nav.path}
-                    className={`group relative flex items-center gap-3 rounded-lg text-sm font-medium transition-all duration-150 ${
-                      collapsed ? "mx-auto h-11 w-11 justify-center px-0" : "px-4 py-3"
-                    } ${
-                      active
-                        ? "bg-brand-500 text-white shadow-[0_1px_2px_rgba(0,0,0,0.08)]"
-                        : "text-[#6a6060] hover:bg-brand-50/70 hover:text-brand-700"
-                    }`}
-                    aria-current={active ? "page" : undefined}
-                  >
-                    <span
-                      className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center [&>svg]:h-[18px] [&>svg]:w-[18px] ${
-                        active ? "text-white" : "text-[#6a6060] group-hover:text-brand-600"
-                      }`}
-                    >
-                      {nav.icon}
-                    </span>
-                    {showText && <span className="whitespace-nowrap">{nav.name}</span>}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
-      </div>
+      <nav className="no-scrollbar flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pt-4 pb-6">
+        {menuItems.map((nav) => {
+          const active = isActive(nav.path);
+          return (
+            <Link
+              key={nav.name}
+              href={nav.path}
+              aria-current={active ? "page" : undefined}
+              className={cn(
+                "flex w-full shrink-0 items-center gap-3 rounded-lg px-4 py-3 text-[16px] leading-[22px] font-medium whitespace-nowrap transition-colors",
+                active
+                  ? "bg-primary text-white drop-shadow-[0px_1px_1px_rgba(0,0,0,0.08)]"
+                  : "text-[#6a6060] hover:bg-accent hover:text-secondary",
+              )}
+            >
+              <span className="flex size-[18px] shrink-0 items-center justify-center [&>svg]:size-[18px]">
+                {nav.icon}
+              </span>
+              {nav.name}
+            </Link>
+          );
+        })}
+      </nav>
     </aside>
   );
 };

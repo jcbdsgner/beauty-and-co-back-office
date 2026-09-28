@@ -7,13 +7,11 @@ import { TrashBinIcon } from "@/icons";
 import { salonName, type SalonId } from "@/lib/mock/beautyandco";
 import { membersForPrestation } from "@/lib/mock/staff";
 import {
-  RESERVATION_MODE_OPTIONS,
   digitsToInt,
   durationLabel,
   fcfa,
   type Prestation,
   type RecipeItem,
-  type ReservationMode,
   type Service,
 } from "@/lib/mock/services";
 import RecipeEditor from "./RecipeEditor";
@@ -26,18 +24,24 @@ type Draft = {
   active: boolean;
   recipe: RecipeItem[];
   salonIds: SalonId[];
-  reservationMode: ReservationMode;
+  twoPractitioners: boolean;
+  serviceId: string;
   subcategoryId: string | null;
 };
 
-const draftOf = (serviceSalonIds: SalonId[], initialSubcategoryId: string | null, p?: Prestation): Draft => ({
+const draftOf = (
+  service: Service,
+  initialSubcategoryId: string | null,
+  p?: Prestation,
+): Draft => ({
   name: p?.name ?? "",
   price: p ? String(p.priceFcfa) : "",
   duration: p ? String(p.durationMin) : "",
   active: p?.active ?? true,
   recipe: p?.recipe ?? [],
-  salonIds: p && p.salonIds.length > 0 ? p.salonIds : serviceSalonIds,
-  reservationMode: p?.reservationMode ?? "both",
+  salonIds: p && p.salonIds.length > 0 ? p.salonIds : service.salonIds,
+  twoPractitioners: p?.twoPractitioners ?? false,
+  serviceId: service.id,
   subcategoryId: p ? p.subcategoryId ?? null : initialSubcategoryId,
 });
 
@@ -46,7 +50,7 @@ function RealiseePar({ prestationId }: { prestationId: string | null }) {
 
   if (!prestationId) {
     return (
-      <p className="text-theme-xs text-gray-500">
+      <p className="text-xs text-base-content/60">
         La liste des praticiennes compétentes s&apos;affichera après l&apos;enregistrement.
       </p>
     );
@@ -64,8 +68,8 @@ function RealiseePar({ prestationId }: { prestationId: string | null }) {
     );
   }
   return (
-    <p className="text-theme-sm text-gray-700">
-      <span className="text-gray-500">Réalisée par : </span>
+    <p className="text-sm text-base-content/80">
+      <span className="text-base-content/60">Réalisée par : </span>
       {members.map((m) => m.firstName).join(", ")}
     </p>
   );
@@ -73,19 +77,22 @@ function RealiseePar({ prestationId }: { prestationId: string | null }) {
 
 type Props = {
   service: Service;
+  // Toutes les catégories — la fiche porte le changement de catégorie (ce que
+  // faisait le glisser-déposer du Kanban, retiré le 2026-09-27).
+  services: Service[];
   prestation: Prestation | null; // null = création
   initialSubcategoryId: string | null;
   onClose: () => void;
-  onSave: (data: Omit<Prestation, "id" | "serviceId">) => void;
+  onSave: (data: Omit<Prestation, "id" | "serviceId"> & { serviceId: string }) => void;
   onDelete: () => void;
 };
 
-// Fiche panneau latéral d'une prestation — remplace le formulaire inline de
-// l'ancien `PrestationsPanel`. Ouverte en cliquant une carte du tableau
-// Kanban, ou via « Ajouter une prestation » depuis une colonne/lane
+// Fiche panneau latéral d'une prestation. Ouverte en cliquant une ligne de la
+// carte des services, ou via « Ajouter » depuis une section / sous-catégorie
 // (`initialSubcategoryId` préremplit alors la sous-catégorie visée).
 export default function PrestationPanel({
-  service,
+  service: initialService,
+  services,
   prestation,
   initialSubcategoryId,
   onClose,
@@ -93,8 +100,17 @@ export default function PrestationPanel({
   onDelete,
 }: Props) {
   const [draft, setDraft] = useState<Draft>(
-    draftOf(service.salonIds, initialSubcategoryId, prestation ?? undefined),
+    draftOf(initialService, initialSubcategoryId, prestation ?? undefined),
   );
+  const service = services.find((s) => s.id === draft.serviceId) ?? initialService;
+
+  // Changer de catégorie : la sous-catégorie et les salons dépendent du
+  // parent, on repart de ses valeurs par défaut.
+  const changeService = (id: string) => {
+    const next = services.find((s) => s.id === id);
+    if (!next || next.id === draft.serviceId) return;
+    setDraft({ ...draft, serviceId: next.id, subcategoryId: null, salonIds: next.salonIds });
+  };
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const valid =
@@ -110,6 +126,7 @@ export default function PrestationPanel({
   const save = () => {
     if (!valid) return;
     onSave({
+      serviceId: draft.serviceId,
       subcategoryId: draft.subcategoryId,
       name: draft.name.trim(),
       priceFcfa: digitsToInt(draft.price),
@@ -117,8 +134,7 @@ export default function PrestationPanel({
       active: draft.active,
       recipe: draft.recipe,
       salonIds: draft.salonIds.length > 0 ? draft.salonIds : [],
-      reservationMode: draft.reservationMode,
-      twoPractitioners: prestation?.twoPractitioners,
+      twoPractitioners: draft.twoPractitioners,
     });
   };
 
@@ -157,7 +173,7 @@ export default function PrestationPanel({
             }
           />
           <div className="pt-7">
-            <label className="flex items-center gap-2 text-theme-sm text-gray-600">
+            <label className="flex items-center gap-2 text-sm text-base-content/70">
               <Toggle
                 checked={draft.active}
                 onChange={(v) => setDraft({ ...draft, active: v })}
@@ -168,22 +184,30 @@ export default function PrestationPanel({
           </div>
         </div>
 
-        {service.subcategories.length > 0 && (
+        <div className={service.subcategories.length > 0 ? "grid grid-cols-2 gap-3" : ""}>
           <SelectField
-            label="Sous-catégorie"
-            value={draft.subcategoryId ?? "__none"}
-            onChange={(v) => setDraft({ ...draft, subcategoryId: v === "__none" ? null : v })}
-            options={[
-              { value: "__none", label: "Autres (sans sous-catégorie)" },
-              ...service.subcategories.map((s) => ({ value: s.id, label: s.name })),
-            ]}
+            label="Catégorie"
+            value={draft.serviceId}
+            onChange={changeService}
+            options={services.map((s) => ({ value: s.id, label: s.name }))}
           />
-        )}
+          {service.subcategories.length > 0 && (
+            <SelectField
+              label="Sous-catégorie"
+              value={draft.subcategoryId ?? "__none"}
+              onChange={(v) => setDraft({ ...draft, subcategoryId: v === "__none" ? null : v })}
+              options={[
+                { value: "__none", label: "Autres (sans sous-catégorie)" },
+                ...service.subcategories.map((s) => ({ value: s.id, label: s.name })),
+              ]}
+            />
+          )}
+        </div>
 
         <div>
-          <span className="mb-1.5 block text-sm font-medium text-gray-800">Proposée dans</span>
+          <span className="mb-1.5 block text-sm font-medium text-base-content">Proposée dans</span>
           {service.salonIds.length === 0 ? (
-            <p className="text-theme-xs text-warning-600">
+            <p className="text-xs text-warning-600">
               Le service parent n&apos;est proposé dans aucun salon.
             </p>
           ) : (
@@ -193,17 +217,17 @@ export default function PrestationPanel({
                 return (
                   <label
                     key={id}
-                    className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-theme-sm ${
+                    className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm ${
                       checked
-                        ? "border-brand-300 bg-white text-gray-800"
-                        : "border-gray-200 bg-white text-gray-500"
+                        ? "border-brand-300 bg-white text-base-content"
+                        : "border-base-300 bg-white text-base-content/60"
                     }`}
                   >
                     <input
                       type="checkbox"
                       checked={checked}
                       onChange={() => toggleSalon(id)}
-                      className="size-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500/20"
+                      className="checkbox checkbox-primary checkbox-sm shrink-0"
                     />
                     {salonName(id)}
                   </label>
@@ -211,30 +235,41 @@ export default function PrestationPanel({
               })}
             </div>
           )}
-          <p className="mt-1.5 text-theme-xs text-gray-500">
+          <p className="mt-1.5 text-xs text-base-content/60">
             Par défaut, tous les salons de la catégorie. Décochez pour restreindre.
           </p>
         </div>
 
-        <SelectField<ReservationMode>
-          label="Réservation"
-          value={draft.reservationMode}
-          onChange={(v) => setDraft({ ...draft, reservationMode: v })}
-          options={RESERVATION_MODE_OPTIONS}
-        />
+        {/* Pas de « mode de réservation » (praticienne choisie par la cliente ou
+            non, retiré le 2026-09-27) : la réservation pose la praticienne
+            d'office, la moins chargée parmi les libres. Seul réglage réel :
+            deux praticiennes en parallèle, temps de chaise divisé. */}
+        <label className="flex items-center justify-between gap-4 rounded-lg border border-base-300 bg-white p-3">
+          <span>
+            <span className="block text-sm font-medium text-base-content">Réalisable à deux praticiennes</span>
+            <span className="text-xs text-base-content/55">
+              Chacune sur une zone distincte, en parallèle — le temps de chaise est divisé.
+            </span>
+          </span>
+          <Toggle
+            checked={draft.twoPractitioners}
+            onChange={(v) => setDraft({ ...draft, twoPractitioners: v })}
+            aria-label="Réalisable à deux praticiennes"
+          />
+        </label>
 
-        <div className="rounded-lg border border-gray-200 bg-white p-3">
+        <div className="rounded-lg border border-base-300 bg-white p-3">
           <RealiseePar prestationId={prestation?.id ?? null} />
         </div>
 
-        <div className="border-t border-gray-200 pt-5">
+        <div className="border-t border-base-300 pt-5">
           <RecipeEditor
             recipe={draft.recipe}
             onChange={(recipe) => setDraft({ ...draft, recipe })}
           />
         </div>
 
-        <div className="flex items-center justify-between gap-3 border-t border-gray-100 pt-5">
+        <div className="flex items-center justify-between gap-3 border-t border-base-300 pt-5">
           <div className="flex items-center gap-2">
             <button type="button" onClick={save} disabled={!valid} className={btnPrimary}>
               {prestation ? "Enregistrer" : "Ajouter la prestation"}
@@ -247,8 +282,8 @@ export default function PrestationPanel({
           {prestation && (
             <div>
               {confirmDelete ? (
-                <span className="flex items-center gap-2 text-theme-xs">
-                  <span className="text-gray-500">Supprimer&nbsp;?</span>
+                <span className="flex items-center gap-2 text-xs">
+                  <span className="text-base-content/60">Supprimer&nbsp;?</span>
                   <button
                     type="button"
                     onClick={onDelete}
@@ -259,7 +294,7 @@ export default function PrestationPanel({
                   <button
                     type="button"
                     onClick={() => setConfirmDelete(false)}
-                    className="font-medium text-gray-500 hover:underline"
+                    className="font-medium text-base-content/60 hover:underline"
                   >
                     Non
                   </button>
@@ -269,7 +304,7 @@ export default function PrestationPanel({
                   type="button"
                   onClick={() => setConfirmDelete(true)}
                   aria-label={`Supprimer la prestation ${prestation.name}`}
-                  className="rounded-lg p-1.5 text-gray-400 transition hover:bg-error-50 hover:text-error-600"
+                  className="rounded-lg p-1.5 text-base-content/45 transition hover:bg-error-50 hover:text-error-600"
                 >
                   <TrashBinIcon className="size-4" />
                 </button>

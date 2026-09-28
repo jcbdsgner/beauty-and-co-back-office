@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { Plus } from "lucide-react";
 import PageHeader from "@/components/back-office/PageHeader";
+import PageTabs from "@/components/back-office/PageTabs";
 import SegmentedControl, {
   type SegmentedOption,
 } from "@/components/ui/segmented/SegmentedControl";
@@ -9,59 +11,57 @@ import { useLocation } from "@/context/LocationContext";
 import { salons, type SalonScope } from "@/lib/mock/beautyandco";
 import {
   newId,
-  prestationSeeds,
-  questionSeeds,
-  serviceSeeds,
   type Prestation,
   type Service,
   type ServiceQuestion,
 } from "@/lib/mock/services";
 import type { ServiceDraft } from "./services/ServiceInfoForm";
-import ServicesBoard from "./services/ServicesBoard";
+import ServicesCatalog from "./services/ServicesCatalog";
 import CategoryPanel from "./services/CategoryPanel";
 import PrestationPanel from "./services/PrestationPanel";
+import BoissonsPanel from "./services/BoissonsPanel";
+import { useServicesData } from "./services/ServicesData";
 
-// Écran « Services » — un tableau Kanban unique pour tout le catalogue.
-//
-// 1. Où en est la propriétaire ? Deux registres. Retouche rapide (« changer le
-//    prix de Vernis permanent mains », « désactiver Brows / Lashes ») : elle
-//    entre, corrige, sort. Mise en place (« ajouter une catégorie avec ses
-//    prestations, ses questions et leurs recettes ») : session posée. Le
-//    Kanban sert les deux — une carte se corrige en un clic, une colonne
-//    entière se construit sans changer d'écran.
-// 2. Ce qui doit sauter aux yeux : les catégories et, à l'intérieur, les
-//    prestations avec leur prix — le sujet n°1 de la propriétaire, c'est
-//    l'argent (cf. carte). Le classement en colonnes/lanes remplace le
-//    tableau à plat : on voit d'un coup d'œil ce que contient chaque
-//    catégorie, pas seulement un compteur.
-// 3. Quand ça se passe mal : prestations / questions « sans catégorie » →
-//    colonne épinglée toujours visible (jamais cachée derrière un lien),
-//    rattachement en un glissé ou un sélecteur ; catégorie sans prestation →
-//    colonne avec état vide explicite ; suppression d'une catégorie →
-//    confirmation, prestations et questions détachées, pas perdues ;
-//    réordonnancement des colonnes possible uniquement sur « Tous les
-//    salons » (sinon un voisin masqué donnerait l'impression que rien ne
-//    bouge).
+// Écran « Services ». Onglet Prestations = carte des services en sections
+// continues avec sommaire (`services/ServicesCatalog`, 2026-09-27 — remplace
+// le tableau Kanban : voir ce fichier pour les 3 questions de design) ;
+// fiches catégorie et prestation en panneau latéral par-dessus.
 
 const SALON_OPTIONS: SegmentedOption<SalonScope>[] = [
   { value: "all", label: "Tous les salons" },
   ...salons.map((s) => ({ value: s.id as SalonScope, label: s.name })),
 ];
 
+// Deux onglets, deux routes (2026-09-27) : Prestations = `/services`,
+// Boissons = `/services/boissons`. L'état du catalogue vit dans
+// `services/ServicesData` (layout de la route) pour survivre au changement
+// d'onglet.
+export type ServicesSection = "prestations" | "boissons";
+
 type View =
-  | { kind: "board" }
+  | { kind: "list" }
   | { kind: "category"; id: string | null }
   | { kind: "prestation"; id: string | null; serviceId: string; subcategoryId: string | null };
 
-export default function Services() {
+export default function Services({ section }: { section: ServicesSection }) {
   const { scope, setScope } = useLocation();
 
   // Aucun backend : tout est édité en mémoire de session (comme Fidélité).
-  const [services, setServices] = useState<Service[]>(serviceSeeds);
-  const [prestations, setPrestations] = useState<Prestation[]>(prestationSeeds);
-  const [questions, setQuestions] = useState<ServiceQuestion[]>(questionSeeds);
+  // Boissons = carte du bar (famille à part, sans stock — cf. `Boisson`).
+  const {
+    services,
+    setServices,
+    prestations,
+    setPrestations,
+    questions,
+    setQuestions,
+    boissons,
+    setBoissons,
+  } = useServicesData();
+  // `undefined` = aucun panneau boisson ; `null` = création.
+  const [editingBoisson, setEditingBoisson] = useState<string | null | undefined>(undefined);
 
-  const [view, setView] = useState<View>({ kind: "board" });
+  const [view, setView] = useState<View>({ kind: "list" });
 
   /* ---- opérations catégories (services) ---- */
 
@@ -80,7 +80,7 @@ export default function Services() {
 
   const deleteService = (id: string) => {
     // Les prestations et questions ne sont jamais perdues : elles retombent
-    // « sans catégorie » et réapparaissent dans la colonne épinglée.
+    // « sans catégorie » et réapparaissent dans la section épinglée en tête.
     setPrestations((list) =>
       list.map((p) => (p.serviceId === id ? { ...p, serviceId: null, subcategoryId: null } : p)),
     );
@@ -88,7 +88,7 @@ export default function Services() {
       list.map((q) => (q.serviceId === id ? { ...q, serviceId: null } : q)),
     );
     setServices((list) => list.filter((s) => s.id !== id));
-    setView((v) => (v.kind === "category" && v.id === id ? { kind: "board" } : v));
+    setView((v) => (v.kind === "category" && v.id === id ? { kind: "list" } : v));
   };
 
   const deleteSubcategory = (serviceId: string, subcategoryId: string) => {
@@ -148,36 +148,77 @@ export default function Services() {
       ? prestations.find((p) => p.id === prestationView.id) ?? null
       : null;
 
-  const closePanel = () => setView({ kind: "board" });
+  const closePanel = () => setView({ kind: "list" });
 
   return (
-    <div className="space-y-6">
+    <div>
       <PageHeader
         title="Services"
         actions={
-          <>
-            <SegmentedControl
-              options={SALON_OPTIONS}
-              value={scope}
-              onChange={setScope}
-              aria-label="Filtrer par salon"
-              variant="tinted"
-            />
+          section === "prestations" ? (
+            <>
+              <SegmentedControl
+                options={SALON_OPTIONS}
+                value={scope}
+                onChange={setScope}
+                aria-label="Filtrer par salon"
+                variant="tinted"
+              />
+              <button
+                type="button"
+                disabled={services.length === 0}
+                onClick={() =>
+                  services[0] &&
+                  setView({ kind: "prestation", id: null, serviceId: services[0].id, subcategoryId: null })
+                }
+                className="btn btn-primary btn-sm normal-case text-[15px] font-semibold active:scale-[0.97] gap-2"
+              >
+                <Plus aria-hidden className="size-4" />
+                Nouvelle prestation
+              </button>
+            </>
+          ) : (
             <button
               type="button"
-              onClick={() => setView({ kind: "category", id: null })}
-              className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-theme-sm font-medium text-white transition hover:bg-brand-600"
+              onClick={() => setEditingBoisson(null)}
+              className="btn btn-primary btn-sm normal-case text-[15px] font-semibold active:scale-[0.97] gap-2"
             >
-              <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                <path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-              Ajouter une catégorie
+              <Plus aria-hidden className="size-4" />
+              Ajouter une boisson
             </button>
-          </>
+          )
         }
       />
 
-      <ServicesBoard
+      <PageTabs
+        label="Sections du catalogue"
+        tabs={[
+          { href: "/services", label: "Prestations", active: section === "prestations" },
+          { href: "/services/boissons", label: "Boissons", active: section === "boissons" },
+        ]}
+      />
+
+      {section === "boissons" && (
+        <BoissonsPanel
+          boissons={boissons}
+          editing={editingBoisson}
+          onOpen={setEditingBoisson}
+          onClose={() => setEditingBoisson(undefined)}
+          onSave={(id, d) => {
+            setBoissons((list) =>
+              id ? list.map((b) => (b.id === id ? { ...d, id } : b)) : [...list, { ...d, id: newId("boisson") }],
+            );
+            setEditingBoisson(undefined);
+          }}
+          onDelete={(id) => {
+            setBoissons((list) => list.filter((b) => b.id !== id));
+            setEditingBoisson(undefined);
+          }}
+        />
+      )}
+
+      {section === "prestations" && (
+      <ServicesCatalog
         services={services}
         prestations={prestations}
         questions={questions}
@@ -195,13 +236,15 @@ export default function Services() {
         onOpenNewPrestation={(serviceId, subcategoryId) =>
           setView({ kind: "prestation", id: null, serviceId, subcategoryId })
         }
-        onMovePrestation={movePrestation}
+        onTogglePrestation={(p, active) => upsertPrestation({ ...p, active })}
+        onAttachOrphanPrestation={(id, serviceId) => movePrestation(id, serviceId, null)}
         onDeleteOrphanPrestation={deletePrestation}
         onAttachOrphanQuestion={(id, serviceId) =>
           upsertQuestion({ ...questions.find((q) => q.id === id)!, serviceId })
         }
         onDeleteOrphanQuestion={deleteQuestion}
       />
+      )}
 
       {categoryView && (
         <CategoryPanel
@@ -224,15 +267,12 @@ export default function Services() {
       {prestationView && prestationService && (
         <PrestationPanel
           service={prestationService}
+          services={services}
           prestation={editingPrestation}
           initialSubcategoryId={prestationView.subcategoryId}
           onClose={closePanel}
           onSave={(data) => {
-            upsertPrestation({
-              id: editingPrestation?.id ?? newId("pr"),
-              serviceId: prestationService.id,
-              ...data,
-            });
+            upsertPrestation({ id: editingPrestation?.id ?? newId("pr"), ...data });
             closePanel();
           }}
           onDelete={() => {

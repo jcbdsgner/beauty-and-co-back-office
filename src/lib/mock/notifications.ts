@@ -61,36 +61,36 @@ export const TONE_DOT: Record<NotificationTone, string> = {
 /* ------------------------------------------------------------------ */
 /* Seeds — cohérents avec les fixtures beautyandco / rendezvous          */
 /* Chaque href pointe vers un id qui existe réellement :                 */
-/*   rdv-2409, rdv-2375, rdv-2410 ∈ SEEDS de rendezvous.ts               */
+/*   réservations reprises de point-de-vente + rdv-2375, cf. rendezvous  */
 /* Pas de seed « stock » ici : voir stockAlertNotifications() ci-dessus. */
 /* ------------------------------------------------------------------ */
 
 export const notifications: AppNotification[] = [
   {
-    id: "notif-rdv-2409",
+    id: "notif-rdv-3q2g7wd2t",
     category: "rendez-vous",
     title: "Nouveau rendez-vous en ligne",
-    body: "Sokhna Mbaye — Pose vernis semi-permanent, Sea Plaza · aujourd'hui à 15:00",
-    date: "2026-09-03T08:12:00",
+    body: "Awa Sarr — Soin du Dos, Almadies · aujourd'hui à 16:00",
+    date: "2026-09-03T13:16:00",
     read: false,
     tone: "info",
-    href: "/rendez-vous/rdv-2409",
+    href: "/rendez-vous/RV-1787682000000-3q2g7wd2t",
   },
   {
-    id: "notif-paiement-2410",
+    id: "notif-paiement-7g4wfsq5m",
     category: "paiement",
     title: "Paiement encaissé",
-    body: "Fatou Ndiaye — 45.000 FCFA · Almadies",
-    date: "2026-09-03T07:40:00",
+    body: "Fatou Camara — 46.000 FCFA · Almadies",
+    date: "2026-09-02T12:10:00",
     read: false,
     tone: "success",
-    href: "/rendez-vous/rdv-2410",
+    href: "/rendez-vous/RV-1787700000000-7g4wfsq5m",
   },
   {
     id: "notif-rdv-2375",
     category: "rendez-vous",
     title: "Rendez-vous annulé",
-    body: "Nafi Camara a annulé sa coloration complète (Almadies) moins de 24 h avant",
+    body: "Nafi Camara a annulé son soin complet (Almadies) moins de 24 h avant",
     date: "2026-09-02T09:30:00",
     read: true,
     tone: "warning",
@@ -100,7 +100,7 @@ export const notifications: AppNotification[] = [
     id: "notif-avis-yacine",
     category: "avis",
     title: "Nouvel avis client",
-    body: "Yacine Thiam — 5/5, Sea Plaza : « Rien à redire. »",
+    body: "Yacine Wade — 5/5, Sea Plaza : « Rien à redire. »",
     date: "2026-09-01T18:20:00",
     read: true,
     tone: "success",
