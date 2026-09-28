@@ -117,7 +117,7 @@ tout design » → voir @design.md.
   - `page.tsx` — tableau de bord (rend `<Dashboard />`, cf. `components/back-office/`)
   - `satisfaction/page.tsx` — satisfaction client (rend `<Satisfaction />`)
   - `rapports/page.tsx` — générateur de rapports paramétrables (rend `<Rapports />`)
-  - `messagerie/page.tsx` — boîte de réception multicanal (rend `<Messagerie />`)
+  - `messagerie/page.tsx` — boîte de réception SMS + WhatsApp (rend `<Messagerie />`)
   - `rendez-vous/page.tsx` — rendez-vous : deux vues (Liste triable + Agenda —
     frise horaire maison par praticienne, voir plus bas), fiche latérale avec
     affectation d'une praticienne par
@@ -528,8 +528,8 @@ tout design » → voir @design.md.
   `messagerie/` : `ConversationList` (panneau gauche : recherche + filtre canal +
   liste), `ConversationThread` (panneau droit : en-tête + fil groupé par jour +
   pied), `MessageComposer` (réponse : bascule de canal + repli WhatsApp quand le
-  SMS est coupé + `⌘`+Entrée), `glyphs` (pictos téléphone / WhatsApp / SMS /
-  chat / actualiser / recherche / alerte / image + `ChannelIcon`),
+  SMS est coupé + `⌘`+Entrée), `glyphs` (pictos WhatsApp / SMS /
+  actualiser / recherche / alerte / image + `ChannelIcon`),
   `Clients` (shell client de l'écran clientèle : recherche nom/email/téléphone +
   filtre `Toutes / Actives / À relancer / Nouvelles` (2026-09-22, dernier —
   `isNewClient`, créée il y a ≤ 30 j, aligné sur le filtre `FILTERS` de
@@ -1314,13 +1314,13 @@ fichiers template supprimés : `index.ts`, `types.ts`, `customers.ts`,
   rattachement » sur la fiche membre et la liste Équipe), et les
   helpers `addDays`, `mondayOf`, `shiftRangeLabel`, `newAbsenceId`,
   `newOverrideId`
-- `messagerie.ts` — fixtures de la boîte de réception (conversations multicanal :
-  `call` / `sms` / `whatsapp` / `chat`, événements `ThreadEvent` datés).
+- `messagerie.ts` — fixtures de la boîte de réception (conversations `sms` /
+  `whatsapp` — appels et chat retirés le 2026-09-28 —, événements `ThreadEvent` datés).
   **Indépendant du barrel** : importer directement `@/lib/mock/messagerie`.
   Expose `conversations`, `smsOutboundAvailable` (panne SMS simulée), les
-  dérivés `needsReply` / `missedCall` / `failedOutbound` / `previewText` /
+  dérivés `needsReply` / `failedOutbound` / `previewText` /
   `writableChannels`, et le formatage `formatListStamp` / `formatClock` /
-  `formatDaySeparator` / `formatDuration` / `groupEventsByDay`. **2026-09-22** :
+  `formatDaySeparator` / `groupEventsByDay`. **2026-09-22** :
   `Conversation.clientId?` (référence vers `@/lib/mock/beautyandco::clients()`)
   + `conversationByClientId(clientId)`, sur le modèle de point-de-vente
   (`lib/data/conversations.ts`) — 3 fils de démo rattachés (`c-awa` → `c01`,

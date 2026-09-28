@@ -10,23 +10,21 @@ export { salonName };
 /* Canaux                                                              */
 /* ------------------------------------------------------------------ */
 
-export type Channel = "call" | "sms" | "whatsapp" | "chat";
-export type WritableChannel = Exclude<Channel, "call">;
+// Deux canaux seulement (2026-09-28) : SMS et WhatsApp. Les appels et le chat
+// du site ont été retirés de la messagerie.
+export type Channel = "sms" | "whatsapp";
+export type WritableChannel = Channel;
 export type ChannelFilter = Channel | "all";
 
 export const channelLabel: Record<Channel, string> = {
-  call: "Appel",
   sms: "SMS",
   whatsapp: "WhatsApp",
-  chat: "Chat",
 };
 
 export const channelFilters: { value: ChannelFilter; label: string }[] = [
   { value: "all", label: "Tous" },
-  { value: "call", label: "Appels" },
   { value: "sms", label: "SMS" },
   { value: "whatsapp", label: "WhatsApp" },
-  { value: "chat", label: "Chat" },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -42,27 +40,18 @@ export const messageStatusLabel: Record<MessageStatus, string> = {
   failed: "Échec de l'envoi",
 };
 
-export type CallEvent = {
-  kind: "call";
-  id: string;
-  direction: "in" | "out";
-  at: string; // ISO local, ex. « 2026-09-03T11:47 »
-  durationSec: number; // 0 = non décroché
-  outcome: "answered" | "missed";
-};
-
 export type MessageEvent = {
   kind: "message";
   id: string;
   channel: WritableChannel;
   direction: "in" | "out";
-  at: string;
+  at: string; // ISO local, ex. « 2026-09-03T11:47 »
   text?: string;
   attachment?: { type: "image"; name: string };
   status?: MessageStatus; // sortants uniquement
 };
 
-export type ThreadEvent = CallEvent | MessageEvent;
+export type ThreadEvent = MessageEvent;
 
 export type Conversation = {
   id: string;
@@ -96,16 +85,23 @@ export const conversations: Conversation[] = [
     phone: "+221 77 123 45 67",
     salon: "almadies",
     clientId: "c01",
-    channels: ["whatsapp", "call"],
+    channels: ["whatsapp"],
     events: [
-      { kind: "call", id: "awa-1", direction: "in", at: "2026-08-28T10:12", durationSec: 95, outcome: "answered" },
+      {
+        kind: "message",
+        id: "awa-1",
+        channel: "whatsapp",
+        direction: "in",
+        at: "2026-08-28T10:12",
+        text: "Bonjour, auriez-vous une place samedi matin pour une coupe & brushing aux Almadies ?",
+      },
       {
         kind: "message",
         id: "awa-2",
         channel: "whatsapp",
         direction: "out",
         at: "2026-08-28T10:21",
-        text: "Bonjour Awa, comme convenu je vous ai réservé la coupe & brushing samedi à 10h aux Almadies. À très vite !",
+        text: "Bonjour Awa, je vous ai réservé la coupe & brushing samedi à 10h aux Almadies. À très vite !",
         status: "read",
       },
       {
@@ -150,10 +146,16 @@ export const conversations: Conversation[] = [
     name: "",
     phone: "+221 78 640 11 74",
     salon: "seaplaza",
-    channels: ["call"],
+    channels: ["sms"],
     events: [
-      { kind: "call", id: "inc-1", direction: "in", at: "2026-09-03T09:02", durationSec: 0, outcome: "missed" },
-      { kind: "call", id: "inc-2", direction: "in", at: "2026-09-03T11:47", durationSec: 0, outcome: "missed" },
+      {
+        kind: "message",
+        id: "inc-1",
+        channel: "sms",
+        direction: "in",
+        at: "2026-09-03T11:47",
+        text: "Bonjour, le salon de Sea Plaza est-il ouvert dimanche ?",
+      },
     ],
   },
   {
@@ -161,12 +163,12 @@ export const conversations: Conversation[] = [
     name: "Sokhna Ndiaye",
     phone: "+221 77 401 88 52",
     salon: "seaplaza",
-    channels: ["chat"],
+    channels: ["whatsapp"],
     events: [
       {
         kind: "message",
         id: "sok-1",
-        channel: "chat",
+        channel: "whatsapp",
         direction: "in",
         at: "2026-09-03T10:05",
         text: "Bonjour, combien coûte un balayage sur cheveux longs à Sea Plaza ?",
@@ -174,7 +176,7 @@ export const conversations: Conversation[] = [
       {
         kind: "message",
         id: "sok-2",
-        channel: "chat",
+        channel: "whatsapp",
         direction: "out",
         at: "2026-09-03T10:21",
         text: "Bonjour Sokhna, le balayage démarre à 35.000 FCFA et varie selon la longueur et la densité. Souhaitez-vous que je vous réserve un diagnostic gratuit ?",
@@ -183,7 +185,7 @@ export const conversations: Conversation[] = [
       {
         kind: "message",
         id: "sok-3",
-        channel: "chat",
+        channel: "whatsapp",
         direction: "in",
         at: "2026-09-03T10:26",
         text: "Je vais réfléchir et je reviens vers vous, merci !",
@@ -230,7 +232,7 @@ export const conversations: Conversation[] = [
     name: "Fatou Camara",
     phone: "+221 77 908 33 21",
     salon: "seaplaza",
-    channels: ["sms", "call"],
+    channels: ["sms"],
     events: [
       {
         kind: "message",
@@ -238,11 +240,10 @@ export const conversations: Conversation[] = [
         channel: "sms",
         direction: "out",
         at: "2026-09-01T08:00",
-        text: "BeautyAndCo — rappel : coloration le 2 sept. à 10h30, Sea Plaza. Répondez OUI pour confirmer.",
+        text: "BeautyAndCo — rappel : soin complet le 2 sept. à 10h30, Sea Plaza. Répondez OUI pour confirmer.",
         status: "delivered",
       },
       { kind: "message", id: "fat-2", channel: "sms", direction: "in", at: "2026-09-01T08:12", text: "OUI" },
-      { kind: "call", id: "fat-3", direction: "out", at: "2026-09-01T16:05", durationSec: 42, outcome: "answered" },
     ],
   },
   {
@@ -250,16 +251,23 @@ export const conversations: Conversation[] = [
     name: "Mariam Kane",
     phone: "+221 76 220 47 63",
     salon: "almadies",
-    channels: ["call", "whatsapp"],
+    channels: ["whatsapp"],
     events: [
-      { kind: "call", id: "nde-1", direction: "in", at: "2026-08-30T16:30", durationSec: 205, outcome: "answered" },
+      {
+        kind: "message",
+        id: "nde-1",
+        channel: "whatsapp",
+        direction: "in",
+        at: "2026-08-30T16:30",
+        text: "Bonjour, avez-vous encore de la place samedi après-midi ?",
+      },
       {
         kind: "message",
         id: "nde-2",
         channel: "whatsapp",
         direction: "out",
         at: "2026-08-30T16:48",
-        text: "Bonjour Ndèye, suite à votre appel je vous ai réservé le balayage samedi à 15h30. Belle journée !",
+        text: "Bonjour Ndèye, suite à votre message je vous ai réservé le balayage samedi à 15h30. Belle journée !",
         status: "read",
       },
     ],
@@ -290,43 +298,29 @@ export const conversationByClientId = (clientId: string): Conversation | undefin
 
 export const lastEvent = (c: Conversation) => c.events[c.events.length - 1];
 
-export const lastChannelOf = (c: Conversation): Channel => {
-  const e = lastEvent(c);
-  return e.kind === "call" ? "call" : e.channel;
-};
+export const lastChannelOf = (c: Conversation): Channel => lastEvent(c).channel;
 
-export const writableChannels = (c: Conversation): WritableChannel[] =>
-  c.channels.filter((ch): ch is WritableChannel => ch !== "call");
+export const writableChannels = (c: Conversation): WritableChannel[] => c.channels;
 
 // Dernier message entrant sans réponse → la conversation attend une action.
 export const needsReply = (c: Conversation) => {
   const e = lastEvent(c);
-  return e.kind === "message" && e.direction === "in";
-};
-
-export const missedCall = (c: Conversation) => {
-  const e = lastEvent(c);
-  return e.kind === "call" && e.outcome === "missed";
+  return e.direction === "in";
 };
 
 export const failedOutbound = (c: Conversation) => {
   const e = lastEvent(c);
-  return e.kind === "message" && e.direction === "out" && e.status === "failed";
+  return e.direction === "out" && e.status === "failed";
 };
 
 export const previewText = (c: Conversation): string => {
   const e = lastEvent(c);
-  if (e.kind === "call") {
-    if (e.outcome === "missed") return e.direction === "in" ? "Appel manqué" : "Appel non abouti";
-    const dur = formatDuration(e.durationSec);
-    return `Appel ${e.direction === "in" ? "reçu" : "passé"}${dur ? ` · ${dur}` : ""}`;
-  }
   const body = e.attachment ? "Photo" : (e.text ?? "");
   return e.direction === "out" ? `Vous : ${body}` : body;
 };
 
 /* ------------------------------------------------------------------ */
-/* Formatage des dates / durées                                        */
+/* Formatage des dates                                        */
 /* ------------------------------------------------------------------ */
 
 const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -364,14 +358,6 @@ export const formatDaySeparator = (at: string) => {
     }),
   );
 };
-
-export function formatDuration(sec: number): string | null {
-  if (!sec) return null;
-  const m = Math.floor(sec / 60);
-  const s = sec % 60;
-  if (!m) return `${s} s`;
-  return s ? `${m} min ${s} s` : `${m} min`;
-}
 
 // Regroupe les événements d'un fil par journée, dans l'ordre.
 export function groupEventsByDay(events: ThreadEvent[]) {

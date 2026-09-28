@@ -5,52 +5,16 @@ import {
   channelLabel,
   displayName,
   formatClock,
-  formatDuration,
   groupEventsByDay,
   initials,
   messageStatusLabel,
   salonName,
-  writableChannels,
-  type CallEvent,
   type Conversation,
   type MessageEvent,
-  type ThreadEvent,
   type WritableChannel,
 } from "@/lib/mock/messagerie";
 import MessageComposer from "./MessageComposer";
-import { ChannelIcon, ImageGlyph, PhoneGlyph } from "./glyphs";
-
-const CALL_TITLE: Record<string, string> = {
-  "in-answered": "Appel reçu",
-  "in-missed": "Appel manqué",
-  "out-answered": "Appel passé",
-  "out-missed": "Appel non abouti",
-};
-
-function CallRow({ event }: { event: CallEvent }) {
-  const missed = event.outcome === "missed";
-  const title = CALL_TITLE[`${event.direction}-${event.outcome}`];
-  const duration = formatDuration(event.durationSec);
-
-  return (
-    <div className="my-2 flex w-full items-center gap-3 rounded-xl border border-base-300 bg-white px-4 py-3">
-      <span
-        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
-          missed ? "bg-error-50 text-error-500" : "bg-accent text-secondary"
-        }`}
-      >
-        <PhoneGlyph className="h-4 w-4" />
-      </span>
-      <div className="min-w-0">
-        <p className="text-sm font-medium text-base-content">{title}</p>
-        <p className="text-xs text-base-content/45">
-          {formatClock(event.at)}
-          {duration ? ` · ${duration}` : ""}
-        </p>
-      </div>
-    </div>
-  );
-}
+import { ChannelIcon, ImageGlyph } from "./glyphs";
 
 function MessageBubble({ event }: { event: MessageEvent }) {
   const out = event.direction === "out";
@@ -100,14 +64,6 @@ function MessageBubble({ event }: { event: MessageEvent }) {
   );
 }
 
-function ThreadEventRow({ event }: { event: ThreadEvent }) {
-  return event.kind === "call" ? (
-    <CallRow event={event} />
-  ) : (
-    <MessageBubble event={event} />
-  );
-}
-
 export default function ConversationThread({
   conversation,
   onSend,
@@ -116,7 +72,6 @@ export default function ConversationThread({
   onSend: (text: string, channel: WritableChannel) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const writable = writableChannels(conversation);
   const groups = groupEventsByDay(conversation.events);
 
   // Toujours montrer le dernier message quand on ouvre / répond.
@@ -170,26 +125,14 @@ export default function ConversationThread({
               </span>
             </div>
             {group.events.map((event) => (
-              <ThreadEventRow key={event.id} event={event} />
+              <MessageBubble key={event.id} event={event} />
             ))}
           </div>
         ))}
       </div>
 
       {/* Réponse */}
-      {writable.length === 0 ? (
-        <div className="border-t border-base-300 px-6 py-4">
-          <p className="text-sm text-base-content/60">
-            Aucune conversation écrite avec ce numéro.
-          </p>
-          <span className="mt-2 inline-flex cursor-default items-center gap-2 rounded-lg border border-base-300 bg-white px-4 py-2 text-sm font-medium text-base-content/80">
-            <PhoneGlyph className="h-4 w-4" />
-            Rappeler le {conversation.phone}
-          </span>
-        </div>
-      ) : (
-        <MessageComposer conversation={conversation} onSend={onSend} />
-      )}
+      <MessageComposer conversation={conversation} onSend={onSend} />
     </div>
   );
 }

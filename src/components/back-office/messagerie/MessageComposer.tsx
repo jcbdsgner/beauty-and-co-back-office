@@ -8,7 +8,6 @@ import {
   smsOutboundAvailable,
   writableChannels,
   type Conversation,
-  type MessageEvent,
   type WritableChannel,
 } from "@/lib/mock/messagerie";
 import { WarningGlyph } from "./glyphs";
@@ -25,7 +24,7 @@ function preferredChannel(conversation: Conversation): WritableChannel {
   const writable = writableChannels(conversation);
   const lastInbound = [...conversation.events]
     .reverse()
-    .find((e): e is MessageEvent => e.kind === "message" && e.direction === "in");
+    .find((e) => e.direction === "in");
   const base =
     lastInbound && writable.includes(lastInbound.channel) ? lastInbound.channel : writable[0];
   if (base === "sms" && !smsOutboundAvailable && writable.includes("whatsapp")) return "whatsapp";

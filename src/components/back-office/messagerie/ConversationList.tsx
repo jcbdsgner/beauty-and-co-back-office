@@ -12,7 +12,6 @@ import {
   initials,
   lastChannelOf,
   lastEvent,
-  missedCall,
   needsReply,
   previewText,
   type ChannelFilter,
@@ -37,12 +36,6 @@ function StatusBadge({ conversation }: { conversation: Conversation }) {
     return (
       <Badge size="sm" color="error">
         Échec d&apos;envoi
-      </Badge>
-    );
-  if (missedCall(conversation))
-    return (
-      <Badge size="sm" color="error">
-        Appel manqué
       </Badge>
     );
   if (needsReply(conversation))
@@ -127,14 +120,14 @@ export default function ConversationList({
           <p className="mt-1 text-xs text-base-content/45">
             {hasConversations
               ? "Modifiez le canal ou la recherche."
-              : "Les appels et messages des clientes s'afficheront ici."}
+              : "Les SMS et messages WhatsApp des clientes s'afficheront ici."}
           </p>
         </div>
       ) : (
         <ul className="flex-1 divide-y divide-base-300 overflow-y-auto">
           {items.map((c) => {
             const active = c.id === selectedId;
-            const unread = needsReply(c) || missedCall(c);
+            const unread = needsReply(c);
             const last = lastEvent(c);
             return (
               <li key={c.id}>
@@ -182,7 +175,7 @@ export default function ConversationList({
                       </span>
                     </span>
 
-                    {(failedOutbound(c) || missedCall(c) || needsReply(c)) && (
+                    {(failedOutbound(c) || needsReply(c)) && (
                       <span className="mt-1.5 flex">
                         <StatusBadge conversation={c} />
                       </span>
