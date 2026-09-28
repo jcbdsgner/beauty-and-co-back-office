@@ -3,11 +3,15 @@
 import { useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { PackageCheck, PackagePlus } from "lucide-react";
 import Alert from "@/components/ui/alert/Alert";
+import { SegmentedToggle } from "@/components/ui/molecules/segmented-toggle";
+import { cn } from "@/lib/utils";
 import Badge from "@/components/ui/badge/Badge";
 import DetailModal from "@/components/back-office/detail/DetailModal";
 import { BoxIcon } from "@/icons";
 import {
+  fcfa,
   groupThousands,
   salonName,
   type SalonId,
@@ -32,7 +36,6 @@ import {
   productLocations,
   PROJECTION_MODEL_OPTIONS,
   projectRunout,
-  projectionModelLabel,
   RESERVE,
   stockMovements,
   usedInRecipe,
@@ -42,9 +45,9 @@ import {
   type StockMovement,
   type ThresholdOverride,
 } from "@/lib/mock/stock";
-import { products } from "@/lib/mock/services";
+import { PRODUCT_BRANDS, products } from "@/lib/mock/services";
 import StockLevelChart from "./StockLevelChart";
-import { SectionCard, SelectField, TextInput, btnPrimary } from "./ui";
+import { SelectField, TextInput, btnPrimary } from "./ui";
 
 type Props = {
   productId: string;
@@ -72,6 +75,7 @@ export default function StockDetail({
   onBack,
 }: Props) {
   const [model, setModel] = useState<ProjectionModel>("4w");
+  const [action, setAction] = useState<"adjust" | "transfer">("adjust");
 
   const product = products.find((p) => p.id === productId);
 
@@ -124,326 +128,354 @@ export default function StockDetail({
 
   const consoTotal = breakdown.sales + breakdown.recipe;
   const scopeLabel = scope === "all" ? "tous les salons" : salonName(scope);
+  const brandName = PRODUCT_BRANDS.find((b) => b.id === product.brand)?.name;
+  const tone = companyCoverage === null ? null : coverageTone(companyCoverage);
+
+  // Emplacements à l'échelle commune : la barre la plus longue = le plus haut
+  // niveau ou seuil, pour comparer réserve et salons d'un coup d'œil.
+  const levels = [
+    ...(hasReserve ? [{ key: "reserve", label: "Réserve centrale", hint: "Non affectée à un salon", onHand: reserveLevel, threshold: null as number | null, salonId: null as SalonId | null }] : []),
+    ...salonRows.map((r) => ({ key: r.salonId, label: salonName(r.salonId), hint: "En rayon", onHand: r.onHand, threshold: r.threshold, salonId: r.salonId as SalonId | null })),
+  ];
+  const scaleMax = Math.max(1, ...levels.map((l) => Math.max(l.onHand ?? 0, l.threshold ?? 0))) * 1.15;
+
+  // Réapprovisionnement : la réponse à « faut-il commander ? », en tête.
+  const needsOrder = companyBelow || (projection.reorderQty > 0 && projection.reorderBy !== null);
+  const verdict =
+    companyTotal === null
+      ? { title: "Stock jamais inventorié", text: "Faites un inventaire pour obtenir une projection." }
+      : needsOrder
+        ? {
+            title: `Commander ${unitsLabel(projection.reorderQty || companyThreshold)}${projection.reorderBy ? ` avant le ${frShortDate(projection.reorderBy)}` : ""}`,
+            text: companyBelow
+              ? `Le stock entreprise (${groupThousands(companyTotal)}) est sous son seuil de ${groupThousands(companyThreshold)}.`
+              : `Délai fournisseur de ${leadDaysFor(productId)} jours.`,
+          }
+        : projection.runoutDate === null
+          ? { title: "Rien à commander", text: "Aucune sortie récente : pas de rupture prévisible." }
+          : { title: "Rien à commander pour l'instant", text: `Délai fournisseur de ${leadDaysFor(productId)} jours.` };
+
+  const shownMovements = movements.slice(0, 10);
 
   return (
-    <DetailModal title="Fiche produit" onClose={onBack}>
-      <div className="space-y-6">
-        {/* En-tête ---------------------------------------------------------- */}
-        <div className="flex flex-wrap items-start justify-between gap-6">
-          <div className="flex items-start gap-4">
-            <ProductPhoto
-              photo={photo ?? product?.image}
-              onPick={(dataUrl) => onSetPhoto(productId, dataUrl)}
-              onRemove={() => onSetPhoto(productId, null)}
-            />
-            <div>
-              <h1 className="text-2xl font-semibold text-base-content">{product.name}</h1>
-              <p className="mt-1 text-sm text-base-content/60">
-                Compté en {product.defaultUnit} · délai fournisseur {leadDaysFor(productId)} j
-              </p>
-            </div>
-          </div>
-
-          <div className="text-right">
-            <p className="text-xs font-medium uppercase tracking-wide text-base-content/45">
-              Stock entreprise
+    <DetailModal title="Fiche produit" onClose={onBack} widthClassName="max-w-6xl">
+      <div className="flex flex-col gap-8">
+        {/* Identité + stock entreprise ------------------------------------ */}
+        <header className="flex items-start gap-6">
+          <ProductPhoto
+            photo={photo ?? product.image}
+            onPick={(dataUrl) => onSetPhoto(productId, dataUrl)}
+            onRemove={() => onSetPhoto(productId, null)}
+          />
+          <div className="min-w-0 flex-1 pt-1">
+            <h1 className="text-balance text-2xl font-semibold text-base-content">{product.name}</h1>
+            <p className="mt-1.5 text-sm text-base-content/60">
+              {[brandName, product.gamme].filter(Boolean).join(" · ")}
+              {product.priceFcfa ? ` · vendu ${fcfa(product.priceFcfa)}` : ""}
             </p>
-            <p className="text-2xl font-semibold text-base-content">
+          </div>
+          <div className="shrink-0 pt-1 text-right">
+            <p className="text-sm text-base-content/60">Stock entreprise</p>
+            <p className="text-4xl font-semibold tabular-nums leading-tight text-base-content">
               {companyTotal === null ? "—" : groupThousands(companyTotal)}
             </p>
             {companyCoverage !== null ? (
-              <Badge
-                size="sm"
-                color={
-                  coverageTone(companyCoverage) === "error"
-                    ? "error"
-                    : coverageTone(companyCoverage) === "warning"
-                      ? "warning"
-                      : "success"
-                }
-              >
+              <Badge size="sm" color={tone === "error" ? "error" : tone === "warning" ? "warning" : "success"}>
                 ≈ {companyCoverage} j de couverture
               </Badge>
             ) : (
-              <span className="text-xs text-base-content/45">Pas de sortie mesurée</span>
+              <span className="text-xs text-base-content/55">Pas de sortie mesurée</span>
             )}
           </div>
-        </div>
+        </header>
 
-        {/* Alerte entreprise ------------------------------------------- */}
-        {companyBelow && (
-          <Alert
-            variant="warning"
-            title="Stock entreprise sous le seuil"
-            message={`Total réserve + salons : ${groupThousands(
-              companyTotal ?? 0,
-            )} pour un seuil de ${groupThousands(
-              companyThreshold,
-            )}. Une commande fournisseur est conseillée (voir la projection ci-dessous).`}
-          />
-        )}
-
-        {/* Niveaux & seuils ------------------------------------------- */}
-        <SectionCard
-          title="Niveaux & seuils"
-          description="Réserve centrale et salons. Les seuils sont modifiables pour cette session uniquement."
+        {/* Réapprovisionnement -------------------------------------------- */}
+        <section
+          aria-label="Réapprovisionnement"
+          className={cn(
+            "grid grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,1fr))] items-center gap-6 rounded-box px-6 py-5",
+            needsOrder ? "bg-warning/10" : "bg-base-200",
+          )}
         >
-          <ul className="divide-y divide-base-300">
-            {hasReserve && (
-              <li className="flex items-center justify-between gap-4 py-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-base-content">Réserve centrale</p>
-                  <p className="text-xs text-base-content/60">Non affectée à un salon</p>
-                </div>
-                <span className="shrink-0 text-sm text-base-content">
-                  {reserveLevel === null ? (
-                    <span className="text-warning-600">Jamais inventoriée</span>
-                  ) : (
-                    <>
-                      {groupThousands(reserveLevel)}{" "}
-                      <span className="text-base-content/45">{product.defaultUnit}</span>
-                    </>
-                  )}
-                </span>
-              </li>
+          <div className="flex items-start gap-3">
+            <span
+              className={cn(
+                "mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full",
+                needsOrder ? "bg-warning/15 text-warning-700" : "bg-base-100 text-success-600",
+              )}
+            >
+              {needsOrder ? <PackagePlus aria-hidden className="size-[18px]" /> : <PackageCheck aria-hidden className="size-[18px]" />}
+            </span>
+            <div className="min-w-0">
+              <p className={cn("text-[17px] font-semibold", needsOrder ? "text-warning-800" : "text-base-content")}>
+                {verdict.title}
+              </p>
+              <p className="mt-0.5 text-sm text-base-content/65">{verdict.text}</p>
+            </div>
+          </div>
+          <Figure label="Rupture estimée" value={projection.runoutDate ? frShortDate(projection.runoutDate) : "—"} />
+          <Figure label="Commander avant le" value={projection.reorderBy ? frShortDate(projection.reorderBy) : "—"} />
+          <div>
+            <label className="text-xs text-base-content/60" htmlFor="projection-model">
+              Rythme retenu
+            </label>
+            <select
+              id="projection-model"
+              value={model}
+              onChange={(e) => setModel(e.target.value as ProjectionModel)}
+              className="select select-sm mt-1 w-full bg-base-100 text-sm"
+            >
+              {PROJECTION_MODEL_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+            {!projection.reliable && projection.runoutDate !== null && (
+              <p className="mt-1 text-xs text-warning-700">Indicatif : moins de 4 semaines de données.</p>
             )}
+          </div>
+        </section>
 
-            {salonRows.map((s) => (
-              <li key={s.salonId} className="flex items-center justify-between gap-4 py-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-base-content">{salonName(s.salonId)}</p>
-                  <p className="text-xs text-base-content/60">
-                    {s.onHand === null
-                      ? "Jamais inventorié"
-                      : `${groupThousands(s.onHand)} en rayon`}
-                    {s.below && <span className="text-error-600"> · sous le seuil</span>}
+        {/* Où est le stock ------------------------------------------------- */}
+        <section>
+          <div className="mb-3 flex items-baseline justify-between gap-4">
+            <h2 className="text-lg font-semibold text-base-content">Où est le stock</h2>
+            <p className="text-xs text-base-content/55">Seuils modifiables pour cette session.</p>
+          </div>
+          <div className="rounded-box border border-base-300">
+            <ul className="divide-y divide-base-300">
+              {levels.map((l) => {
+                const below = l.onHand !== null && l.threshold !== null && l.onHand < l.threshold;
+                return (
+                  <li key={l.key} className="grid grid-cols-[180px_minmax(0,1fr)_64px_150px] items-center gap-5 px-5 py-3.5">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-base-content">{l.label}</p>
+                      <p className={cn("text-xs", below ? "text-error-600" : "text-base-content/55")}>
+                        {below ? "Sous le seuil" : l.hint}
+                      </p>
+                    </div>
+                    <LevelBar value={l.onHand} threshold={l.threshold} max={scaleMax} below={below} />
+                    <p className="text-right text-lg font-semibold tabular-nums text-base-content">
+                      {l.onHand === null ? (
+                        <span className="text-sm font-medium text-warning-700">Jamais compté</span>
+                      ) : (
+                        groupThousands(l.onHand)
+                      )}
+                    </p>
+                    {l.salonId ? (
+                      <label className="flex items-center justify-end gap-2 text-xs text-base-content/60">
+                        Seuil
+                        <ThresholdInput
+                          value={l.threshold ?? 0}
+                          onCommit={(value) => onSetThreshold({ productId, salon: l.salonId!, value })}
+                        />
+                      </label>
+                    ) : (
+                      <span />
+                    )}
+                  </li>
+                );
+              })}
+              <li className="grid grid-cols-[180px_minmax(0,1fr)_64px_150px] items-center gap-5 bg-base-200/60 px-5 py-3.5">
+                <div>
+                  <p className="text-sm font-semibold text-base-content">Total entreprise</p>
+                  <p className={cn("text-xs", companyBelow ? "text-error-600" : "text-base-content/55")}>
+                    {companyBelow ? "Sous le seuil" : "Réserve + salons"}
                   </p>
                 </div>
-                <label className="flex shrink-0 items-center gap-2 text-xs text-base-content/60">
-                  Seuil salon
-                  <ThresholdInput
-                    value={s.threshold}
-                    onCommit={(value) =>
-                      onSetThreshold({ productId, salon: s.salonId, value })
-                    }
-                  />
+                <span />
+                <p className="text-right text-lg font-semibold tabular-nums text-base-content">
+                  {companyTotal === null ? "—" : groupThousands(companyTotal)}
+                </p>
+                <label className="flex items-center justify-end gap-2 text-xs text-base-content/60">
+                  Seuil
+                  <ThresholdInput value={companyThreshold} onCommit={(value) => onSetThreshold({ productId, value })} />
                 </label>
               </li>
-            ))}
-          </ul>
+            </ul>
+          </div>
+        </section>
 
-          <div className="mt-4 flex items-center justify-between gap-4 rounded-xl bg-base-200 px-4 py-3">
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-base-content">Total entreprise</p>
-              {companyBelow ? (
-                <p className="text-xs text-error-600">
-                  Sous le seuil — commande fournisseur conseillée
-                </p>
-              ) : (
-                <p className="text-xs text-base-content/60">Réserve + salons</p>
+        {/* Analyse | Actions ------------------------------------------------ */}
+        <div className="grid grid-cols-[minmax(0,1fr)_360px] items-start gap-8">
+          <div className="flex min-w-0 flex-col gap-8">
+            <StockLevelChart history={history} />
+
+            <section>
+              <div className="mb-3 flex items-baseline justify-between gap-4">
+                <h2 className="text-lg font-semibold text-base-content">Consommation</h2>
+                <p className="text-xs text-base-content/55">8 dernières semaines · {scopeLabel}</p>
+              </div>
+              {scopeWeekly === 0 && usedInRecipe(productId) && (
+                <div className="mb-4">
+                  <Alert
+                    variant="warning"
+                    title="Aucune sortie depuis 60 jours"
+                    message="Ce produit figure encore dans une recette de prestation mais n'a pas bougé. Vérifiez que la recette est à jour."
+                    showLink
+                    linkHref="/services"
+                    linkText="Ouvrir Services"
+                  />
+                </div>
               )}
-            </div>
-            <div className="flex shrink-0 items-center gap-4">
-              <span className="text-lg font-semibold text-base-content">
-                {companyTotal === null ? "—" : groupThousands(companyTotal)}
-              </span>
-              <label className="flex items-center gap-2 text-xs text-base-content/60">
-                Seuil entreprise
-                <ThresholdInput
-                  value={companyThreshold}
-                  onCommit={(value) => onSetThreshold({ productId, value })}
+              <div className="grid grid-cols-2 gap-8 rounded-box border border-base-300 p-5">
+                <div>
+                  <p className="mb-3 text-sm font-medium text-base-content">Sorties</p>
+                  {consoTotal === 0 ? (
+                    <p className="text-sm text-base-content/60">Aucune sortie mesurée sur la période.</p>
+                  ) : (
+                    <div className="space-y-4">
+                      <ConsoBar label="Ventes au détail" value={breakdown.sales} total={consoTotal} />
+                      <ConsoBar label="Prestations" value={breakdown.recipe} total={consoTotal} />
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <p className="mb-3 text-sm font-medium text-base-content">Utilisé dans</p>
+                  {uses.length === 0 ? (
+                    <p className="text-sm text-base-content/60">Aucune recette : vendu au détail uniquement.</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {uses.map((u) => (
+                        <li key={u.id} className="flex items-baseline justify-between gap-3 text-sm">
+                          <Link
+                            href="/services"
+                            className="min-w-0 truncate text-base-content/80 underline-offset-2 transition hover:text-secondary hover:underline"
+                          >
+                            {u.name}
+                          </Link>
+                          <span className="shrink-0 tabular-nums text-base-content/60">
+                            {groupThousands(u.qty)} {u.unit} / visite
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <aside className="flex flex-col gap-8">
+            <section className="rounded-box border border-base-300 p-5">
+              <h2 className="text-lg font-semibold text-base-content">Mouvement</h2>
+              <p className="mb-4 mt-0.5 text-xs text-base-content/55">Enregistré pour cette session.</p>
+              {hasReserve && salonLocs.length > 0 && (
+                <SegmentedToggle
+                  size="sm"
+                  className="mb-5"
+                  value={action}
+                  onChange={(v) => setAction(v as "adjust" | "transfer")}
+                  options={[
+                    { value: "adjust", label: "Ajuster" },
+                    { value: "transfer", label: "Transférer" },
+                  ]}
+                  aria-label="Type de mouvement"
                 />
-              </label>
-            </div>
-          </div>
-        </SectionCard>
+              )}
+              {action === "transfer" && hasReserve && salonLocs.length > 0 ? (
+                <TransferForm
+                  productId={productId}
+                  salonLocs={salonLocs}
+                  reserveLevel={reserveLevel}
+                  onAddMovements={onAddMovements}
+                />
+              ) : (
+                <AdjustForm
+                  productId={productId}
+                  locations={locs}
+                  extraMovements={extraMovements}
+                  onAddMovements={onAddMovements}
+                />
+              )}
+            </section>
 
-        {/* Ajuster / transférer -------------------------------------- */}
-        <SectionCard
-          title="Ajuster ou transférer"
-          description="Enregistré pour cette session uniquement."
-        >
-          <AdjustForm
-            productId={productId}
-            locations={locs}
-            extraMovements={extraMovements}
-            onAddMovements={onAddMovements}
-          />
-
-          {hasReserve && salonLocs.length > 0 && (
-            <>
-              <div className="-mx-6 my-6 border-t border-base-300" />
-              <TransferForm
-                productId={productId}
-                salonLocs={salonLocs}
-                reserveLevel={reserveLevel}
-                onAddMovements={onAddMovements}
-              />
-            </>
-          )}
-        </SectionCard>
-
-        {/* Évolution du stock --------------------------------------- */}
-        <StockLevelChart history={history} />
-
-        {/* Répartition de la consommation -------------------------- */}
-        {scopeWeekly === 0 && usedInRecipe(productId) && (
-          <Alert
-            variant="warning"
-            title="Aucune sortie depuis 60 jours"
-            message="Ce produit figure encore dans une recette de prestation mais n'a pas bougé. Vérifiez que la recette est à jour."
-            showLink
-            linkHref="/services"
-            linkText="Ouvrir Services"
-          />
-        )}
-
-        <SectionCard
-          title="Répartition de la consommation"
-          description={`Sur les 8 dernières semaines · ${scopeLabel}.`}
-        >
-          {consoTotal === 0 ? (
-            <p className="text-sm text-base-content/60">
-              Aucune sortie mesurée sur la période.
-            </p>
-          ) : (
-            <div className="space-y-4">
-              <ConsoBar label="Ventes au détail" value={breakdown.sales} total={consoTotal} />
-              <ConsoBar
-                label="Absorbé par les prestations"
-                value={breakdown.recipe}
-                total={consoTotal}
-              />
-            </div>
-          )}
-        </SectionCard>
-
-        <SectionCard
-          title="Utilisé dans ces prestations"
-          description="Quantité prélevée à chaque visite, d'après la recette de consommation."
-        >
-          {uses.length === 0 ? (
-            <p className="text-sm text-base-content/60">
-              Ce produit n&apos;entre dans aucune recette : il n&apos;est que vendu
-              au détail.
-            </p>
-          ) : (
-            <ul className="divide-y divide-base-300">
-              {uses.map((u) => (
-                <li
-                  key={u.id}
-                  className="flex items-center justify-between gap-3 py-2.5 text-sm"
-                >
-                  <Link
-                    href="/services"
-                    className="text-base-content/80 transition hover:text-brand-600 hover:underline"
-                  >
-                    {u.name}
-                  </Link>
-                  <span className="shrink-0 text-base-content/60">
-                    {groupThousands(u.qty)} {u.unit} / visite
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </SectionCard>
-
-        {/* Projection de rupture ----------------------------------- */}
-        <SectionCard
-          title="Projection de rupture — Beauty & Co"
-          description="Estime la date de rupture du stock entreprise au rythme choisi, et quand commander au fournisseur."
-        >
-          <div className="max-w-xs">
-            <SelectField
-              label="Base de calcul"
-              value={model}
-              onChange={setModel}
-              options={PROJECTION_MODEL_OPTIONS}
-            />
-          </div>
-
-          {!projection.reliable && projection.runoutDate !== null && (
-            <div className="mt-4">
-              <Alert
-                variant="warning"
-                title="Projection indicative"
-                message="Moins de 4 semaines de données pour ce produit : la date de rupture peut varier fortement."
-              />
-            </div>
-          )}
-
-          <dl className="mt-5 grid grid-cols-3 gap-4">
-            <div>
-              <dt className="text-xs text-base-content/45">Rupture estimée</dt>
-              <dd className="mt-1 text-lg font-semibold text-base-content">
-                {projection.runoutDate ? frShortDate(projection.runoutDate) : "—"}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-xs text-base-content/45">Quantité à commander</dt>
-              <dd className="mt-1 text-lg font-semibold text-base-content">
-                {projection.reorderQty > 0
-                  ? `${groupThousands(projection.reorderQty)} ${product.defaultUnit}`
-                  : "—"}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-xs text-base-content/45">Commander avant le</dt>
-              <dd className="mt-1 text-lg font-semibold text-base-content">
-                {projection.reorderBy ? frShortDate(projection.reorderBy) : "—"}
-              </dd>
-            </div>
-          </dl>
-
-          <p className="mt-4 text-xs text-base-content/45">
-            Base : {projectionModelLabel(model)}.
-          </p>
-
-          {projection.runoutDate === null && (
-            <p className="mt-2 text-sm text-base-content/60">
-              Aucune sortie récente : pas de rupture prévisible.
-            </p>
-          )}
-        </SectionCard>
-
-        {/* Journal ------------------------------------------------- */}
-        <SectionCard
-          title="Journal des mouvements"
-          description="Les 12 derniers mouvements, tous emplacements confondus."
-        >
-          {movements.length === 0 ? (
-            <p className="text-sm text-base-content/60">Aucun mouvement enregistré.</p>
-          ) : (
-            <ul className="divide-y divide-base-300">
-              {movements.slice(0, 12).map((m) => (
-                <li
-                  key={m.id}
-                  className="flex items-center justify-between gap-3 py-2.5 text-sm"
-                >
-                  <div className="min-w-0">
-                    <span className="text-base-content/80">{movementReasonLabel(m.reason)}</span>
-                    <span className="text-base-content/45"> · {locationName(m.location)}</span>
-                    {m.note && <span className="text-base-content/45"> · {m.note}</span>}
-                  </div>
-                  <div className="flex shrink-0 items-center gap-3">
-                    <span className="text-base-content/45">{frShortDate(m.date)}</span>
-                    <span
-                      className={`font-medium ${
-                        m.qty >= 0 ? "text-success-600" : "text-error-600"
-                      }`}
-                    >
-                      {m.qty >= 0 ? "+" : "−"}
-                      {groupThousands(Math.abs(m.qty))}
-                    </span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </SectionCard>
+            <section>
+              <h2 className="mb-3 text-lg font-semibold text-base-content">Derniers mouvements</h2>
+              {shownMovements.length === 0 ? (
+                <p className="text-sm text-base-content/60">Aucun mouvement enregistré.</p>
+              ) : (
+                <ol className="divide-y divide-base-300 border-y border-base-300">
+                  {shownMovements.map((m) => {
+                    const label = movementReasonLabel(m.reason);
+                    const note = m.note && m.note !== label && !m.note.startsWith("Transfert") ? m.note : null;
+                    const detail =
+                      m.reason === "transfer"
+                        ? m.qty < 0
+                          ? `${locationName(m.location)} → ${m.note?.replace("Transfert vers ", "") ?? ""}`
+                          : `Réserve → ${locationName(m.location)}`
+                        : locationName(m.location);
+                    return (
+                      <li key={m.id} className="flex items-center justify-between gap-3 py-2.5">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm text-base-content">{label}</p>
+                          <p className="truncate text-xs text-base-content/55">
+                            {frShortDate(m.date)} · {detail}
+                            {note ? ` · ${note}` : ""}
+                          </p>
+                        </div>
+                        <span
+                          className={cn(
+                            "shrink-0 text-sm font-semibold tabular-nums",
+                            m.qty >= 0 ? "text-success-600" : "text-base-content/70",
+                          )}
+                        >
+                          {m.qty >= 0 ? "+" : "−"}
+                          {groupThousands(Math.abs(m.qty))}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ol>
+              )}
+            </section>
+          </aside>
+        </div>
       </div>
     </DetailModal>
+  );
+}
+
+const unitsLabel = (n: number) => `${groupThousands(n)} unité${n > 1 ? "s" : ""}`;
+
+function Figure({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs text-base-content/60">{label}</p>
+      <p className="mt-1 text-lg font-semibold tabular-nums text-base-content">{value}</p>
+    </div>
+  );
+}
+
+// Niveau d'un emplacement sur l'échelle commune, repère vertical au seuil.
+function LevelBar({
+  value,
+  threshold,
+  max,
+  below,
+}: {
+  value: number | null;
+  threshold: number | null;
+  max: number;
+  below: boolean;
+}) {
+  const pct = value === null ? 0 : Math.min(100, (value / max) * 100);
+  const tick = threshold === null ? null : Math.min(100, (threshold / max) * 100);
+  return (
+    <div className="relative h-2.5 rounded-full bg-muted" aria-hidden>
+      <div
+        className={cn("h-full rounded-full transition-[width] duration-500 ease-out", below ? "bg-error-500" : "bg-brand-500")}
+        style={{ width: `${pct}%` }}
+      />
+      {tick !== null && (
+        <span
+          className="absolute -top-1 h-[18px] w-0.5 rounded-full bg-base-content/45"
+          style={{ left: `calc(${tick}% - 1px)` }}
+          title="Seuil"
+        />
+      )}
+    </div>
   );
 }
 
@@ -470,21 +502,21 @@ function ProductPhoto({
   };
 
   return (
-    <div className="shrink-0">
-      <div className="relative h-20 w-20 overflow-hidden rounded-xl border border-base-300 bg-base-200">
+    <div className="w-28 shrink-0">
+      <div className="relative size-28 overflow-hidden rounded-box border border-base-300 bg-base-200">
         {photo ? (
-          <Image src={photo} alt="" fill sizes="80px" unoptimized className="object-cover" />
+          <Image src={photo} alt="" fill sizes="112px" unoptimized className="object-cover" />
         ) : (
           <span className="flex h-full w-full items-center justify-center text-base-content/30">
-            <BoxIcon className="size-8" />
+            <BoxIcon className="size-10" />
           </span>
         )}
       </div>
-      <div className="mt-1.5 flex items-center gap-2 text-xs">
+      <div className="mt-2 flex items-center justify-center gap-3 text-xs">
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          className="font-medium text-brand-600 transition hover:underline"
+          className="font-medium text-secondary underline-offset-2 transition hover:underline"
         >
           {photo ? "Changer" : "Ajouter une photo"}
         </button>
@@ -597,11 +629,10 @@ function AdjustForm({
 
   return (
     <div>
-      <p className="text-sm font-medium text-base-content">Ajuster un niveau</p>
-      <p className="mt-0.5 text-xs text-base-content/60">
+      <p className="text-xs text-base-content/60">
         Après un comptage, une réception fournisseur ou une casse.
       </p>
-      <div className="mt-3 grid grid-cols-2 gap-4">
+      <div className="mt-3 flex flex-col gap-4">
         {locations.length > 1 && (
           <SelectField
             label="Emplacement"
@@ -625,8 +656,8 @@ function AdjustForm({
           hint={kindMeta.help}
         />
       </div>
-      <div className="mt-4">
-        <button type="button" className={btnPrimary} disabled={!valid} onClick={submit}>
+      <div className="mt-5">
+        <button type="button" className={cn(btnPrimary, "w-full")} disabled={!valid} onClick={submit}>
           Enregistrer le mouvement
         </button>
       </div>
@@ -687,11 +718,10 @@ function TransferForm({
 
   return (
     <div>
-      <p className="text-sm font-medium text-base-content">Transférer vers un salon</p>
-      <p className="mt-0.5 text-xs text-base-content/60">
+      <p className="text-xs text-base-content/60">
         Sort de la réserve centrale, entre dans le salon.
       </p>
-      <div className="mt-3 grid grid-cols-2 gap-4">
+      <div className="mt-3 flex flex-col gap-4">
         <SelectField
           label="Salon destinataire"
           value={toSalon}
@@ -713,8 +743,8 @@ function TransferForm({
           }
         />
       </div>
-      <div className="mt-4">
-        <button type="button" className={btnPrimary} disabled={!valid} onClick={submit}>
+      <div className="mt-5">
+        <button type="button" className={cn(btnPrimary, "w-full")} disabled={!valid} onClick={submit}>
           Transférer
         </button>
       </div>

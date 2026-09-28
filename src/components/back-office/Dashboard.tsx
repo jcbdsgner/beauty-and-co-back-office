@@ -54,14 +54,14 @@ export default function Dashboard() {
         </p>
       </div>
 
-      <div className="grid grid-cols-2 items-start gap-6 min-[1400px]:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+      <div className="grid grid-cols-2 items-stretch gap-6 min-[1400px]:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
         <DayDecisions decisions={decisions} onOpen={markRead} />
         <DayFeed visits={visits} scope={scope} />
       </div>
 
       <TodayKpiCards scope={scope} visits={visits} />
 
-      <div className="grid grid-cols-[minmax(0,7fr)_minmax(0,5fr)] items-start gap-6">
+      <div className="grid grid-cols-[minmax(0,7fr)_minmax(0,5fr)] items-stretch gap-6">
         <PopularServices scope={scope} />
         <AccesRapides />
       </div>

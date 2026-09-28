@@ -52,7 +52,7 @@ export default function Equipe({ tab }: { tab: EquipeTab }) {
   // Arrivée depuis une notification « demande en attente » : ?membre=<id> ouvre
   // directement la fiche — y compris si la propriétaire est déjà sur /equipe et
   // clique la notif (le param change sans remontage). Ajustement d'état pendant
-  // le rendu, même motif que l'ouverture de `AbsenceDialog` sur une cellule.
+  // le rendu, même motif que pour une fiche ouverte par lien.
   // Id inconnu → ignoré, on reste sur la liste.
   const memberParam = searchParams.get("membre");
   const [lastMemberParam, setLastMemberParam] = useState<string | null>(null);

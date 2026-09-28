@@ -62,8 +62,6 @@ export type ShiftOverride = {
   salonId: SalonId;
   start: string; // "HH:MM"
   end: string; // "HH:MM"
-  breakStart?: string;
-  breakEnd?: string;
 };
 
 /* ------------------------------------------------------------------ */
@@ -71,28 +69,28 @@ export type ShiftOverride = {
 /* ------------------------------------------------------------------ */
 
 export const absences: Absence[] = [
-  // Coumba en formation jeudi 03 et vendredi 04/09 : Bineta tient Sea Plaza
-  // seule, ses rendez-vous d'onglerie sont affectés à Aïda aux Almadies.
+  // Adja en formation jeudi 03 et vendredi 04/09 : aux Almadies, ses
+  // rendez-vous d'onglerie reviennent à Henry.
   {
-    id: "ab-coumba-formation",
-    memberId: "m-coumba",
+    id: "ab-adja-formation",
+    memberId: "m-adja",
     from: "2026-09-03",
     to: "2026-09-04",
     type: "formation",
     reason: "Formation pose gel — centre partenaire",
   },
-  // Congé posé la semaine suivante — Almadies reste couvert (Mariama + Aïda).
+  // Congé posé la semaine suivante — Sea Plaza reste couvert (Bineta + Marie Dominique).
   {
-    id: "ab-sophie-conge",
-    memberId: "m-sophie",
+    id: "ab-fatou-conge",
+    memberId: "m-fatou",
     from: "2026-09-08",
     to: "2026-09-12",
     type: "conge",
   },
-  // Journée maladie isolée — vendredi 04/09, Almadies garde Sophie et Aïda.
+  // Journée maladie isolée — vendredi 04/09, Almadies garde Henry et Gnagna.
   {
-    id: "ab-mariama-maladie",
-    memberId: "m-mariama",
+    id: "ab-michelle-maladie",
+    memberId: "m-michelle",
     from: "2026-09-04",
     to: "2026-09-04",
     type: "maladie",
@@ -100,30 +98,30 @@ export const absences: Absence[] = [
 ];
 
 export const shiftOverrides: ShiftOverride[] = [
-  // Sophie vient exceptionnellement son jour de repos (mercredi 02/09), le matin.
+  // Fatou vient exceptionnellement son jour de repos (mercredi 02/09), le matin.
   {
-    id: "so-sophie-0902",
-    memberId: "m-sophie",
-    date: "2026-09-02",
-    salonId: "almadies",
-    start: "09:00",
-    end: "14:00",
-  },
-  // Mariama démarre en milieu de journée le vendredi 04/09 (rendez-vous personnel).
-  {
-    id: "so-mariama-0904",
-    memberId: "m-mariama",
-    date: "2026-09-04",
-    salonId: "almadies",
-    start: "12:00",
-    end: "19:00",
-  },
-  // Coumba écourte sa journée du mardi 02/09.
-  {
-    id: "so-coumba-0902",
-    memberId: "m-coumba",
+    id: "so-fatou-0902",
+    memberId: "m-fatou",
     date: "2026-09-02",
     salonId: "seaplaza",
+    start: "10:00",
+    end: "14:00",
+  },
+  // Michelle démarre en milieu de journée le mercredi 09/09 (rendez-vous personnel).
+  {
+    id: "so-michelle-0909",
+    memberId: "m-michelle",
+    date: "2026-09-09",
+    salonId: "almadies",
+    start: "12:00",
+    end: "16:30",
+  },
+  // Adja écourte sa journée du mardi 02/09.
+  {
+    id: "so-adja-0902",
+    memberId: "m-adja",
+    date: "2026-09-02",
+    salonId: "almadies",
     start: "10:00",
     end: "15:00",
   },
@@ -141,8 +139,6 @@ export type Presence =
       salonId: SalonId;
       start: string;
       end: string;
-      breakStart?: string;
-      breakEnd?: string;
     };
 
 const WEEKDAY_BY_JS_DAY: Weekday[] = ["dim", "lun", "mar", "mer", "jeu", "ven", "sam"];
@@ -198,8 +194,6 @@ export function presenceFor(
       salonId: override.salonId,
       start: override.start,
       end: override.end,
-      breakStart: override.breakStart,
-      breakEnd: override.breakEnd,
     };
   }
 
@@ -212,8 +206,6 @@ export function presenceFor(
     salonId: shift.salonId,
     start: shift.start,
     end: shift.end,
-    breakStart: shift.breakStart,
-    breakEnd: shift.breakEnd,
   };
 }
 
@@ -374,14 +366,11 @@ export function weekSalonSummary(
 /* Format                                                             */
 /* ------------------------------------------------------------------ */
 
-// « 9h–18h », « 9h–13h · 14h–19h » si coupure.
+// « 10h–18h ».
 export const shiftRangeLabel = (p: Extract<Presence, { state: "present" }>): string => {
   const h = (t: string) => {
     const [hh, mm] = t.split(":");
     return mm === "00" ? `${Number(hh)}h` : `${Number(hh)}h${mm}`;
   };
-  if (p.breakStart && p.breakEnd) {
-    return `${h(p.start)}–${h(p.breakStart)} · ${h(p.breakEnd)}–${h(p.end)}`;
-  }
   return `${h(p.start)}–${h(p.end)}`;
 };

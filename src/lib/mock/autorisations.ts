@@ -244,6 +244,8 @@ export const defaultAutorisations: Autorisations = {
     "stock.adjust",
     "journal.view",
   ]),
+  // Ménage : aucun accès à la plateforme (hors matrice, cf. `ROLE_COLUMNS`).
+  menage: policyFrom([]),
   // Manager : pilote l'exploitation.
   manager: policyFrom(
     ALL_CAPABILITIES.filter((id) => !MANAGER_EXCLUDES.includes(id)),
@@ -310,5 +312,6 @@ export const applyCapability = (
 
 export const roleLabel = (role: StaffRole) => ROLE_LABELS[role];
 
-// Rôles dans l'ordre d'affichage de la matrice.
+// Rôles dans l'ordre d'affichage de la matrice — le ménage n'y figure pas :
+// il n'a jamais accès à la plateforme.
 export const ROLE_COLUMNS: StaffRole[] = ["praticienne", "caisse", "manager"];

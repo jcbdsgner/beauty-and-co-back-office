@@ -59,10 +59,7 @@ export default function TodayKpiCards({
   ];
 
   return (
-    <section aria-labelledby="figures-title">
-      <h2 id="figures-title" className="mb-3 px-1 text-[20px] font-semibold text-base-content">
-        Repères
-      </h2>
+    <section aria-label="Chiffres du jour">
       <dl className="grid grid-cols-4 divide-x divide-base-300 rounded-box border border-base-300 bg-base-100">
         {figures.map((f) => (
           <div key={f.label} className="px-6 py-5">

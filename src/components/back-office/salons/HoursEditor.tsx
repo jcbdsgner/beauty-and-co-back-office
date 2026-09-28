@@ -15,15 +15,13 @@ type Hours = Record<Weekday, DayOpening>;
 
 const DEFAULT_OPEN: Extract<DayOpening, { closed: false }> = {
   closed: false,
-  open: "09:00",
-  close: "19:00",
+  open: "10:00",
+  close: "20:00",
 };
 
 export function dayHasError(d: DayOpening): boolean {
   if (d.closed) return false;
-  if (d.close <= d.open) return true;
-  if (d.breakStart && d.breakEnd && d.breakEnd <= d.breakStart) return true;
-  return false;
+  return d.close <= d.open;
 }
 
 export const hoursHaveError = (hours: Hours) =>
@@ -73,45 +71,6 @@ export default function HoursEditor({
                     onChange={(e) => setDay(w, { ...d, close: e.target.value })}
                     className={timeFieldClass}
                   />
-                  {d.breakStart != null && d.breakEnd != null ? (
-                    <span className="flex items-center gap-2">
-                      <span className="text-base-content/45">coupure</span>
-                      <input
-                        type="time"
-                        aria-label={`${WEEKDAY_LABELS[w]} — début de coupure`}
-                        value={d.breakStart}
-                        onChange={(e) => setDay(w, { ...d, breakStart: e.target.value })}
-                        className={timeFieldClass}
-                      />
-                      <span>–</span>
-                      <input
-                        type="time"
-                        aria-label={`${WEEKDAY_LABELS[w]} — fin de coupure`}
-                        value={d.breakEnd}
-                        onChange={(e) => setDay(w, { ...d, breakEnd: e.target.value })}
-                        className={timeFieldClass}
-                      />
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setDay(w, { closed: false, open: d.open, close: d.close })
-                        }
-                        className="text-xs font-medium text-base-content/45 hover:text-error-600"
-                      >
-                        Retirer
-                      </button>
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setDay(w, { ...d, breakStart: "13:00", breakEnd: "14:00" })
-                      }
-                      className="text-xs font-medium text-brand-600 hover:underline"
-                    >
-                      + Coupure déjeuner
-                    </button>
-                  )}
                 </div>
               )}
             </div>

@@ -14,7 +14,7 @@ import { SectionCard } from "./ui";
 // Onglet « Activité » de la fiche membre — l'état de la personne, pas sa config.
 //
 // 1. Où en est la propriétaire ? En pilotage : elle ouvre la fiche pour un coup
-//    d'œil (« Mariama assure ? sa charge cette semaine ? »), ou elle arrive d'une
+//    d'œil (« Michelle assure ? sa charge cette semaine ? »), ou elle arrive d'une
 //    notification « demande en attente » et doit trancher.
 // 2. Ce qui doit sauter aux yeux : s'il y a une demande en attente, le bandeau de
 //    décision ; sinon la note de satisfaction client.

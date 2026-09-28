@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { CalendarRange, ChevronRight, ListChecks, Plus, UsersRound } from "lucide-react";
 import PageHeader from "@/components/back-office/PageHeader";
-import Alert from "@/components/ui/alert/Alert";
 import SegmentedControl, {
   type SegmentedOption,
 } from "@/components/ui/segmented/SegmentedControl";
@@ -18,53 +17,36 @@ import { cn } from "@/lib/utils";
 import { useClientsData } from "@/context/ClientsContext";
 import { useLocation } from "@/context/LocationContext";
 import { usePlanningData } from "@/context/PlanningContext";
+import { useNotifications } from "@/context/NotificationsContext";
+import { addDays } from "@/lib/mock/planning";
 import {
-  ABSENCE_LABELS,
-  addDays,
-  mondayOf,
-  shiftRangeLabel,
-  weekPresence,
-} from "@/lib/mock/planning";
-import {
-  POSTE_TYPES,
-  POSTE_TYPE_LABELS,
-  frShortDate,
   clientMatchesQuery,
   isClosed,
   salonConfig,
   salonName,
   salons,
-  type PosteType,
   type SalonId,
   type SalonScope,
   type Weekday,
 } from "@/lib/mock/beautyandco";
-import { accentForMemberId, accentForStaffName } from "@/lib/mock/staff-colors";
-import { fullName, memberById } from "@/lib/mock/staff";
 import {
-  RDV_STATUS_META,
   allRendezvous,
   autoAssign,
-  frFullDate,
-  minutesToTime,
-  timeToMinutes,
-  rdvCountByStaffDay,
-  rdvEnd,
+  cancellationNotification,
+  cancellationNotificationId,
   type RdvDetail,
   type RdvPrestation,
   type RdvStatus,
 } from "@/lib/mock/rendezvous";
-import DayTimeline, { type TimelineRow } from "@/components/back-office/rendezvous/DayTimeline";
-import WeekTimeline, { type WeekRow } from "@/components/back-office/rendezvous/WeekTimeline";
+import PlanningBoard from "@/components/back-office/equipe/planning-board/PlanningBoard";
 import DayList from "@/components/back-office/rendezvous/DayList";
 import ReservationCalendar from "@/components/back-office/rendezvous/ReservationCalendar";
 import { initialsOf } from "@/components/back-office/shared/PersonCard";
-import { ChipFilter, Legend } from "@/components/back-office/shared/board";
+import { Legend } from "@/components/back-office/shared/board";
 import { PriseRdvModal } from "@/components/prise-rdv/prise-rdv-modal";
 import RendezVousDetail from "@/components/back-office/RendezVousDetail";
-import AbsenceDialog from "@/components/back-office/planning/AbsenceDialog";
 
-// Écran « Rendez-vous » — une destination, deux vues (Liste + Agenda).
+// Écran « Rendez-vous » — une destination, trois vues (Liste, Calendrier, Par praticienne).
 // 1. Où en est la propriétaire ? Coup d'œil courant (« qui vient aujourd'hui,
 //    à quelle heure, pour quoi, qui s'en occupe »), ou gestion d'un imprévu
 //    (changer d'intervenante, déplacer, annuler). Souvent pressée.
@@ -75,7 +57,7 @@ import AbsenceDialog from "@/components/back-office/planning/AbsenceDialog";
 //    prendre (absence posée après la réservation) — un rendez-vous à déplacer.
 // 3. Quand ça se passe mal : journée vide → les clientes réservent en ligne ;
 //    praticienne demandée absente → alerte sur la fiche ; salon fermé → bandeau ;
-//    rendez-vous annulés → toujours consultables via le filtre « Annulés ».
+//    rendez-vous annulés → masqués des listes, retrouvables par leur n° de rendez-vous.
 //
 // Un rendez-vous n'a pas d'étape de confirmation : dès qu'une cliente réserve,
 // il est « à venir ». L'acompte demandé à la réservation est le même pour toutes
@@ -109,302 +91,12 @@ const dayWindow = (scopeIds: SalonId[], iso: string) => {
   return min >= max ? { min: "08:00", max: "20:00" } : { min, max };
 };
 
-// Occupation par type de poste à un instant de référence (chevauchements).
-const occupancyAt = (
-  list: RdvDetail[],
-  salonId: SalonId,
-  iso: string,
-  refTime: string,
-): Record<PosteType, number> => {
-  const ref = new Date(`${iso}T${refTime}:00`).getTime();
-  const counts: Record<PosteType, number> = { coiffure: 0, esthetique: 0, onglerie: 0 };
-  for (const r of list) {
-    if (r.salon !== salonId || r.date.slice(0, 10) !== iso) continue;
-    if (RDV_STATUS_META[r.status].closed) continue;
-    const start = new Date(r.date.replace(" ", "T")).getTime();
-    const end = new Date(rdvEnd(r)).getTime();
-    if (ref < start || ref >= end) continue;
-    for (const t of new Set(r.prestations.map((p) => p.posteType))) counts[t] += 1;
-  }
-  return counts;
-};
-
-/* -------------------------------------------------------------- agenda */
-
-function AgendaView({
-  rdvs,
-  scope,
-  onOpen,
-  onMove,
-}: {
-  rdvs: RdvDetail[];
-  scope: SalonScope;
-  onOpen: (id: string) => void;
-  onMove: (id: string, startIso: string) => void;
-}) {
-  const [period, setPeriod] = useState<"jour" | "semaine">("jour");
-  const [selectedIso, setSelectedIso] = useState(TODAY_ISO);
-  // Isoler une praticienne / réordonner les lignes — pur confort d'affichage,
-  // pas partagé avec l'onglet Planning (chaque écran garde sa propre vue).
-  const [isolated, setIsolated] = useState<string | null>(null);
-  const [rowOrder, setRowOrder] = useState<string[]>([]);
-  const { data: planningData, addAbsence } = usePlanningData();
-  const [absenceMemberId, setAbsenceMemberId] = useState<string | null>(null);
-
-  const scopeIds: SalonId[] = scope === "all" ? salons.map((s) => s.id) : [scope];
-  const win = dayWindow(scopeIds, selectedIso);
-  const monday = mondayOf(selectedIso);
-  const { days, rows: presenceRows } = useMemo(
-    () => weekPresence(scope, monday, planningData),
-    [scope, monday, planningData],
-  );
-  const unorderedPractitionerRows = useMemo(
-    () => presenceRows.filter((r) => r.member.roles.includes("praticienne")),
-    [presenceRows],
-  );
-  const practitionerRows = useMemo(() => {
-    if (rowOrder.length === 0) return unorderedPractitionerRows;
-    const byId = new Map(unorderedPractitionerRows.map((r) => [r.member.id, r]));
-    const ordered = rowOrder.map((id) => byId.get(id)).filter((r): r is (typeof unorderedPractitionerRows)[number] => Boolean(r));
-    const rest = unorderedPractitionerRows.filter((r) => !rowOrder.includes(r.member.id));
-    return [...ordered, ...rest];
-  }, [unorderedPractitionerRows, rowOrder]);
-  const dayIndex = days.findIndex((d) => d.iso === selectedIso);
-
-  const reorderRows = (draggedId: string, targetId: string) => {
-    const base = rowOrder.length > 0 ? rowOrder : unorderedPractitionerRows.map((r) => r.member.id);
-    const withoutDragged = base.filter((id) => id !== draggedId);
-    const targetIdx = withoutDragged.indexOf(targetId);
-    withoutDragged.splice(targetIdx === -1 ? withoutDragged.length : targetIdx, 0, draggedId);
-    setRowOrder(withoutDragged);
-  };
-
-  // Rendez-vous non annulés de la praticienne visée par le dialogue d'absence,
-  // par jour — pour l'alerte de conflit (même logique que l'ancien onglet Planning d'Équipe).
-  const absenceMember = absenceMemberId ? memberById(absenceMemberId) : null;
-  const absenceRdvDays = useMemo(() => {
-    if (!absenceMember) return [];
-    return rdvCountByStaffDay("all")
-      .filter((r) => r.staffFirstName === absenceMember.firstName)
-      .map((r) => ({ date: r.date, count: r.count }));
-  }, [absenceMember]);
-
-  const rdvCountMap = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const r of rdvCountByStaffDay(scope)) map.set(`${r.date}__${r.staffFirstName}`, r.count);
-    return map;
-  }, [scope]);
-
-  const dayRdvs = rdvs.filter(
-    (r) => (scope === "all" || r.salon === scope) && r.date.slice(0, 10) === selectedIso && r.status !== "annulé",
-  );
-  const pendingCount = dayRdvs.reduce(
-    (sum, r) => sum + r.prestations.filter((p) => p.staff === null).length,
-    0,
-  );
-
-  const timelineRows: TimelineRow[] = useMemo(() => {
-    const base: TimelineRow[] = practitionerRows.map((r) => {
-      const pres = r.cells[dayIndex];
-      const accent = accentForMemberId(r.member.id);
-      const label = fullName(r.member);
-      if (pres?.state === "present") {
-        return {
-          key: r.member.id,
-          label,
-          sublabel: scope === "all" ? `${shiftRangeLabel(pres)} · ${salonName(pres.salonId)}` : shiftRangeLabel(pres),
-          accent,
-          hours: { start: pres.start, end: pres.end },
-        };
-      }
-      if (pres?.state === "absent") {
-        return { key: r.member.id, label, sublabel: ABSENCE_LABELS[pres.type], accent, absent: true };
-      }
-      return { key: r.member.id, label, sublabel: "Repos", accent };
-    });
-    if (pendingCount > 0) {
-      base.unshift({
-        key: "pending",
-        label: "Sans praticienne",
-        sublabel: `${pendingCount} prestation${pendingCount > 1 ? "s" : ""} · personne de disponible`,
-        accent: accentForStaffName(null),
-        pending: true,
-      });
-    }
-    return base;
-  }, [practitionerRows, dayIndex, scope, pendingCount]);
-  const visibleTimelineRows = isolated ? timelineRows.filter((r) => r.key === isolated) : timelineRows;
-
-  const weekRows: WeekRow[] = useMemo(
-    () =>
-      practitionerRows.map((r) => ({
-        memberId: r.member.id,
-        label: fullName(r.member),
-        cells: days.map((d, i) => {
-          const pres = r.cells[i];
-          const count = rdvCountMap.get(`${d.iso}__${r.member.firstName}`) ?? 0;
-          if (pres.state === "present") return { hours: { start: pres.start, end: pres.end }, count };
-          if (pres.state === "absent") return { count: 0, absent: true };
-          return { count: 0, off: true };
-        }),
-      })),
-    [practitionerRows, days, rdvCountMap],
-  );
-  const visibleWeekRows = isolated ? weekRows.filter((r) => r.memberId === isolated) : weekRows;
-
-  const closedDays = scopeIds.every((id) => isClosed(id, selectedIso));
-  const isToday = selectedIso === TODAY_ISO;
-
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setSelectedIso((iso) => addDays(iso, period === "jour" ? -1 : -7))}
-            aria-label="Période précédente"
-            className="flex size-9 items-center justify-center rounded-full border border-base-300 text-base-content/60 transition hover:bg-base-200 hover:text-base-content"
-          >
-            ‹
-          </button>
-          <button
-            type="button"
-            onClick={() => setSelectedIso((iso) => addDays(iso, period === "jour" ? 1 : 7))}
-            aria-label="Période suivante"
-            className="flex size-9 items-center justify-center rounded-full border border-base-300 text-base-content/60 transition hover:bg-base-200 hover:text-base-content"
-          >
-            ›
-          </button>
-          <span className="min-w-56 text-sm font-semibold text-base-content">
-            {period === "jour" ? frFullDate(selectedIso) : `Semaine du ${frShortDate(monday)}`}
-          </span>
-          {selectedIso !== TODAY_ISO && (
-            <button
-              type="button"
-              onClick={() => setSelectedIso(TODAY_ISO)}
-              className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-brand-600 transition hover:bg-accent"
-            >
-              Aujourd&apos;hui
-            </button>
-          )}
-        </div>
-        <SegmentedControl
-          options={
-            [
-              { value: "jour", label: "Jour" },
-              { value: "semaine", label: "Semaine" },
-            ] as SegmentedOption<"jour" | "semaine">[]
-          }
-          value={period}
-          onChange={setPeriod}
-          aria-label="Vue Jour ou Semaine"
-        />
-      </div>
-
-      <CapacityBanner rdvs={rdvs} scopeIds={scopeIds} iso={selectedIso} />
-      {closedDays && period === "jour" && (
-        <Alert
-          variant="info"
-          title="Salon fermé ce jour-là"
-          message="Aucun créneau réservable. Les rendez-vous existants restent consultables."
-        />
-      )}
-
-      {period === "jour" ? (
-        <DayTimeline
-          iso={selectedIso}
-          windowStart={win.min}
-          windowEnd={win.max}
-          isToday={isToday}
-          nowTime={NOW_TIME}
-          rows={visibleTimelineRows}
-          rdvs={dayRdvs}
-          onOpen={onOpen}
-          onMove={onMove}
-          isolated={isolated}
-          onIsolate={setIsolated}
-          onShowAll={() => setIsolated(null)}
-          onMarkAbsent={(key) => setAbsenceMemberId(key)}
-          onReorderRow={reorderRows}
-        />
-      ) : (
-        <WeekTimeline
-          days={days}
-          rows={visibleWeekRows}
-          todayIso={TODAY_ISO}
-          onPickDay={(iso, memberId) => {
-            setSelectedIso(iso);
-            setPeriod("jour");
-            if (memberId) setIsolated(memberId);
-          }}
-          isolated={isolated}
-          onIsolate={setIsolated}
-          onShowAll={() => setIsolated(null)}
-          onMarkAbsent={(memberId) => setAbsenceMemberId(memberId)}
-        />
-      )}
-
-      <AbsenceDialog
-        open={absenceMemberId !== null}
-        member={absenceMember}
-        defaultDate={TODAY_ISO}
-        rdvDays={absenceRdvDays}
-        onClose={() => setAbsenceMemberId(null)}
-        onSubmit={(absence) => {
-          addAbsence(absence);
-          setAbsenceMemberId(null);
-        }}
-      />
-    </div>
-  );
-}
-
-function CapacityBanner({
-  rdvs,
-  scopeIds,
-  iso,
-}: {
-  rdvs: RdvDetail[];
-  scopeIds: SalonId[];
-  iso: string;
-}) {
-  const ref = iso === TODAY_ISO ? NOW_TIME : "12:00";
-  return (
-    <div className="flex flex-wrap gap-3">
-      {scopeIds.map((id) => {
-        const occ = occupancyAt(rdvs, id, iso, ref);
-        const postes = salonConfig(id).postes;
-        return (
-          <div
-            key={id}
-            className="flex items-center gap-3 rounded-xl border border-base-300 bg-white px-4 py-2.5 text-xs"
-          >
-            <span className="font-semibold text-base-content/80">{salonName(id)}</span>
-            <span className="text-base-content/30">·</span>
-            {POSTE_TYPES.map((t) => {
-              const cap = postes[t] ?? 0;
-              if (cap === 0) return null;
-              const used = occ[t];
-              const full = used >= cap;
-              return (
-                <span key={t} className={full ? "font-semibold text-warning-700" : "text-base-content/70"}>
-                  {POSTE_TYPE_LABELS[t]} {used}/{cap}
-                </span>
-              );
-            })}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
 /* -------------------------------------------------------------- shell */
 
 // Vues de l'écran — « Liste » et « Calendrier » sont celles de l'Accueil de
-// point-de-vente (qui fait autorité) ; « Par praticienne » est l'agenda
-// d'équipe du back-office (frise par praticienne, glisser-déposer), gardé en
-// plus : c'est là que la propriétaire déplace un rendez-vous.
+// point-de-vente (qui fait autorité) ; « Par praticienne » est son écran
+// Planning (Jour / Semaine, Coiffeurs / Esthéticiens), repris tel quel.
 type RdvView = "liste" | "calendrier" | "equipe";
 
 // Numéro de réservation tel qu'affiché (`RV-1787664806861-hupke9br1`) : l'id
@@ -436,6 +128,7 @@ export default function RendezVous() {
   const { data: planningData } = usePlanningData();
   const { rows: clientRows } = useClientsData();
   const [rawRdvs, setRdvs] = useState<RdvDetail[]>(() => allRendezvous());
+  const { push: pushNotification, remove: removeNotification } = useNotifications();
   // Règle métier : chaque prestation est affectée d'office à une praticienne
   // compétente, présente et libre. Recalculé à chaque changement (rendez-vous
   // déplacé, prestation ajoutée, absence posée…) ; une affectation encore
@@ -445,7 +138,6 @@ export default function RendezVous() {
   const [query, setQuery] = useState("");
   const [fromIso, setFromIso] = useState(TODAY_ISO);
   const [toIso, setToIso] = useState(TODAY_ISO);
-  const [showCancelled, setShowCancelled] = useState(false);
   const [conflictOnly, setConflictOnly] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [newOpen, setNewOpen] = useState(false);
@@ -478,7 +170,7 @@ export default function RendezVous() {
       const day = r.date.slice(0, 10);
       if (day < rangeStart || day > rangeEnd) return false;
       if (scope !== "all" && r.salon !== scope) return false;
-      if (!showCancelled && r.status === "annulé") return false;
+      if (r.status === "annulé") return false;
       if (conflictOnly && !(r.status === "à venir" && r.prestations.some((p) => !p.staff))) return false;
       if (!qq) return true;
       const payer = clientRows("all").find((c) => c.id === r.client.id);
@@ -486,7 +178,7 @@ export default function RendezVous() {
       const beneficiaryMatch = r.prestations.some((p) => p.beneficiaryName.toLowerCase().includes(qq));
       return payerMatch || beneficiaryMatch;
     });
-  }, [rdvs, q, rangeStart, rangeEnd, scope, showCancelled, conflictOnly, clientRows]);
+  }, [rdvs, q, rangeStart, rangeEnd, scope, conflictOnly, clientRows]);
 
   // La même recherche retrouve aussi la fiche cliente directement.
   const clientMatches = useMemo(
@@ -539,31 +231,27 @@ export default function RendezVous() {
   const removePrestation = (id: string, prestationId: string) =>
     patch(id, (r) => ({ ...r, prestations: r.prestations.filter((p) => p.id !== prestationId) }));
 
+  // Annuler un rendez-vous encore à venir remonte une alerte sur l'accueil ;
+  // le rétablir la retire.
   const cancelWithReason = (id: string, reason: string) => {
+    const current = rawRdvs.find((r) => r.id === id);
     patch(id, (r) => ({ ...r, status: "annulé", cancelReason: reason || undefined }));
+    if (current && current.status === "à venir") {
+      pushNotification(cancellationNotification({ ...current, cancelReason: reason || undefined }));
+    }
     flash("Réservation annulée — cliente prévenue par email.");
   };
 
   const setStatus = (id: string, status: RdvStatus) => {
+    const current = rawRdvs.find((r) => r.id === id);
     patch(id, (r) => ({ ...r, status }));
-    if (status === "à venir") flash("Réservation rétablie — cliente prévenue par email.");
-  };
-
-  const move = (id: string, startIso: string) => {
-    // Toutes les prestations suivent, écart entre elles conservé ; les
-    // praticiennes sont réaffectées d'office si besoin (`autoAssign`).
-    patch(id, (r) => {
-      const delta = timeToMinutes(startIso.slice(11, 16)) - timeToMinutes(r.date.slice(11, 16));
-      return {
-        ...r,
-        date: startIso,
-        prestations: r.prestations.map((p) => ({
-          ...p,
-          start: minutesToTime(timeToMinutes(p.start) + delta),
-        })),
-      };
-    });
-    flash("Rendez-vous déplacé — cliente prévenue par email.");
+    if (status === "annulé" && current && current.status === "à venir") {
+      pushNotification(cancellationNotification(current));
+    }
+    if (status === "à venir") {
+      removeNotification(cancellationNotificationId(id));
+      flash("Réservation rétablie — cliente prévenue par email.");
+    }
   };
 
   const create = (r: RdvDetail) => {
@@ -604,13 +292,17 @@ export default function RendezVous() {
       />
 
       {view === "equipe" ? (
-        <section className="flex flex-col gap-4">
-          <div className="flex flex-wrap items-center justify-between gap-3 pl-1">
-            <span />
+        // Le Planning de point-de-vente, tel quel (Jour / Semaine, Coiffeurs /
+        // Esthéticiens) — même composant que l'onglet Équipe › Planning, branché
+        // sur les rendez-vous de la session ; le salon se règle dans le bandeau.
+        <PlanningBoard
+          rdvs={rdvs}
+          onOpenRdv={setSelectedId}
+          showSalonFilter={false}
+          toolbarEnd={
             <SegmentedToggle value={view} onChange={(v) => setView(v as RdvView)} options={viewOptions} aria-label="Vue" />
-          </div>
-          <AgendaView rdvs={rdvs} scope={scope} onOpen={setSelectedId} onMove={move} />
-        </section>
+          }
+        />
       ) : (
         <section>
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3 pl-1">
@@ -646,16 +338,8 @@ export default function RendezVous() {
             </div>
           </div>
 
-          <div className="mb-5 flex flex-wrap items-center gap-2">
-            <ChipFilter
-              value={showCancelled ? "annules" : "actifs"}
-              onChange={(v) => setShowCancelled(v === "annules")}
-              options={[
-                { value: "actifs", label: "Sans les annulés" },
-                { value: "annules", label: "Afficher les annulés" },
-              ]}
-            />
-            {conflictCount > 0 && (
+          {conflictCount > 0 && (
+            <div className="mb-5 flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 onClick={() => {
@@ -671,8 +355,8 @@ export default function RendezVous() {
                 <span className="tabular-nums">{conflictCount}</span>
                 sans praticienne disponible — à déplacer
               </button>
-            )}
-          </div>
+            </div>
+          )}
 
           {clientMatches.length > 0 && (
             <div className="mb-5 flex flex-col gap-2">

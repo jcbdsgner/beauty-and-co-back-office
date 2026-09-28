@@ -32,7 +32,7 @@ import { Textarea } from "@/components/ui/atoms/textarea";
 import { cn } from "@/lib/utils";
 import { fullName } from "@/lib/mock/staff";
 import { presentPractitioners, type PlanningData } from "@/lib/mock/planning";
-import { preferenceLines } from "@/lib/mock/preferences";
+import { preferenceLines } from "@/lib/mock/preference-targets";
 import { TIER_LABEL, type ClientDetail } from "@/lib/mock/beautyandco";
 import { useClientsData } from "@/context/ClientsContext";
 import { usePreferenceConfig } from "@/context/PreferencesContext";

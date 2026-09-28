@@ -6,7 +6,7 @@ import SegmentedControl from "@/components/ui/segmented/SegmentedControl";
 import { weekSalonSummary } from "@/lib/mock/planning";
 import {
   ACCOUNT_LABELS,
-  CATEGORY_LABELS,
+  memberCategoryLabel,
   ROLE_LABELS,
   fullName,
   initials,
@@ -30,24 +30,34 @@ const ACCOUNT_TONE: Record<AccountState, "success" | "info" | "light"> = {
   none: "light",
 };
 
-const ROLE_FILTERS: { value: StaffRole | "all"; label: string }[] = [
-  { value: "all", label: "Tous les rôles" },
-  { value: "praticienne", label: "Praticiennes" },
+// Métier d'abord (Coiffeurs / Esthéticiens, comme le Planning), puis les autres rôles.
+type TeamFilter = "all" | "coiffure" | "esthetique" | Exclude<StaffRole, "praticienne">;
+const TEAM_FILTERS: { value: TeamFilter; label: string }[] = [
+  { value: "all", label: "Tous" },
+  { value: "coiffure", label: "Coiffeurs" },
+  { value: "esthetique", label: "Esthéticiens" },
   { value: "caisse", label: "Caisse" },
   { value: "manager", label: "Managers" },
+  { value: "menage", label: "Ménage" },
 ];
+
+const matchesFilter = (m: Member, f: TeamFilter) =>
+  f === "all" ||
+  (f === "coiffure" || f === "esthetique"
+    ? m.roles.includes("praticienne") && m.category === f
+    : m.roles.includes(f));
 
 // Grille de cartes membres — remplace l'ancien tableau (2026-09-22, passage
 // listes → blocs demandé par l'utilisatrice, même grammaire que
 // `ClientCards`, façon répertoire).
 export default function EquipeList({ members, requests, onOpen }: Props) {
   const [query, setQuery] = useState("");
-  const [role, setRole] = useState<StaffRole | "all">("all");
+  const [filter, setFilter] = useState<TeamFilter>("all");
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
     return members.filter((m) => {
-      if (role !== "all" && !m.roles.includes(role)) return false;
+      if (!matchesFilter(m, filter)) return false;
       if (!q) return true;
       return (
         fullName(m).toLowerCase().includes(q) ||
@@ -55,7 +65,7 @@ export default function EquipeList({ members, requests, onOpen }: Props) {
         m.phone.toLowerCase().includes(q)
       );
     });
-  }, [members, query, role]);
+  }, [members, query, filter]);
 
   return (
     <div className="space-y-4">
@@ -80,10 +90,10 @@ export default function EquipeList({ members, requests, onOpen }: Props) {
           />
         </div>
         <SegmentedControl
-          options={ROLE_FILTERS}
-          value={role}
-          onChange={setRole}
-          aria-label="Filtrer par rôle"
+          options={TEAM_FILTERS}
+          value={filter}
+          onChange={setFilter}
+          aria-label="Filtrer par métier ou rôle"
         />
       </div>
 
@@ -105,7 +115,7 @@ export default function EquipeList({ members, requests, onOpen }: Props) {
                 className="flex flex-col gap-3 rounded-xl border border-base-300 bg-white p-4 text-left transition hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-theme-sm"
               >
                 <div className="flex items-start justify-between gap-2">
-                  <Avatar initials={initials(m)} size="sm" />
+                  <Avatar initials={initials(m)} photo={m.photo} size="sm" />
                   {pending > 0 && (
                     <Badge size="sm" color="warning">
                       {pending === 1 ? "1 demande" : `${pending} demandes`}
@@ -115,7 +125,7 @@ export default function EquipeList({ members, requests, onOpen }: Props) {
 
                 <div className="min-w-0">
                   <p className="truncate font-semibold text-base-content">{fullName(m)}</p>
-                  <p className="text-xs text-base-content/60">{CATEGORY_LABELS[m.category]}</p>
+                  <p className="text-xs text-base-content/60">{memberCategoryLabel(m)}</p>
                 </div>
 
                 <div className="flex flex-wrap gap-1">

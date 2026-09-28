@@ -14,13 +14,8 @@ import { TextInput as Input } from "@/components/ui/atoms/text-input";
 import { Select } from "@/components/ui/atoms/select";
 import { Textarea } from "@/components/ui/atoms/textarea";
 import { cn } from "@/lib/utils";
-import {
-  PREFERENCE_DOMAINS,
-  PREFERENCE_DOMAIN_LABEL,
-  latestChoices,
-  type PreferenceDomain,
-  type PreferenceQuestion,
-} from "@/lib/mock/preferences";
+import { latestChoices, type PreferenceQuestion } from "@/lib/mock/preferences";
+import { PREFERENCE_RUBRICS, rubricOf } from "@/lib/mock/preference-targets";
 import { TextInput, btnGhost, btnPrimary } from "@/components/back-office/fidelite/ui";
 import {
   BirthdaySelect,
@@ -390,7 +385,13 @@ export function EditPreferencesDialog({
   onClose: () => void;
   onSave: (prefs: ClientPreferences) => void;
 }) {
-  const [domain, setDomain] = useState<PreferenceDomain>("onglerie");
+  // Une rubrique = une catégorie du catalogue (ou les boissons) qui a des
+  // questions actives, ou déjà une note libre sur cette fiche.
+  const rubrics = PREFERENCE_RUBRICS.filter(
+    (r) => questions.some((q) => q.active && rubricOf(q) === r.key) || initial.notes[r.key],
+  );
+  const [rubric, setRubric] = useState<string>(rubrics[0]?.key ?? "s-coiffure");
+  const rubricLabel = rubrics.find((r) => r.key === rubric)?.label ?? "";
   const [choices, setChoices] = useState<Record<string, string[]>>(() => latestChoices(initial, questions));
   const [notes, setNotes] = useState(initial.notes);
   const [hairType, setHairType] = useState(initial.hairType ?? "");
@@ -437,7 +438,7 @@ export function EditPreferencesDialog({
     onClose();
   };
 
-  const domainQuestions = questions.filter((q) => q.domain === domain && q.active);
+  const rubricQuestions = questions.filter((q) => q.active && rubricOf(q) === rubric);
 
   return (
     <Modal isOpen={open} onClose={onClose} showCloseButton={false} className="max-w-3xl m-4">
@@ -450,23 +451,23 @@ export function EditPreferencesDialog({
         <SegmentedToggle
           className="mt-5 w-full"
           size="sm"
-          aria-label="Domaine de préférence"
-          options={PREFERENCE_DOMAINS.map((d) => ({ value: d, label: PREFERENCE_DOMAIN_LABEL[d] }))}
-          value={domain}
-          onChange={(v) => setDomain(v as PreferenceDomain)}
+          aria-label="Catégorie"
+          options={rubrics.map((r) => ({ value: r.key, label: r.label }))}
+          value={rubric}
+          onChange={setRubric}
         />
 
         <div className="mt-6 space-y-6">
-          {domain === "coiffure" && (
+          {rubric === "s-coiffure" && (
             <div className="grid grid-cols-2 gap-4">
               <TextInput label="Type de cheveux" value={hairType} onChange={setHairType} placeholder="Crépus, fins" />
               <TextInput label="Réf. couleur" value={colorReference} onChange={setColorReference} placeholder="1B" />
             </div>
           )}
-          {domainQuestions.length === 0 && (
-            <p className="text-sm text-base-content/55">Aucune question active pour ce domaine.</p>
+          {rubricQuestions.length === 0 && (
+            <p className="text-sm text-base-content/55">Aucune question active pour cette catégorie.</p>
           )}
-          {domainQuestions.map((q) => (
+          {rubricQuestions.map((q) => (
             <div key={q.id}>
               <p className="text-sm font-semibold text-base-content">{q.title}</p>
               <p className="text-xs text-base-content/55">{q.multiple ? "Plusieurs réponses possibles." : "Une seule réponse."}</p>
@@ -499,11 +500,11 @@ export function EditPreferencesDialog({
               </div>
             </div>
           ))}
-          <Field label={`Note libre — ${PREFERENCE_DOMAIN_LABEL[domain]}`}>
+          <Field label={`Note libre — ${rubricLabel}`}>
             <Textarea
-              value={notes[domain] ?? ""}
-              onChange={(e) => setNotes((n) => ({ ...n, [domain]: e.target.value }))}
-              placeholder="Ce que l'équipe doit savoir sur ce domaine"
+              value={notes[rubric] ?? ""}
+              onChange={(e) => setNotes((n) => ({ ...n, [rubric]: e.target.value }))}
+              placeholder="Ce que l'équipe doit savoir pour cette catégorie"
             />
           </Field>
         </div>

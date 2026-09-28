@@ -154,7 +154,7 @@ export const conversations: Conversation[] = [
         channel: "sms",
         direction: "in",
         at: "2026-09-03T11:47",
-        text: "Bonjour, le salon de Sea Plaza est-il ouvert dimanche ?",
+        text: "Bonjour, le salon de Sea Plaza est-il ouvert lundi ?",
       },
     ],
   },

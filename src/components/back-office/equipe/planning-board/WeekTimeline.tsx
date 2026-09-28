@@ -118,7 +118,7 @@ export function WeekTimeline({
           return (
             <div key={p.id} className="flex border-b border-l-[3px] border-base-300 last:border-b-0" style={{ borderLeftColor: accent.dot }}>
               <div className="flex shrink-0 items-center gap-2 border-r border-base-300 px-3 py-2" style={{ width: LABEL_W }}>
-                <Avatar initial={initials(p)} size={28} className="shrink-0 text-xs font-semibold" style={{ backgroundColor: accent.dot, color: "#fff" }} />
+                <Avatar photoUrl={p.photo} initial={initials(p)} size={28} className="shrink-0 text-xs font-semibold" style={{ backgroundColor: accent.dot, color: "#fff" }} />
                 <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-base-content">{p.firstName}</span>
                 <DropdownMenu
                   align="end"

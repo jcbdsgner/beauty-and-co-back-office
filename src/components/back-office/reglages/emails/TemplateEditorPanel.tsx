@@ -3,13 +3,15 @@
 import { Dialog } from "@/components/ui/molecules/dialog";
 import { useMemo, useRef, useState } from "react";
 import { CheckLineIcon, CloseLineIcon, LockIcon, TrashBinIcon } from "@/icons";
+import { Zap } from "lucide-react";
 import {
-  CUSTOM_TRIGGER,
+  DEFAULT_SEND,
   TEMPLATE_VARIABLES,
-  templateKindLabel,
+  type EmailSend,
   type EmailTemplate,
 } from "@/lib/mock/emails";
 import { fieldClass, btnGhost, btnPrimary } from "./ui";
+import SendSettings from "./SendSettings";
 
 export type EditorTarget =
   | { mode: "new" }
@@ -40,6 +42,7 @@ export default function TemplateEditorPanel({
   const [name, setName] = useState(existing?.name ?? "");
   const [subject, setSubject] = useState(existing?.subject ?? "");
   const [body, setBody] = useState(existing?.body ?? "");
+  const [send, setSend] = useState<EmailSend>(existing?.send ?? DEFAULT_SEND);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const bodyRef = useRef<HTMLTextAreaElement>(null);
@@ -51,9 +54,12 @@ export default function TemplateEditorPanel({
   const dirty = useMemo(() => {
     if (!existing) return name.trim() !== "" || subject.trim() !== "" || body.trim() !== "";
     return (
-      name !== existing.name || subject !== existing.subject || body !== existing.body
+      name !== existing.name ||
+      subject !== existing.subject ||
+      body !== existing.body ||
+      JSON.stringify(send) !== JSON.stringify(existing.send)
     );
-  }, [existing, name, subject, body]);
+  }, [existing, name, subject, body, send]);
 
   const canSave = subject.trim() !== "" && body.trim() !== "" && (isSystem || name.trim() !== "") && dirty;
 
@@ -77,14 +83,14 @@ export default function TemplateEditorPanel({
   const handleSave = () => {
     if (!canSave) return;
     if (existing) {
-      onSave({ ...existing, name: isSystem ? existing.name : name.trim(), subject, body });
+      onSave({ ...existing, name: isSystem ? existing.name : name.trim(), subject, body, send });
     } else {
       const base = slug(name) || "modele";
       onSave({
         id: `custom-${base}-${Date.now().toString(36)}`,
         name: name.trim(),
         kind: "custom",
-        trigger: CUSTOM_TRIGGER,
+        send,
         subject,
         body,
       });
@@ -102,10 +108,7 @@ export default function TemplateEditorPanel({
         {/* en-tête */}
         <div className="flex items-start justify-between gap-4 border-b border-base-300 px-6 py-5">
           <div className="min-w-0">
-            <p className="text-xs font-medium text-base-content/45">
-              {existing ? "Modifier le modèle" : "Créer un modèle"}
-            </p>
-            <h2 id="template-editor-title" className="mt-0.5 truncate text-lg font-semibold text-base-content">{title}</h2>
+            <h2 id="template-editor-title" className="truncate text-lg font-semibold text-base-content">{title}</h2>
           </div>
           <button
             type="button"
@@ -123,9 +126,8 @@ export default function TemplateEditorPanel({
             <div className="flex items-start gap-2.5 rounded-xl bg-base-200 px-4 py-3 text-xs text-base-content/70">
               <LockIcon className="mt-0.5 size-4 shrink-0 text-base-content/45" />
               <span>
-                Modèle {templateKindLabel("system").toLowerCase()} : vous pouvez adapter
-                l&apos;objet et le texte, mais pas le renommer, le supprimer ni changer son
-                déclencheur ({existing?.trigger.toLowerCase()}).
+                Modèle système : vous pouvez adapter l&apos;objet et le texte, mais pas le
+                renommer ni le supprimer.
               </span>
             </div>
           )}
@@ -144,6 +146,25 @@ export default function TemplateEditorPanel({
               className={fieldClass}
             />
           </div>
+
+          {existing?.fixedTrigger ? (
+            <div>
+              <p className="mb-1.5 text-sm font-medium text-base-content">Envoi</p>
+              <div className="flex items-start gap-2.5 rounded-box border border-base-300 bg-base-200/50 px-4 py-3">
+                <Zap className="mt-[3px] size-4 shrink-0 text-primary" aria-label="Automatique" />
+                <div>
+                  <p className="text-sm font-medium text-base-content">{existing.fixedTrigger}</p>
+                  <p className="mt-0.5 text-xs text-base-content/60">
+                    Lié à cette action, ce moment d&apos;envoi ne se modifie pas.
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <SendSettings send={send} onChange={setSend} />
+          )}
+
+          <div className="-mx-6 border-t border-base-300" />
 
           <div>
             <label htmlFor="tpl-subject" className="mb-1.5 block text-sm font-medium text-base-content">

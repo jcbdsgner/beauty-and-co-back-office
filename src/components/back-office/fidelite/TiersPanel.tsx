@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import { Badge } from "@/components/ui/atoms/badge";
-import { multiplier, points as fmtPoints, type LoyaltyTier } from "@/lib/mock/fidelite";
+import { points as fmtPoints, type LoyaltyTier } from "@/lib/mock/fidelite";
 import { TextInput } from "./ui";
 import {
   EditorPanel,
@@ -20,8 +20,8 @@ import {
 let seq = 0;
 const uid = () => `tier-${Date.now()}-${seq++}`;
 
-type FormState = { name: string; minPoints: string; multiplierPct: string };
-const EMPTY: FormState = { name: "", minPoints: "", multiplierPct: "100" };
+type FormState = { name: string; minPoints: string };
+const EMPTY: FormState = { name: "", minPoints: "" };
 
 const isInt = (raw: string) => raw.trim() !== "" && Number.isInteger(Number(raw)) && Number(raw) >= 0;
 
@@ -37,12 +37,12 @@ export default function TiersPanel({
   const [form, setForm] = useState<FormState>(EMPTY);
 
   const sorted = [...tiers].sort((a, b) => a.minPoints - b.minPoints);
-  const valid = form.name.trim().length > 0 && isInt(form.minPoints) && isInt(form.multiplierPct);
+  const valid = form.name.trim().length > 0 && isInt(form.minPoints);
 
   const open = (t?: LoyaltyTier) => {
     setEditing(t ? t.id : null);
     setForm(
-      t ? { name: t.name, minPoints: String(t.minPoints), multiplierPct: String(t.multiplierPct) } : EMPTY,
+      t ? { name: t.name, minPoints: String(t.minPoints) } : EMPTY,
     );
   };
 
@@ -52,7 +52,6 @@ export default function TiersPanel({
       id: editing ?? uid(),
       name: form.name.trim(),
       minPoints: Number(form.minPoints),
-      multiplierPct: Number(form.multiplierPct),
       // Garde la teinte de badge d'un palier existant (paliers de point-de-vente).
       badge: tiers.find((t) => t.id === editing)?.badge,
     };
@@ -60,12 +59,9 @@ export default function TiersPanel({
     setEditing(undefined);
   };
 
-  const pct = Number(form.multiplierPct);
-
   return (
     <SettingsGroup
       title="Paliers"
-      description="Chaque palier multiplie les points gagnés à partir d'un total cumulé. En dessous du premier, les clientes cumulent au taux de base."
       action={
         <button type="button" onClick={() => open()} className={`${btnOutline} gap-1.5`}>
           <Plus className="size-4" aria-hidden />
@@ -74,10 +70,10 @@ export default function TiersPanel({
       }
     >
       {sorted.length === 0 ? (
-        <EmptyRow>Aucun palier : toutes les clientes cumulent au taux de base (×1,00).</EmptyRow>
+        <EmptyRow>Aucun palier.</EmptyRow>
       ) : (
         <>
-          <ItemHeader label="Palier" columns={["À partir de", "Multiplicateur"]} />
+          <ItemHeader label="Palier" columns={["À partir de"]} />
           {sorted.map((t) => (
             <ItemRow
               key={t.id}
@@ -90,7 +86,7 @@ export default function TiersPanel({
                   t.name
                 )
               }
-              columns={[fmtPoints(t.minPoints), multiplier(t.multiplierPct)]}
+              columns={[fmtPoints(t.minPoints)]}
               onEdit={() => open(t)}
               onDelete={() => onChange(tiers.filter((x) => x.id !== t.id))}
               deleteLabel={`Supprimer le palier ${t.name}`}
@@ -119,18 +115,6 @@ export default function TiersPanel({
           placeholder="500"
           value={form.minPoints}
           onChange={(v) => setForm((f) => ({ ...f, minPoints: v }))}
-        />
-        <TextInput
-          label="Multiplicateur (%)"
-          inputMode="numeric"
-          placeholder="150"
-          value={form.multiplierPct}
-          onChange={(v) => setForm((f) => ({ ...f, multiplierPct: v }))}
-          hint={
-            isInt(form.multiplierPct)
-              ? `Les clientes de ce palier gagnent ${multiplier(pct)} les points de base.`
-              : "100 = ×1,00 (taux de base), 150 = ×1,50."
-          }
         />
       </EditorPanel>
     </SettingsGroup>

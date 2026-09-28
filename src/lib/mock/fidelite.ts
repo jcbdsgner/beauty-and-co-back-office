@@ -16,9 +16,6 @@ export type LoyaltySettings = {
   rounding: Rounding; // Arrondi des points
   pointsPerVisit: number; // Points crédités par visite (base « Par visite »)
   fcfaPerPoint: number; // Montant pour 1 point (base « Par montant dépensé »)
-  guestsEligible: boolean; // Clients invités éligibles (sans compte)
-  pointsExpire: boolean; // Expiration des points inactifs
-  minRedeemBalance: number; // Solde minimum pour échanger une récompense
 };
 
 export const ACCRUAL_BASIS_OPTIONS: { value: AccrualBasis; label: string }[] = [
@@ -43,19 +40,15 @@ export const defaultSettings: LoyaltySettings = {
   rounding: "down",
   pointsPerVisit: 10,
   fcfaPerPoint: 100,
-  guestsEligible: true,
-  pointsExpire: false,
-  minRedeemBalance: 0,
 };
 
 /* -------------------------------------------------------------------- Paliers */
-/* Carte de fidélité : un multiplicateur de points selon le total cumulé.       */
+/* Carte de fidélité : un palier atteint selon le total de points cumulé.      */
 
 export type LoyaltyTier = {
   id: string;
   name: string; // « Silver », « Gold », « Platinum », « VIP »…
   minPoints: number; // seuil d'entrée dans le palier
-  multiplierPct: number; // 150 → ×1,50 · 100 = taux de base
   // Teinte métallique du badge, celle des paliers de point-de-vente
   // (`--pos-tier-*`, `Badge` variantes silver/gold/platinum/vip). Absente pour
   // un palier créé par la propriétaire → badge neutre.
@@ -64,13 +57,13 @@ export type LoyaltyTier = {
 
 // Les 4 paliers de point-de-vente (`ClientTier` / `TIER_LABEL` : Silver, Gold,
 // Platinum, VIP — 2026-09-27, remplace Argent/Or/VIP) : mêmes libellés et
-// mêmes badges que la caisse. Le back-office définit en plus le seuil et le
-// multiplicateur de chaque palier, que point-de-vente ne connaît pas.
+// mêmes badges que la caisse. Le back-office définit en plus le seuil de chaque
+// palier, que point-de-vente ne connaît pas.
 export const defaultTiers: LoyaltyTier[] = [
-  { id: "tier-silver", name: "Silver", minPoints: 200, multiplierPct: 125, badge: "silver" },
-  { id: "tier-gold", name: "Gold", minPoints: 500, multiplierPct: 150, badge: "gold" },
-  { id: "tier-platinum", name: "Platinum", minPoints: 1000, multiplierPct: 200, badge: "platinum" },
-  { id: "tier-vip", name: "VIP", minPoints: 2000, multiplierPct: 250, badge: "vip" },
+  { id: "tier-silver", name: "Silver", minPoints: 200, badge: "silver" },
+  { id: "tier-gold", name: "Gold", minPoints: 500, badge: "gold" },
+  { id: "tier-platinum", name: "Platinum", minPoints: 1000, badge: "platinum" },
+  { id: "tier-vip", name: "VIP", minPoints: 2000, badge: "vip" },
 ];
 
 /* ---------------------------------------------------------------- Récompenses */
@@ -106,13 +99,6 @@ export const defaultRewards: LoyaltyReward[] = [
 
 // « 1.250 pts » — les points suivent la règle des milliers (point séparateur).
 export const points = (n: number) => `${groupThousands(n)} pts`;
-
-// 150 → « ×1,50 »
-export const multiplier = (pct: number) =>
-  `×${(pct / 100).toLocaleString("fr-FR", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
 
 // Résumé lisible de ce que vaut une récompense, selon son type.
 export const rewardValueLabel = (r: LoyaltyReward) => {

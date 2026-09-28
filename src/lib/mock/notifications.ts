@@ -31,7 +31,7 @@ export type AppNotification = {
   id: string;
   category: NotificationCategory;
   title: string; // « Demande de congé »
-  body: string; // « Coumba Faye — 3 jours, 15–17 sept. »
+  body: string; // « Adja — 3 jours, 15–17 sept. »
   date: string; // ISO 8601 (monde mock ancré au 2026-09-03)
   read: boolean;
   tone: NotificationTone;

@@ -15,7 +15,6 @@ import MemberIdentityFields, {
   trimIdentity,
 } from "./MemberIdentityFields";
 import MemberSkillsPanel from "./MemberSkillsPanel";
-import MemberSchedulePanel from "./MemberSchedulePanel";
 import { SectionCard, btnGhost, btnPrimary } from "./ui";
 
 type Props = {
@@ -28,17 +27,15 @@ type Props = {
 const STANDARD_DAY: DayShift = {
   off: false,
   salonId: salons[0].id,
-  start: "09:00",
-  end: "19:00",
-  breakStart: "13:00",
-  breakEnd: "14:00",
+  start: "10:00",
+  end: "20:00",
 };
 
-// Trame par défaut d'une nouvelle recrue : lun–sam travaillé, dimanche repos.
+// Trame par défaut d'une nouvelle recrue : mar–dim travaillé, lundi (salons fermés) repos.
 const DEFAULT_HOURS = (): Record<Weekday, DayShift> =>
   WEEKDAYS.reduce(
     (acc, d) => {
-      acc[d] = d === "dim" ? { off: true } : STANDARD_DAY;
+      acc[d] = d === "lun" ? { off: true } : STANDARD_DAY;
       return acc;
     },
     {} as Record<Weekday, DayShift>,
@@ -47,7 +44,7 @@ const DEFAULT_HOURS = (): Record<Weekday, DayShift> =>
 export default function AddMemberFlow({ allMembers, onCancel, onCreate, onDone }: Props) {
   const [identity, setIdentity] = useState<IdentityDraft>(BLANK_IDENTITY);
   const [skills, setSkills] = useState<string[]>([]);
-  const [baseHours, setBaseHours] = useState<Record<Weekday, DayShift>>(DEFAULT_HOURS);
+  const [baseHours] = useState<Record<Weekday, DayShift>>(DEFAULT_HOURS);
   const [created, setCreated] = useState<Member | null>(null);
 
   const valid = identityValid(identity);
@@ -131,16 +128,6 @@ export default function AddMemberFlow({ allMembers, onCancel, onCreate, onDone }
           allMembers={allMembers}
           onChange={setSkills}
         />
-      </section>
-
-      <section className="space-y-3">
-        <div>
-          <h2 className="text-lg font-semibold text-base-content">Horaires habituels</h2>
-          <p className="mt-1 text-sm text-base-content/60">
-            La trame appliquée chaque semaine par le Planning.
-          </p>
-        </div>
-        <MemberSchedulePanel baseHours={baseHours} onChange={setBaseHours} />
       </section>
 
       <div className="flex items-center gap-3">

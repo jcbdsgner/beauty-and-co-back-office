@@ -234,7 +234,7 @@ function AddLineForm({
 }) {
   const { list, grouped } = useGroupedPrestations(salon);
   const [serviceId, setServiceId] = useState("");
-  const [start, setStart] = useState("09:00");
+  const [start, setStart] = useState("10:00");
   const [staff, setStaff] = useState<string | null>(null);
   const [beneficiaryName, setBeneficiaryName] = useState("");
   const [error, setError] = useState<string | null>(null);

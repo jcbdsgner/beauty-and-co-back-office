@@ -107,12 +107,12 @@ const ALL_SALONS_TODAY: SalonToday[] = [
     area: "Route de Ngor",
     count: 6,
     appointments: [
-      { time: "09:00", client: "Awa Sarr", service: "Coupe & Brushing", staff: "Sophie", status: "à venir" },
-      { time: "10:30", client: "Fatou Camara", service: "Coloration", staff: "Mariama", status: "à venir" },
-      { time: "12:00", client: "Coumba Thiam", service: "Manucure", staff: "Aïda", status: "à venir" },
-      { time: "14:00", client: "Bineta Diagne", service: "Soin visage", staff: "Sophie", status: "à venir" },
-      { time: "15:30", client: "Mariam Kane", service: "Balayage", staff: "Mariama", status: "à venir" },
-      { time: "17:00", client: "Khady Guèye", service: "Coupe", staff: "Aïda", status: "à venir" },
+      { time: "10:00", client: "Awa Sarr", service: "Coupe & Brushing", staff: "Fatou", status: "à venir" },
+      { time: "10:30", client: "Fatou Camara", service: "Coloration", staff: "Michelle", status: "à venir" },
+      { time: "12:00", client: "Coumba Thiam", service: "Manucure", staff: "Henry", status: "à venir" },
+      { time: "14:00", client: "Bineta Diagne", service: "Soin visage", staff: "Fatou", status: "à venir" },
+      { time: "15:30", client: "Mariam Kane", service: "Balayage", staff: "Michelle", status: "à venir" },
+      { time: "17:00", client: "Khady Guèye", service: "Coupe", staff: "Henry", status: "à venir" },
     ],
   },
   {
@@ -121,9 +121,9 @@ const ALL_SALONS_TODAY: SalonToday[] = [
     area: "Corniche Ouest",
     count: 3,
     appointments: [
-      { time: "10:00", client: "Sokhna Ndiaye", service: "Manucure", staff: "Bineta", status: "à venir" },
-      { time: "13:00", client: "Rama Diallo", service: "Soin visage", staff: "Coumba", status: "à venir" },
-      { time: "16:00", client: "Bineta Cissé", service: "Coupe & Brushing", staff: "Bineta", status: "à venir" },
+      { time: "10:00", client: "Sokhna Ndiaye", service: "Manucure", staff: "Gnagna", status: "à venir" },
+      { time: "13:00", client: "Rama Diallo", service: "Soin visage", staff: "Adja", status: "à venir" },
+      { time: "16:00", client: "Bineta Cissé", service: "Coupe & Brushing", staff: "Gnagna", status: "à venir" },
     ],
   },
 ];
@@ -168,11 +168,11 @@ export const POSTE_TYPE_LABELS: Record<PosteType, string> = {
   onglerie: "Poste onglerie",
 };
 
-// Horaire d'un jour : soit fermé, soit une plage avec coupure optionnelle.
+// Horaire d'un jour : soit fermé, soit une plage continue (pas de coupure).
 // Heures au format "HH:MM".
 export type DayOpening =
   | { closed: true }
-  | { closed: false; open: string; close: string; breakStart?: string; breakEnd?: string };
+  | { closed: false; open: string; close: string };
 
 export type SalonConfig = {
   id: SalonId;
@@ -185,23 +185,21 @@ export type SalonConfig = {
   hours: Record<Weekday, DayOpening>;
 };
 
-// lun–sam 09:00–19:00 avec coupure 13:00–14:00 ; dimanche fermé.
+// mar–dim 10:00–20:00 sans coupure ; lundi fermé.
 const standardHours = (): Record<Weekday, DayOpening> => {
   const day: DayOpening = {
     closed: false,
-    open: "09:00",
-    close: "19:00",
-    breakStart: "13:00",
-    breakEnd: "14:00",
+    open: "10:00",
+    close: "20:00",
   };
   return {
-    lun: day,
+    lun: { closed: true },
     mar: day,
     mer: day,
     jeu: day,
     ven: day,
     sam: day,
-    dim: { closed: true },
+    dim: day,
   };
 };
 
@@ -535,32 +533,32 @@ export type Review = {
 // Avis fictifs des 3 derniers mois. Volontairement modeste en volume (collecte
 // automatique post-visite : quelques avis par semaine et par salon).
 const REVIEWS: Review[] = [
-  { id: "r01", date: "2026-06-08", rating: 5, client: "Awa Sarr", service: "Coupe & Brushing", staff: "Sophie", salon: "almadies", comment: "Toujours au top, merci Sophie." },
-  { id: "r02", date: "2026-06-14", rating: 4, client: "Rama Diallo", service: "Manucure", staff: "Coumba", salon: "seaplaza" },
-  { id: "r03", date: "2026-06-19", rating: 5, client: "Adama Sarr", service: "Coloration", staff: "Mariama", salon: "almadies", comment: "Couleur exactement comme je voulais." },
-  { id: "r04", date: "2026-06-25", rating: 3, client: "Penda Ndoye", service: "Soin visage", staff: "Bineta", salon: "seaplaza", comment: "Correct, mais j'ai attendu 20 minutes." },
-  { id: "r05", date: "2026-07-02", rating: 5, client: "Ndèye Diop", service: "Balayage", staff: "Mariama", salon: "almadies" },
-  { id: "r06", date: "2026-07-06", rating: 2, client: "Nafi Camara", service: "Coupe", staff: "Aïda", salon: "almadies", comment: "Coupe pas égale, j'ai dû la faire reprendre ailleurs." },
-  { id: "r07", date: "2026-07-11", rating: 4, client: "Dieynaba Kane", service: "Manucure", staff: "Coumba", salon: "seaplaza", comment: "Très bien, ambiance agréable." },
-  { id: "r08", date: "2026-07-15", rating: 5, client: "Rokhaya Seck", service: "Coupe & Brushing", staff: "Sophie", salon: "almadies" },
-  { id: "r09", date: "2026-07-19", rating: 5, client: "Yacine Wade", service: "Soin visage", staff: "Bineta", salon: "seaplaza", comment: "Peau nickel, je reviendrai." },
-  { id: "r10", date: "2026-07-24", rating: 4, client: "Oumou Baldé", service: "Coloration", staff: "Mariama", salon: "almadies" },
-  { id: "r11", date: "2026-07-28", rating: 3, client: "Fatoumata Barry", service: "Coupe", staff: "Aïda", salon: "almadies" },
-  { id: "r12", date: "2026-08-01", rating: 5, client: "Seynabou Wade", service: "Manucure", staff: "Coumba", salon: "seaplaza", comment: "Rapide et soigné." },
-  { id: "r13", date: "2026-08-05", rating: 5, client: "Maimouna Sy", service: "Coupe & Brushing", staff: "Sophie", salon: "almadies", comment: "Sophie connaît mes cheveux par cœur." },
-  { id: "r14", date: "2026-08-08", rating: 4, client: "Awa Sarr", service: "Soin visage", staff: "Bineta", salon: "seaplaza" },
-  { id: "r15", date: "2026-08-12", rating: 1, client: "Mame Diarra", service: "Coloration", staff: "Aïda", salon: "almadies", comment: "Résultat orange, très déçue. Personne ne m'a rappelée." },
-  { id: "r16", date: "2026-08-15", rating: 5, client: "Khady Guèye", service: "Balayage", staff: "Mariama", salon: "almadies", comment: "Magnifique, bravo." },
-  { id: "r17", date: "2026-08-18", rating: 4, client: "Sokhna Ndiaye", service: "Manucure", staff: "Coumba", salon: "seaplaza" },
-  { id: "r18", date: "2026-08-20", rating: 5, client: "Bineta Diagne", service: "Coupe & Brushing", staff: "Sophie", salon: "almadies" },
-  { id: "r19", date: "2026-08-22", rating: 2, client: "Mariam Kane", service: "Soin visage", staff: "Bineta", salon: "seaplaza", comment: "Le produit a piqué, pas assez à l'écoute." },
-  { id: "r20", date: "2026-08-24", rating: 4, client: "Coumba Thiam", service: "Coupe", staff: "Aïda", salon: "almadies", comment: "Mieux que la dernière fois." },
-  { id: "r21", date: "2026-08-26", rating: 5, client: "Fatou Camara", service: "Coloration", staff: "Mariama", salon: "almadies", comment: "Toujours parfaite." },
-  { id: "r22", date: "2026-08-27", rating: 5, client: "Adama Sarr", service: "Manucure", staff: "Coumba", salon: "seaplaza" },
-  { id: "r23", date: "2026-08-29", rating: 3, client: "Ndèye Diop", service: "Coupe & Brushing", staff: "Sophie", salon: "almadies", comment: "Le brushing n'a pas tenu la journée." },
-  { id: "r24", date: "2026-08-30", rating: 5, client: "Dieynaba Kane", service: "Soin visage", staff: "Bineta", salon: "seaplaza", comment: "Très professionnelle, je recommande." },
-  { id: "r25", date: "2026-09-01", rating: 4, client: "Rokhaya Seck", service: "Balayage", staff: "Mariama", salon: "almadies" },
-  { id: "r26", date: "2026-09-02", rating: 5, client: "Yacine Wade", service: "Manucure", staff: "Coumba", salon: "seaplaza", comment: "Rien à redire." },
+  { id: "r01", date: "2026-06-08", rating: 5, client: "Awa Sarr", service: "Coupe & Brushing", staff: "Fatou", salon: "almadies", comment: "Toujours au top, merci Fatou." },
+  { id: "r02", date: "2026-06-14", rating: 4, client: "Rama Diallo", service: "Manucure", staff: "Adja", salon: "seaplaza" },
+  { id: "r03", date: "2026-06-19", rating: 5, client: "Adama Sarr", service: "Coloration", staff: "Michelle", salon: "almadies", comment: "Couleur exactement comme je voulais." },
+  { id: "r04", date: "2026-06-25", rating: 3, client: "Penda Ndoye", service: "Soin visage", staff: "Gnagna", salon: "seaplaza", comment: "Correct, mais j'ai attendu 20 minutes." },
+  { id: "r05", date: "2026-07-02", rating: 5, client: "Ndèye Diop", service: "Balayage", staff: "Michelle", salon: "almadies" },
+  { id: "r06", date: "2026-07-06", rating: 2, client: "Nafi Camara", service: "Coupe", staff: "Henry", salon: "almadies", comment: "Coupe pas égale, j'ai dû la faire reprendre ailleurs." },
+  { id: "r07", date: "2026-07-11", rating: 4, client: "Dieynaba Kane", service: "Manucure", staff: "Adja", salon: "seaplaza", comment: "Très bien, ambiance agréable." },
+  { id: "r08", date: "2026-07-15", rating: 5, client: "Rokhaya Seck", service: "Coupe & Brushing", staff: "Fatou", salon: "almadies" },
+  { id: "r09", date: "2026-07-19", rating: 5, client: "Yacine Wade", service: "Soin visage", staff: "Gnagna", salon: "seaplaza", comment: "Peau nickel, je reviendrai." },
+  { id: "r10", date: "2026-07-24", rating: 4, client: "Oumou Baldé", service: "Coloration", staff: "Michelle", salon: "almadies" },
+  { id: "r11", date: "2026-07-28", rating: 3, client: "Fatoumata Barry", service: "Coupe", staff: "Henry", salon: "almadies" },
+  { id: "r12", date: "2026-08-01", rating: 5, client: "Seynabou Wade", service: "Manucure", staff: "Adja", salon: "seaplaza", comment: "Rapide et soigné." },
+  { id: "r13", date: "2026-08-05", rating: 5, client: "Maimouna Sy", service: "Coupe & Brushing", staff: "Fatou", salon: "almadies", comment: "Fatou connaît mes cheveux par cœur." },
+  { id: "r14", date: "2026-08-08", rating: 4, client: "Awa Sarr", service: "Soin visage", staff: "Gnagna", salon: "seaplaza" },
+  { id: "r15", date: "2026-08-12", rating: 1, client: "Mame Diarra", service: "Coloration", staff: "Henry", salon: "almadies", comment: "Résultat orange, très déçue. Personne ne m'a rappelée." },
+  { id: "r16", date: "2026-08-15", rating: 5, client: "Khady Guèye", service: "Balayage", staff: "Michelle", salon: "almadies", comment: "Magnifique, bravo." },
+  { id: "r17", date: "2026-08-18", rating: 4, client: "Sokhna Ndiaye", service: "Manucure", staff: "Adja", salon: "seaplaza" },
+  { id: "r18", date: "2026-08-20", rating: 5, client: "Bineta Diagne", service: "Coupe & Brushing", staff: "Fatou", salon: "almadies" },
+  { id: "r19", date: "2026-08-22", rating: 2, client: "Mariam Kane", service: "Soin visage", staff: "Gnagna", salon: "seaplaza", comment: "Le produit a piqué, pas assez à l'écoute." },
+  { id: "r20", date: "2026-08-24", rating: 4, client: "Coumba Thiam", service: "Coupe", staff: "Henry", salon: "almadies", comment: "Mieux que la dernière fois." },
+  { id: "r21", date: "2026-08-26", rating: 5, client: "Fatou Camara", service: "Coloration", staff: "Michelle", salon: "almadies", comment: "Toujours parfaite." },
+  { id: "r22", date: "2026-08-27", rating: 5, client: "Adama Sarr", service: "Manucure", staff: "Adja", salon: "seaplaza" },
+  { id: "r23", date: "2026-08-29", rating: 3, client: "Ndèye Diop", service: "Coupe & Brushing", staff: "Fatou", salon: "almadies", comment: "Le brushing n'a pas tenu la journée." },
+  { id: "r24", date: "2026-08-30", rating: 5, client: "Dieynaba Kane", service: "Soin visage", staff: "Gnagna", salon: "seaplaza", comment: "Très professionnelle, je recommande." },
+  { id: "r25", date: "2026-09-01", rating: 4, client: "Rokhaya Seck", service: "Balayage", staff: "Michelle", salon: "almadies" },
+  { id: "r26", date: "2026-09-02", rating: 5, client: "Yacine Wade", service: "Manucure", staff: "Adja", salon: "seaplaza", comment: "Rien à redire." },
 ];
 
 const mean = (list: Review[]) =>
@@ -778,11 +776,11 @@ const GROUP_ROWS: Record<Exclude<ReportGroupId, "period">, RowSeed[]> = {
     { key: "seaplaza", label: "Sea Plaza", weight: SHARE.seaplaza, satisfaction: 4.5 },
   ],
   practitioner: [
-    { key: "sophie", label: "Sophie Ndione", weight: 0.24, satisfaction: 4.8 },
-    { key: "mariama", label: "Mariama Bâ", weight: 0.22, satisfaction: 4.7 },
-    { key: "aida", label: "Aïda Sarr", weight: 0.18, satisfaction: 4.4 },
-    { key: "bineta", label: "Bineta Cissé", weight: 0.16, satisfaction: 4.6 },
-    { key: "coumba", label: "Coumba Faye", weight: 0.15, satisfaction: 4.9 },
+    { key: "fatou", label: "Fatou", weight: 0.24, satisfaction: 4.8 },
+    { key: "michelle", label: "Michelle", weight: 0.22, satisfaction: 4.7 },
+    { key: "henry", label: "Henry", weight: 0.18, satisfaction: 4.4 },
+    { key: "gnagna", label: "Gnagna", weight: 0.16, satisfaction: 4.6 },
+    { key: "adja", label: "Adja", weight: 0.15, satisfaction: 4.9 },
     { key: "unassigned", label: "Non assigné", weight: 0.05, satisfaction: 0 },
   ],
   service: [
@@ -1158,14 +1156,14 @@ const CLIENT_SEEDS: ClientSeed[] = [
     id: "c01", number: 1006, name: "Awa Sarr", email: "awa.sarr@example.com",
     phone: "+221 78 445 56 61", whatsapp: "+221 78 445 56 61",
     address: "Sacré-Cœur 3, Villa 412, Dakar", residenceCountry: "Sénégal", birthday: "03-14", ethnicity: "africain",
-    salon: "almadies", since: "2026-02-01", tier: null, points: 320, preferredStaffId: "m-bineta",
+    salon: "almadies", since: "2026-02-01", tier: null, points: 320, preferredStaffId: "m-gnagna",
     totals: { spent: 245_000, visits: 9 },
     preferences: {
       hairType: "Naturel 4C",
       colorReference: "Châtain profond #3",
       notes: {
-        coiffure: "Préfère les tresses collées, pas de rajouts trop lourds.",
-        boisson: "Thé à la menthe, sans sucre.",
+        "s-coiffure": "Préfère les tresses collées, pas de rajouts trop lourds.",
+        bar: "Thé à la menthe, sans sucre.",
       },
       rounds: [
         { at: pdv("2026-09-19"), choices: { "ongles-type": ["gel-x"], "ongles-longueur": ["moyens"], "coiffure-style": ["tresses-collees"], "coiffure-soin": ["masque"], "boisson-choix": ["the-menthe"], "boisson-sucre": ["sans-sucre"] } },
@@ -1176,14 +1174,14 @@ const CLIENT_SEEDS: ClientSeed[] = [
       ],
     },
     notes: [
-      { at: pdv("2026-09-19T16:40:00.000Z"), authorId: "m-awa", origin: "encaissement", text: "A demandé à être prévenue dès qu'un créneau se libère le samedi matin." },
-      { at: pdv("2026-08-02T11:15:00.000Z"), authorId: "m-bineta", origin: "fiche", text: "Cuir chevelu sensible — éviter les produits mentholés au shampooing." },
+      { at: pdv("2026-09-19T16:40:00.000Z"), authorId: "m-ndiole", origin: "encaissement", text: "A demandé à être prévenue dès qu'un créneau se libère le samedi matin." },
+      { at: pdv("2026-08-02T11:15:00.000Z"), authorId: "m-gnagna", origin: "fiche", text: "Cuir chevelu sensible — éviter les produits mentholés au shampooing." },
     ],
     visits: [
-      v("2026-08-28", "tresses", "Bineta Cissé"),
-      v("2026-08-08", "manucure", "Coumba Faye"),
-      v("2026-07-11", "tresses", "Bineta Cissé"),
-      v("2026-05-30", "glow", "Sophie Ndione"),
+      v("2026-08-28", "tresses", "Gnagna"),
+      v("2026-08-08", "manucure", "Adja"),
+      v("2026-07-11", "tresses", "Gnagna"),
+      v("2026-05-30", "glow", "Fatou"),
     ],
   },
   {
@@ -1204,9 +1202,9 @@ const CLIENT_SEEDS: ClientSeed[] = [
       { at: pdv("2026-09-10T15:05:00.000Z"), authorId: "m-rokhaya", origin: "encaissement", text: "Vient souvent avec sa fille, prévoir un fauteuil en plus." },
     ],
     visits: [
-      v("2026-08-19", "manucure", "Aïda Sarr"),
-      v("2026-06-26", "relax", "Sophie Ndione"),
-      v("2026-05-11", "manucure", "Aïda Sarr"),
+      v("2026-08-19", "manucure", "Henry"),
+      v("2026-06-26", "relax", "Fatou"),
+      v("2026-05-11", "manucure", "Henry"),
     ],
   },
   {
@@ -1216,8 +1214,8 @@ const CLIENT_SEEDS: ClientSeed[] = [
     salon: "almadies", since: "2026-06-20", tier: null, points: 60,
     totals: { spent: 42_000, visits: 2 },
     visits: [
-      v("2026-08-06", "tresses", "Mariama Bâ"),
-      v("2026-06-20", "brushing", "Mariama Bâ"),
+      v("2026-08-06", "tresses", "Michelle"),
+      v("2026-06-20", "brushing", "Michelle"),
     ],
   },
   {
@@ -1227,9 +1225,9 @@ const CLIENT_SEEDS: ClientSeed[] = [
     salon: "almadies", since: "2026-01-15", tier: null, points: 210,
     totals: { spent: 156_000, visits: 6 },
     visits: [
-      v("2026-08-03", "jelly", "Aïda Sarr"),
-      v("2026-06-12", "glow", "Sophie Ndione"),
-      v("2026-04-18", "manucure", "Aïda Sarr"),
+      v("2026-08-03", "jelly", "Henry"),
+      v("2026-06-12", "glow", "Fatou"),
+      v("2026-04-18", "manucure", "Henry"),
     ],
   },
   {
@@ -1239,22 +1237,22 @@ const CLIENT_SEEDS: ClientSeed[] = [
     salon: "seaplaza", since: "2026-03-05", tier: null, points: 90,
     totals: { spent: 61_000, visits: 3 },
     visits: [
-      v("2026-07-02", "brushing", "Mariama Bâ"),
-      v("2026-03-05", "tresses", "Bineta Cissé"),
+      v("2026-07-02", "brushing", "Michelle"),
+      v("2026-03-05", "tresses", "Gnagna"),
     ],
   },
   {
     id: "c06", number: 1002, name: "Awa Niang", email: "awa.niang@example.com",
     phone: "+221 77 654 32 10",
     address: "Almadies, Route des Almadies, Dakar", residenceCountry: "Sénégal", birthday: "01-23", ethnicity: "africain",
-    salon: "almadies", since: "2025-09-01", tier: "vip", points: 1420, preferredStaffId: "m-mariama",
+    salon: "almadies", since: "2025-09-01", tier: "vip", points: 1420, preferredStaffId: "m-michelle",
     totals: { spent: 890_000, visits: 22 },
     preferences: {
       hairType: "Défrisé",
       colorReference: "Auburn #30",
       notes: {
-        onglerie: "Vernis semi-permanent nude, ongles courts et carrés.",
-        spa: "Sensible au parfum d'eucalyptus — préférer la lavande.",
+        "s-onglerie": "Vernis semi-permanent nude, ongles courts et carrés.",
+        "s-spa": "Sensible au parfum d'eucalyptus — préférer la lavande.",
       },
       rounds: [
         { at: pdv("2026-09-14"), choices: { "spa-massage": ["pierres-chaudes"], "spa-pression": ["forte"], "ongles-type": ["french"], "ongles-longueur": ["moyens"] } },
@@ -1263,13 +1261,13 @@ const CLIENT_SEEDS: ClientSeed[] = [
       ],
     },
     notes: [
-      { at: pdv("2026-07-22T10:30:00.000Z"), authorId: "m-awa", origin: "fiche", text: "Préfère régler par Wave. Arrive en général 10 min en avance." },
+      { at: pdv("2026-07-22T10:30:00.000Z"), authorId: "m-ndiole", origin: "fiche", text: "Préfère régler par Wave. Arrive en général 10 min en avance." },
     ],
     visits: [
-      v("2026-08-23", "pierres", "Sophie Ndione"),
-      v("2026-07-19", "relax", "Sophie Ndione"),
-      v("2026-06-14", "silk", "Mariama Bâ"),
-      v("2026-05-02", "dos", "Sophie Ndione"),
+      v("2026-08-23", "pierres", "Fatou"),
+      v("2026-07-19", "relax", "Fatou"),
+      v("2026-06-14", "silk", "Michelle"),
+      v("2026-05-02", "dos", "Fatou"),
     ],
   },
   {
@@ -1279,9 +1277,9 @@ const CLIENT_SEEDS: ClientSeed[] = [
     salon: "almadies", since: "2025-12-01", tier: "silver", points: 300,
     totals: { spent: 180_000, visits: 7 },
     visits: [
-      v("2026-04-02", "silk", "Mariama Bâ"),
-      v("2026-02-14", "soinComplet", "Mariama Bâ"),
-      v("2025-12-20", "brushing", "Sophie Ndione"),
+      v("2026-04-02", "silk", "Michelle"),
+      v("2026-02-14", "soinComplet", "Michelle"),
+      v("2025-12-20", "brushing", "Fatou"),
     ],
   },
   {
@@ -1291,15 +1289,15 @@ const CLIENT_SEEDS: ClientSeed[] = [
     salon: "almadies", since: "2026-04-12", tier: null, points: 140,
     totals: { spent: 96_000, visits: 4 },
     preferences: {
-      notes: { boisson: "Jus de bissap pour les enfants, jamais de café." },
+      notes: { bar: "Jus de bissap pour les enfants, jamais de café." },
       rounds: [
         { at: pdv("2026-09-05"), choices: { "boisson-choix": ["cafe"], "boisson-sucre": ["sucre"], "coiffure-style": ["brushing"], "coiffure-soin": ["keratine"] } },
         { at: pdv("2026-08-08"), choices: { "boisson-choix": ["cafe"], "boisson-sucre": ["sucre"], "coiffure-style": ["coupe", "brushing"], "coiffure-soin": ["shampoing"] } },
       ],
     },
     visits: [
-      v("2026-08-14", "brushing", "Mariama Bâ"),
-      v("2026-07-17", "coupe", "Mariama Bâ"),
+      v("2026-08-14", "brushing", "Michelle"),
+      v("2026-07-17", "coupe", "Michelle"),
     ],
   },
   {
@@ -1309,10 +1307,10 @@ const CLIENT_SEEDS: ClientSeed[] = [
     salon: "seaplaza", since: "2025-11-12", tier: "gold", points: 680,
     totals: { spent: 410_000, visits: 14 },
     visits: [
-      v("2026-08-18", "manucure", "Coumba Faye"),
-      v("2026-08-01", "manucure", "Coumba Faye"),
-      v("2026-07-10", "jelly", "Coumba Faye"),
-      v("2026-06-15", "glow", "Bineta Cissé"),
+      v("2026-08-18", "manucure", "Adja"),
+      v("2026-08-01", "manucure", "Adja"),
+      v("2026-07-10", "jelly", "Adja"),
+      v("2026-06-15", "glow", "Gnagna"),
     ],
   },
   {
@@ -1325,8 +1323,8 @@ const CLIENT_SEEDS: ClientSeed[] = [
       hairType: "Locks",
       colorReference: "Noir naturel #1",
       notes: {
-        epilation: "Cire tiède uniquement, peau réactive.",
-        boisson: "Café noir, un carré de chocolat.",
+        "s-epilation": "Cire tiède uniquement, peau réactive.",
+        bar: "Café noir, un carré de chocolat.",
       },
       rounds: [
         { at: pdv("2026-09-20"), choices: { "epilation-methode": ["cire-chaude"], "epilation-zone": ["sourcils", "aisselles"], "boisson-choix": ["gingembre"], "boisson-sucre": ["peu-sucre"] } },
@@ -1335,9 +1333,9 @@ const CLIENT_SEEDS: ClientSeed[] = [
       ],
     },
     visits: [
-      v("2026-08-29", "aisselles", "Bineta Cissé"),
-      v("2026-07-31", "hydra", "Bineta Cissé"),
-      v("2026-07-03", "jambes", "Bineta Cissé"),
+      v("2026-08-29", "aisselles", "Gnagna"),
+      v("2026-07-31", "hydra", "Gnagna"),
+      v("2026-07-03", "jambes", "Gnagna"),
     ],
   },
 
@@ -1348,7 +1346,7 @@ const CLIENT_SEEDS: ClientSeed[] = [
     address: "Sacré-Cœur, Dakar", residenceCountry: "Sénégal", birthday: "06-09", ethnicity: "africain",
     salon: "almadies", since: "2022-10-14", tier: null, points: 210,
     preferences: {
-      notes: { onglerie: "Nail art discret." },
+      notes: { "s-onglerie": "Nail art discret." },
       rounds: [
         { at: "2026-08-12", choices: { "ongles-type": ["capsules", "decoration"], "ongles-longueur": ["longs"], "boisson-choix": ["cafe"] } },
         { at: "2026-07-10", choices: { "ongles-type": ["capsules"], "ongles-longueur": ["longs"] } },
@@ -1356,12 +1354,12 @@ const CLIENT_SEEDS: ClientSeed[] = [
       ],
     },
     notes: [
-      { at: "2026-07-10T14:05:00.000Z", authorId: "m-awa", origin: "fiche", text: "Cliente pressée — enchaîner les prestations." },
+      { at: "2026-07-10T14:05:00.000Z", authorId: "m-ndiole", origin: "fiche", text: "Cliente pressée — enchaîner les prestations." },
     ],
     visits: [
-      v("2026-08-27", "manucure", "Aïda Sarr"),
-      v("2026-08-01", "soinComplet", "Mariama Bâ"),
-      v("2026-06-19", "soinComplet", "Mariama Bâ"),
+      v("2026-08-27", "manucure", "Henry"),
+      v("2026-08-01", "soinComplet", "Michelle"),
+      v("2026-06-19", "soinComplet", "Michelle"),
     ],
   },
   {
@@ -1370,9 +1368,9 @@ const CLIENT_SEEDS: ClientSeed[] = [
     address: "Dakar", residenceCountry: "Sénégal", birthday: "02-17", ethnicity: "africain",
     salon: "almadies", since: "2024-08-01", tier: null, points: 30,
     visits: [
-      v("2026-06-10", "soinComplet", "Aïda Sarr", "annulé"),
-      v("2026-05-02", "soinComplet", "Aïda Sarr"),
-      v("2026-01-20", "coupe", "Aïda Sarr"),
+      v("2026-06-10", "soinComplet", "Henry", "annulé"),
+      v("2026-05-02", "soinComplet", "Henry"),
+      v("2026-01-20", "coupe", "Henry"),
     ],
   },
   {
@@ -1381,9 +1379,9 @@ const CLIENT_SEEDS: ClientSeed[] = [
     address: "Dakar", residenceCountry: "Sénégal", birthday: "08-21", ethnicity: "africain",
     salon: "seaplaza", since: "2023-04-02", tier: null, points: 80,
     visits: [
-      v("2026-07-06", "manucure", "Coumba Faye"),
-      v("2026-06-14", "manucure", "Coumba Faye"),
-      v("2026-04-02", "glow", "Bineta Cissé"),
+      v("2026-07-06", "manucure", "Adja"),
+      v("2026-06-14", "manucure", "Adja"),
+      v("2026-04-02", "glow", "Gnagna"),
     ],
   },
   {
@@ -1392,13 +1390,13 @@ const CLIENT_SEEDS: ClientSeed[] = [
     address: "Plateau, Dakar", residenceCountry: "Sénégal", birthday: "04-11", ethnicity: "africain",
     salon: "seaplaza", since: "2023-01-15", tier: null, points: 190,
     preferences: {
-      notes: { coiffure: "Coupe au carré, frange à garder longue." },
+      notes: { "s-coiffure": "Coupe au carré, frange à garder longue." },
       rounds: [{ at: "2026-08-15", choices: { "coiffure-style": ["coupe", "brushing"], "boisson-choix": ["eau"] } }],
     },
     visits: [
-      v("2026-08-24", "brushing", "Bineta Cissé"),
-      v("2026-07-20", "soinComplet", "Bineta Cissé"),
-      v("2026-06-05", "brushing", "Bineta Cissé"),
+      v("2026-08-24", "brushing", "Gnagna"),
+      v("2026-07-20", "soinComplet", "Gnagna"),
+      v("2026-06-05", "brushing", "Gnagna"),
     ],
   },
   {
@@ -1407,8 +1405,8 @@ const CLIENT_SEEDS: ClientSeed[] = [
     address: "Dakar", residenceCountry: "Sénégal", birthday: "12-29", ethnicity: "africain",
     salon: "seaplaza", since: "2024-05-30", tier: null, points: 100,
     visits: [
-      v("2026-07-11", "manucure", "Coumba Faye"),
-      v("2026-05-30", "glow", "Bineta Cissé"),
+      v("2026-07-11", "manucure", "Adja"),
+      v("2026-05-30", "glow", "Gnagna"),
     ],
   },
   {
@@ -1417,8 +1415,8 @@ const CLIENT_SEEDS: ClientSeed[] = [
     address: "Dakar", residenceCountry: "Sénégal", birthday: "03-02", ethnicity: "africain",
     salon: "seaplaza", since: "2023-10-15", tier: null, points: 45,
     visits: [
-      v("2025-12-20", "glow", "Bineta Cissé"),
-      v("2025-10-15", "manucure", "Coumba Faye"),
+      v("2025-12-20", "glow", "Gnagna"),
+      v("2025-10-15", "manucure", "Adja"),
     ],
   },
   {
@@ -1427,9 +1425,9 @@ const CLIENT_SEEDS: ClientSeed[] = [
     address: "Dakar", residenceCountry: "Sénégal", birthday: "07-15", ethnicity: "africain",
     salon: "seaplaza", since: "2023-05-20", tier: null, points: 130,
     visits: [
-      v("2026-08-12", "soinComplet", "Bineta Cissé"),
-      v("2026-07-01", "coupe", "Coumba Faye"),
-      v("2026-05-20", "soinComplet", "Bineta Cissé"),
+      v("2026-08-12", "soinComplet", "Gnagna"),
+      v("2026-07-01", "coupe", "Adja"),
+      v("2026-05-20", "soinComplet", "Gnagna"),
     ],
   },
   {
@@ -1438,8 +1436,8 @@ const CLIENT_SEEDS: ClientSeed[] = [
     address: "Dakar", residenceCountry: "Sénégal", birthday: "10-30", ethnicity: "africain",
     salon: "seaplaza", since: "2024-06-01", tier: null, points: 110,
     visits: [
-      v("2026-07-15", "brushing", "Bineta Cissé"),
-      v("2026-06-01", "silk", "Bineta Cissé"),
+      v("2026-07-15", "brushing", "Gnagna"),
+      v("2026-06-01", "silk", "Gnagna"),
     ],
   },
 ];

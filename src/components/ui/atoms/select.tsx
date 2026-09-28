@@ -29,16 +29,19 @@ type SelectProps = {
   size?: Size;
   disabled?: boolean;
   className?: string;
+  /** Ajout back-office : nom accessible quand aucun libellé visible n'est associé. */
+  "aria-label"?: string;
 };
 
 /**
  * Radix Select styled as a daisyUI `input`. Disabled options render struck-through with "· pris"
  * rather than disappearing. Menu rows are 56px tap targets.
  */
-export function Select({ value, onChange, options, placeholder = "Sélectionner…", tone = "white", size = "field", disabled, className }: SelectProps) {
+export function Select({ value, onChange, options, placeholder = "Sélectionner…", tone = "white", size = "field", disabled, className, "aria-label": ariaLabel }: SelectProps) {
   return (
     <SelectPrimitive.Root value={value} onValueChange={onChange} disabled={disabled}>
       <SelectPrimitive.Trigger
+        aria-label={ariaLabel}
         className={cn(
           "input w-full items-center justify-between gap-2 text-left",
           "disabled:cursor-not-allowed disabled:opacity-40 data-[placeholder]:text-base-content/40",

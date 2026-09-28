@@ -22,6 +22,7 @@ const draftOf = (m: Member): IdentityDraft => ({
   lastName: m.lastName,
   phone: m.phone,
   email: m.email,
+  gender: m.gender ?? "f",
   category: m.category,
   roles: m.roles,
 });

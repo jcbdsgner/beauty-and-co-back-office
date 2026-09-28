@@ -14,6 +14,8 @@ import {
 } from "@/lib/mock/notifications";
 import { requestNotifications, staffRequests } from "@/lib/mock/rh";
 import { stockAlertNotifications } from "@/lib/mock/stock";
+import { cancellationNotifications } from "@/lib/mock/rendezvous";
+import { remiseNotifications } from "@/lib/mock/remises";
 
 // Notifications : une seule source de vérité pour « ce qui s'est passé » et pour
 // l'état « lu / non lu ». Consommée par la cloche du header ET par l'écran
@@ -28,6 +30,10 @@ type NotificationsContextType = {
   unreadCount: number;
   markRead: (id: string) => void;
   markAllRead: () => void;
+  // Ajoute (ou remplace, même id) une notification née pendant la session —
+  // ex. un rendez-vous annulé depuis /rendez-vous.
+  push: (notification: AppNotification) => void;
+  remove: (id: string) => void;
 };
 
 const NotificationsContext = createContext<NotificationsContextType | undefined>(
@@ -43,6 +49,8 @@ function initialNotifications(): AppNotification[] {
   return [
     ...seedNotifications,
     ...stockAlertNotifications(),
+    ...cancellationNotifications(),
+    ...remiseNotifications(),
     ...requestNotifications(staffRequests),
   ].sort((a, b) => b.date.localeCompare(a.date));
 }
@@ -76,14 +84,24 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
     );
   }, []);
 
+  const push = useCallback((notification: AppNotification) => {
+    setNotifications((list) => [notification, ...list.filter((n) => n.id !== notification.id)]);
+  }, []);
+
+  const remove = useCallback((id: string) => {
+    setNotifications((list) => (list.some((n) => n.id === id) ? list.filter((n) => n.id !== id) : list));
+  }, []);
+
   const value = useMemo<NotificationsContextType>(
     () => ({
       notifications,
       unreadCount: countUnread(notifications),
       markRead,
       markAllRead,
+      push,
+      remove,
     }),
-    [notifications, markRead, markAllRead],
+    [notifications, markRead, markAllRead, push, remove],
   );
 
   return (

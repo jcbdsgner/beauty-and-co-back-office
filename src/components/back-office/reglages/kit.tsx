@@ -288,6 +288,7 @@ export function EditorPanel({
   onSubmit,
   submitLabel,
   canSubmit,
+  widthClassName = "max-w-xl",
   children,
 }: {
   open: boolean;
@@ -296,11 +297,12 @@ export function EditorPanel({
   onSubmit: () => void;
   submitLabel: string;
   canSubmit: boolean;
+  widthClassName?: string;
   children: ReactNode;
 }) {
   const id = `editor-${title.replace(/\W+/g, "-")}`;
   return (
-    <Dialog open={open} onClose={onClose} variant="side" labelledBy={id} className="flex max-w-xl flex-col">
+    <Dialog open={open} onClose={onClose} variant="side" labelledBy={id} className={cn("flex flex-col", widthClassName)}>
       <header className="flex items-center justify-between gap-4 border-b border-base-300 px-6 py-4">
         <h2 id={id} className="text-lg font-semibold text-base-content">
           {title}

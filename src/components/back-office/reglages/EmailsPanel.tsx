@@ -1,13 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  defaultAutomation,
-  defaultSiteLink,
-  defaultTemplates,
-  type EmailAutomation,
-  type EmailTemplate,
-} from "@/lib/mock/emails";
+import { defaultSiteLink, defaultTemplates, type EmailTemplate } from "@/lib/mock/emails";
 import SettingsCards from "./emails/SettingsCards";
 import TemplateList from "./emails/TemplateList";
 import TemplateEditorPanel, { type EditorTarget } from "./emails/TemplateEditorPanel";
@@ -15,7 +9,6 @@ import TemplateEditorPanel, { type EditorTarget } from "./emails/TemplateEditorP
 export default function EmailsPanel() {
   // Aucun backend : tout est édité en mémoire de session, comme Fidélité.
   const [siteLink, setSiteLink] = useState(defaultSiteLink);
-  const [automation, setAutomation] = useState<EmailAutomation>(defaultAutomation);
   const [templates, setTemplates] = useState<EmailTemplate[]>(defaultTemplates);
   const [editing, setEditing] = useState<EditorTarget | null>(null);
 
@@ -38,8 +31,6 @@ export default function EmailsPanel() {
       <SettingsCards
         siteLink={siteLink}
         onSaveSiteLink={setSiteLink}
-        automation={automation}
-        onSaveAutomation={setAutomation}
       />
 
       <TemplateList

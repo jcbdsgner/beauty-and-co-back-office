@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { preferenceQuestionSeeds, type PreferenceQuestion } from "@/lib/mock/preferences";
+import { rubricOf } from "@/lib/mock/preference-targets";
 
 // Configuration des préférences clientes (2026-09-27) — les questions et leurs
 // options, définies dans Réglages › Préférences clientes et lues par la fiche
@@ -12,7 +13,7 @@ type PreferencesContextType = {
   questions: PreferenceQuestion[];
   upsertQuestion: (q: PreferenceQuestion) => void;
   deleteQuestion: (id: string) => void;
-  /** Décale une question d'un cran dans son domaine (-1 = monter). */
+  /** Décale une question d'un cran dans sa rubrique (-1 = monter). */
   moveQuestion: (id: string, delta: -1 | 1) => void;
 };
 
@@ -41,7 +42,8 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     setQuestions((list) => {
       const q = list.find((x) => x.id === id);
       if (!q) return list;
-      const same = list.filter((x) => x.domain === q.domain);
+      const rubric = rubricOf(q);
+      const same = list.filter((x) => rubricOf(x) === rubric);
       const k = same.findIndex((x) => x.id === id);
       const target = same[k + delta];
       if (!target) return list;

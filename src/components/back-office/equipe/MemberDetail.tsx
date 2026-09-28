@@ -5,7 +5,7 @@ import Badge from "@/components/ui/badge/Badge";
 import { weekSalonSummary } from "@/lib/mock/planning";
 import {
   ACCOUNT_LABELS,
-  CATEGORY_LABELS,
+  memberCategoryLabel,
   ROLE_LABELS,
   fullName,
   initials,
@@ -19,7 +19,6 @@ import MemberActivityPanel from "./MemberActivityPanel";
 import MemberIdentityForm from "./MemberIdentityForm";
 import MemberAccessPanel from "./MemberAccessPanel";
 import MemberSkillsPanel from "./MemberSkillsPanel";
-import MemberSchedulePanel from "./MemberSchedulePanel";
 import { Avatar, BackButton } from "./ui";
 
 // Fiche membre — 3 onglets :
@@ -28,7 +27,7 @@ import { Avatar, BackButton } from "./ui";
 //    historique daté). C'est l'état de la personne, pas sa config.
 //  · Identité & accès : coordonnées / métier / rôles + membre actif, puis
 //    accès à la plateforme et récap des autorisations par rôle.
-//  · Compétences & horaires : prestations réalisées + trame hebdomadaire.
+//  · Compétences : prestations réalisées.
 
 type TabId = "activite" | "identite" | "competences";
 
@@ -89,7 +88,7 @@ export default function MemberDetail({
       ),
     },
     { id: "identite", label: "Identité & accès" },
-    { id: "competences", label: `Compétences & horaires · ${member.skills.length}` },
+    { id: "competences", label: `Compétences · ${member.skills.length}` },
   ];
 
   return (
@@ -98,7 +97,7 @@ export default function MemberDetail({
         <BackButton onClick={onBack} />
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex items-center gap-4">
-            <Avatar initials={initials(member)} size="lg" />
+            <Avatar initials={initials(member)} photo={member.photo} size="lg" />
             <div>
               <h1 className="flex items-center gap-2 text-2xl font-semibold text-base-content">
                 {fullName(member)}
@@ -110,7 +109,7 @@ export default function MemberDetail({
               </h1>
               <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                 <span className="text-sm text-base-content/60">
-                  {CATEGORY_LABELS[member.category]}
+                  {memberCategoryLabel(member)}
                 </span>
                 <span className="text-base-content/30">·</span>
                 {member.roles.map((r) => (
@@ -216,25 +215,11 @@ export default function MemberDetail({
         )}
 
         {tab === "competences" && (
-          <div className="space-y-8">
-            <MemberSkillsPanel
-              member={member}
-              allMembers={allMembers}
-              onChange={(skills) => onPatch({ skills })}
-            />
-            <section className="space-y-3">
-              <div>
-                <h2 className="text-lg font-semibold text-base-content">Horaires habituels</h2>
-                <p className="mt-1 text-sm text-base-content/60">
-                  La trame appliquée chaque semaine par le Planning.
-                </p>
-              </div>
-              <MemberSchedulePanel
-                baseHours={member.baseHours}
-                onChange={(baseHours) => onPatch({ baseHours })}
-              />
-            </section>
-          </div>
+          <MemberSkillsPanel
+            member={member}
+            allMembers={allMembers}
+            onChange={(skills) => onPatch({ skills })}
+          />
         )}
       </div>
     </div>

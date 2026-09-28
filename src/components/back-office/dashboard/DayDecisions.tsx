@@ -1,14 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import type { ComponentType, ReactNode } from "react";
-import { Bell, CalendarClock, Check, Package, Palmtree, Wallet } from "lucide-react";
+import { useState, type ComponentType, type ReactNode } from "react";
+import { Bell, CalendarClock, CalendarX2, Check, Package, Palmtree, TicketPercent, Wallet } from "lucide-react";
 import { buttonVariants } from "@/components/ui/atoms/button";
 import { useNotifications } from "@/context/NotificationsContext";
 import { fcfa } from "@/lib/mock/beautyandco";
 import { leaveDays, leaveRange, staffRequests } from "@/lib/mock/rh";
 import { fullName, memberById } from "@/lib/mock/staff";
 import type { AppNotification } from "@/lib/mock/notifications";
+import { remises, remiseNotificationId, type Remise } from "@/lib/mock/remises";
+import RemiseDialog from "@/components/back-office/dashboard/RemiseDialog";
 import { visitSalon, type TodayVisit } from "@/components/back-office/dashboard/today";
 
 // « À régler aujourd'hui » — la file de décisions qui ouvre l'accueil.
@@ -28,6 +30,9 @@ export type Decision = {
   cta: string;
   href: string;
   notificationId?: string;
+  // Remise accordée à la caisse : le bouton ouvre son détail sur place au
+  // lieu de naviguer.
+  remise?: Remise;
 };
 
 const TONE_ICON: Record<Tone, string> = {
@@ -108,6 +113,43 @@ function notificationDecisions(list: AppNotification[]): Decision[] {
           notificationId: n.id,
         };
       }
+      const remise = remises.find((r) => remiseNotificationId(r.id) === n.id);
+      if (remise) {
+        return {
+          key: n.id,
+          icon: TicketPercent,
+          tone: "urgent",
+          sentence: (
+            <>
+              Remise de <span className="tabular-nums">{fcfa(remise.amountFcfa)}</span> accordée à{" "}
+              <strong className="font-semibold text-base-content">{remise.clientName}</strong>
+            </>
+          ),
+          context: `Par ${remise.cashierName} · ${remise.reason}`,
+          cta: "Voir plus",
+          href: n.href,
+          notificationId: n.id,
+          remise,
+        };
+      }
+      if (n.category === "rendez-vous" && n.title === "Rendez-vous annulé") {
+        const [who, ...rest] = n.body.split(" — ");
+        return {
+          key: n.id,
+          icon: CalendarX2,
+          tone: "urgent",
+          sentence: (
+            <>
+              <strong className="font-semibold text-base-content">{who}</strong> a annulé son
+              rendez-vous
+            </>
+          ),
+          context: rest.join(" — "),
+          cta: "Voir",
+          href: n.href,
+          notificationId: n.id,
+        };
+      }
       if (n.category === "stock") {
         return {
           key: n.id,
@@ -146,6 +188,10 @@ export default function DayDecisions({
   decisions: Decision[];
   onOpen: (notificationId: string) => void;
 }) {
+  // La remise ouverte reste affichée même une fois sa ligne retirée de la file
+  // (marquée lue à la fermeture).
+  const [openRemise, setOpenRemise] = useState<{ remise: Remise; notificationId?: string } | null>(null);
+
   return (
     <section
       aria-labelledby="decisions-title"
@@ -170,8 +216,9 @@ export default function DayDecisions({
           <div>
             <p className="text-[15px] font-semibold text-base-content">Tout est en ordre</p>
             <p className="mt-0.5 text-sm text-base-content/60">
-              Les rendez-vous qu&apos;aucune praticienne ne peut assurer, les demandes de
-              l&apos;équipe et les alertes de stock apparaîtront ici.
+              Les rendez-vous annulés ou qu&apos;aucune praticienne ne peut assurer, les remises
+              accordées à la caisse, les demandes de l&apos;équipe et les alertes de stock
+              apparaîtront ici.
             </p>
           </div>
         </div>
@@ -192,18 +239,36 @@ export default function DayDecisions({
                     <p className="mt-0.5 truncate text-sm text-base-content/60">{d.context}</p>
                   )}
                 </div>
-                <Link
-                  href={d.href}
-                  onClick={() => d.notificationId && onOpen(d.notificationId)}
-                  className={`${buttonVariants({ variant: "outline", size: "sm" })} shrink-0`}
-                >
-                  {d.cta}
-                </Link>
+                {d.remise ? (
+                  <button
+                    type="button"
+                    onClick={() => setOpenRemise({ remise: d.remise!, notificationId: d.notificationId })}
+                    className={`${buttonVariants({ variant: "outline", size: "sm" })} shrink-0`}
+                  >
+                    {d.cta}
+                  </button>
+                ) : (
+                  <Link
+                    href={d.href}
+                    onClick={() => d.notificationId && onOpen(d.notificationId)}
+                    className={`${buttonVariants({ variant: "outline", size: "sm" })} shrink-0`}
+                  >
+                    {d.cta}
+                  </Link>
+                )}
               </li>
             );
           })}
         </ul>
       )}
+
+      <RemiseDialog
+        remise={openRemise?.remise ?? null}
+        onClose={() => {
+          if (openRemise?.notificationId) onOpen(openRemise.notificationId);
+          setOpenRemise(null);
+        }}
+      />
     </section>
   );
 }

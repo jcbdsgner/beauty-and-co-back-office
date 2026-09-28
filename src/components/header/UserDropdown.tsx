@@ -1,14 +1,15 @@
 "use client";
 import { useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, LogOut, Settings, Store } from "lucide-react";
+import { ChevronsUpDown, LogOut, Settings, Store } from "lucide-react";
 import { DropdownMenu } from "@/components/ui/molecules/dropdown-menu";
 import { Avatar } from "@/components/ui/atoms/avatar";
 import { useAccount } from "@/context/AccountContext";
 import { accountInitials } from "@/lib/mock/compte";
 
 // Menu compte — `DropdownMenu` Radix de point-de-vente (en-tête nom + rôle,
-// puis actions), déclenché par la pastille avatar + nom.
+// puis actions), déclenché par la pastille avatar + nom + rôle, en pied de
+// sidebar (le menu s'ouvre vers le haut).
 export default function UserDropdown() {
   const { account } = useAccount();
   const router = useRouter();
@@ -24,7 +25,7 @@ export default function UserDropdown() {
   const trigger = (
     <button
       type="button"
-      className="flex items-center gap-3 rounded-box py-1.5 pr-3 pl-1.5 text-base-content/80 transition hover:bg-base-100"
+      className="flex w-full items-center gap-3 rounded-lg py-2 pr-3 pl-2 text-left text-base-content/80 transition hover:bg-accent"
     >
       <Avatar
         photoUrl={account.avatarUrl || null}
@@ -32,8 +33,11 @@ export default function UserDropdown() {
         size={40}
         className="bg-accent text-sm font-semibold text-secondary"
       />
-      <span className="text-sm font-semibold">{account.name}</span>
-      <ChevronDown aria-hidden className="size-4 text-base-content/45" />
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-semibold text-base-content">{account.name}</span>
+        <span className="block truncate text-xs text-base-content/60">{account.role}</span>
+      </span>
+      <ChevronsUpDown aria-hidden className="size-4 shrink-0 text-base-content/45" />
     </button>
   );
 
@@ -41,7 +45,8 @@ export default function UserDropdown() {
 
   return (
     <DropdownMenu
-      align="end"
+      align="start"
+      side="top"
       trigger={trigger}
       items={[
         { type: "header", label: account.name, sublabel: account.role },

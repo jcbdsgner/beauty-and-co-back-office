@@ -60,8 +60,8 @@ export const STAFF_REQUEST_STATUS_LABELS: Record<StaffRequestStatus, string> = {
 export const staffRequests: StaffRequest[] = [
   // --- en attente : ce que la propriétaire doit trancher ---------------
   {
-    id: "rq-aida-avance",
-    memberId: "m-aida",
+    id: "rq-henry-avance",
+    memberId: "m-henry",
     kind: "avance",
     status: "en_attente",
     submittedAt: "2026-09-01T09:12:00",
@@ -69,8 +69,8 @@ export const staffRequests: StaffRequest[] = [
     note: "Frais de rentrée scolaire pour mes deux enfants, je rembourse sur septembre et octobre.",
   },
   {
-    id: "rq-coumba-conge",
-    memberId: "m-coumba",
+    id: "rq-adja-conge",
+    memberId: "m-adja",
     kind: "conge",
     status: "en_attente",
     submittedAt: "2026-09-02T18:40:00",
@@ -81,8 +81,8 @@ export const staffRequests: StaffRequest[] = [
 
   // --- déjà tranchées : l'historique de chaque fiche -------------------
   {
-    id: "rq-aida-conge-juin",
-    memberId: "m-aida",
+    id: "rq-henry-conge-juin",
+    memberId: "m-henry",
     kind: "conge",
     status: "acceptee",
     submittedAt: "2026-05-20T11:00:00",
@@ -91,8 +91,8 @@ export const staffRequests: StaffRequest[] = [
     to: "2026-06-06",
   },
   {
-    id: "rq-mariama-avance",
-    memberId: "m-mariama",
+    id: "rq-michelle-avance",
+    memberId: "m-michelle",
     kind: "avance",
     status: "acceptee",
     submittedAt: "2026-08-19T10:05:00",
@@ -101,8 +101,8 @@ export const staffRequests: StaffRequest[] = [
     note: "Réparation de ma moto, indispensable pour venir au salon.",
   },
   {
-    id: "rq-bineta-conge",
-    memberId: "m-bineta",
+    id: "rq-gnagna-conge",
+    memberId: "m-gnagna",
     kind: "conge",
     status: "refusee",
     submittedAt: "2026-08-04T16:20:00",
@@ -112,8 +112,8 @@ export const staffRequests: StaffRequest[] = [
     note: "Voyage en famille au village.",
   },
   {
-    id: "rq-awa-avance",
-    memberId: "m-awa",
+    id: "rq-ndiole-avance",
+    memberId: "m-ndiole",
     kind: "avance",
     status: "acceptee",
     submittedAt: "2026-07-14T09:40:00",

@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import UserDropdown from "@/components/header/UserDropdown";
 import {
   CalendarCheck2,
   FileUser,
@@ -84,6 +85,12 @@ const AppSidebar: React.FC = () => {
           );
         })}
       </nav>
+
+      {/* Compte de la propriétaire en pied de sidebar (2026-09-28 : plus de
+          barre du haut, comme le rail de point-de-vente). */}
+      <div className="shrink-0 border-t border-[#efe9e8] py-4">
+        <UserDropdown />
+      </div>
     </aside>
   );
 };

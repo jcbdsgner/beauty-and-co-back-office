@@ -60,14 +60,28 @@ export function CheckPill({
   );
 }
 
-// Avatar initiales — même rendu dans la liste et sur la fiche.
-export function Avatar({ initials, size = "md" }: { initials: string; size?: "sm" | "md" | "lg" }) {
+// Avatar (photo, sinon initiales) — même rendu dans la liste et sur la fiche.
+export function Avatar({
+  initials,
+  photo,
+  size = "md",
+}: {
+  initials: string;
+  photo?: string;
+  size?: "sm" | "md" | "lg";
+}) {
   const cls =
     size === "lg"
       ? "h-14 w-14 text-lg"
       : size === "sm"
         ? "h-9 w-9 text-xs"
         : "h-10 w-10 text-sm";
+  if (photo) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={photo} alt="" className={`shrink-0 rounded-full object-cover ${cls}`} />
+    );
+  }
   return (
     <span
       className={`flex shrink-0 items-center justify-center rounded-full bg-accent font-semibold text-secondary ${cls}`}

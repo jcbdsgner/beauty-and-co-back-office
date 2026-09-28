@@ -159,7 +159,7 @@ export default function ServicesCatalog({
 
   return (
     <div className="grid grid-cols-[232px_minmax(0,1fr)] items-start gap-8">
-      <nav aria-label="Catégories" className="sticky top-24 space-y-1">
+      <nav aria-label="Catégories" className="sticky top-8 space-y-1">
         <p className="px-3 pb-2 text-xs font-medium uppercase tracking-wide text-base-content/45">
           Catégories
         </p>

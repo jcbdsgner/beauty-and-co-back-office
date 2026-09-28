@@ -40,7 +40,7 @@ export default function StockLevelChart({ history }: { history: LevelHistoryPoin
     chart: {
       fontFamily: "Poppins, sans-serif",
       type: "area",
-      height: 240,
+      height: 220,
       stacked: mode === "split",
       toolbar: { show: false },
     },
@@ -62,10 +62,12 @@ export default function StockLevelChart({ history }: { history: LevelHistoryPoin
       categories,
       axisBorder: { show: false },
       axisTicks: { show: false },
+      tickAmount: 5,
+      labels: { rotate: 0, hideOverlappingLabels: true, style: { fontSize: "12px", colors: "#6B7280" } },
     },
     yaxis: {
       labels: {
-        style: { fontSize: "14px", colors: ["#6B7280"] },
+        style: { fontSize: "12px", colors: ["#6B7280"] },
         formatter: (val: number) => groupThousands(Math.round(val)),
       },
     },
@@ -76,10 +78,10 @@ export default function StockLevelChart({ history }: { history: LevelHistoryPoin
 
   return (
     <div className="overflow-hidden rounded-box border border-base-300 bg-white">
-      <div className="flex items-start justify-between gap-4 border-b border-base-300 px-6 py-5">
+      <div className="flex items-start justify-between gap-4 px-5 pt-5">
         <div>
           <h2 className="text-lg font-semibold text-base-content">Évolution du stock</h2>
-          <p className="mt-1 text-sm text-base-content/60">
+          <p className="mt-0.5 text-xs text-base-content/55">
             {flat
               ? "Niveau stable sur la période — pas de mouvement enregistré."
               : "10 dernières semaines · réserve centrale + salons."}
@@ -93,8 +95,8 @@ export default function StockLevelChart({ history }: { history: LevelHistoryPoin
           aria-label="Détail du graphe"
         />
       </div>
-      <div className="px-4 pb-2 pt-3">
-        <ReactApexChart options={options} series={series} type="area" height={240} />
+      <div className="px-3 pb-1">
+        <ReactApexChart options={options} series={series} type="area" height={220} />
       </div>
     </div>
   );

@@ -44,15 +44,8 @@ import {
   type ClientRow,
   type ClientVisit,
 } from "@/lib/mock/beautyandco";
-import {
-  PREFERENCE_DOMAINS,
-  PREFERENCE_DOMAIN_LABEL,
-  notationTally,
-  takenOptions,
-  type ClientPreferences,
-  type PreferenceDomain,
-  type PreferenceQuestion,
-} from "@/lib/mock/preferences";
+import { takenOptions, type ClientPreferences, type PreferenceQuestion } from "@/lib/mock/preferences";
+import { readingByRubric, type RubricReading } from "@/lib/mock/preference-targets";
 import { fullName, memberById, members, initials as staffInitials } from "@/lib/mock/staff";
 import { conversationByClientId, type Conversation } from "@/lib/mock/messagerie";
 import { ABONNEMENT_STATUS_META, forfaitById, packById } from "@/lib/mock/abonnements";
@@ -177,7 +170,7 @@ function PreferencesBoard({
   questions: PreferenceQuestion[];
   onEdit: () => void;
 }) {
-  const domains = PREFERENCE_DOMAINS.filter((d) => prefs.notes[d] || notationTally(prefs, d, questions).length > 0);
+  const readings = readingByRubric(prefs, questions);
   const hasBasics = Boolean(prefs.hairType || prefs.colorReference);
 
   return (
@@ -189,7 +182,7 @@ function PreferencesBoard({
         </Button>
       }
     >
-      {!hasBasics && domains.length === 0 ? (
+      {!hasBasics && readings.length === 0 ? (
         <BoardEmpty title="Aucune préférence notée" hint="Elles se remplissent à chaque encaissement, ou depuis « Modifier »." />
       ) : (
         <div className="flex flex-col divide-y divide-base-300">
@@ -199,8 +192,8 @@ function PreferencesBoard({
               <Pref label="Référence couleur" value={prefs.colorReference} />
             </div>
           )}
-          {domains.map((domain) => (
-            <PreferenceDomainRow key={domain} prefs={prefs} domain={domain} questions={questions} />
+          {readings.map((reading) => (
+            <PreferenceRubricRow key={reading.rubric.key} prefs={prefs} reading={reading} />
           ))}
         </div>
       )}
@@ -208,22 +201,13 @@ function PreferencesBoard({
   );
 }
 
-function PreferenceDomainRow({
-  prefs,
-  domain,
-  questions,
-}: {
-  prefs: ClientPreferences;
-  domain: PreferenceDomain;
-  questions: PreferenceQuestion[];
-}) {
-  const note = prefs.notes[domain];
-  const tallies = notationTally(prefs, domain, questions);
+function PreferenceRubricRow({ prefs, reading }: { prefs: ClientPreferences; reading: RubricReading }) {
+  const { note, tallies } = reading;
   const passages = prefs.rounds.filter((r) => tallies.some((t) => (r.choices[t.question.id]?.length ?? 0) > 0)).length;
   return (
     <div className="grid grid-cols-[8rem_minmax(0,1fr)] gap-5 px-5 py-4">
       <div className="pt-0.5">
-        <p className="text-sm font-semibold text-base-content">{PREFERENCE_DOMAIN_LABEL[domain]}</p>
+        <p className="text-sm font-semibold text-base-content">{reading.rubric.label}</p>
         {passages > 0 && <p className="mt-0.5 text-xs tabular-nums text-base-content/55">Notée {passages} fois</p>}
       </div>
       <div className="flex min-w-0 flex-col gap-3">

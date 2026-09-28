@@ -13,12 +13,16 @@ export default function ImagePicker({
   label,
   size = 72,
   fit = "contain",
+  compact = false,
 }: {
   value: string | null | undefined;
   onChange: (value: string | null) => void;
   label: string;
   size?: number;
   fit?: "contain" | "cover";
+  /** Vignette seule (clic = importer / remplacer, « Changer » au survol), sans
+   *  les liens ni « Retirer » — pour une liste où l'image est obligatoire. */
+  compact?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -42,13 +46,23 @@ export default function ImagePicker({
         style={{ width: size, height: size }}
       >
         {value ? (
-          // eslint-disable-next-line @next/next/no-img-element -- dataURL de session ou SVG local
-          <img src={value} alt="" className={cn("size-full", fit === "cover" ? "object-cover" : "object-contain p-2")} />
+          <span className="group/thumb relative size-full">
+            {/* eslint-disable-next-line @next/next/no-img-element -- dataURL de session ou SVG local */}
+            <img src={value} alt="" className={cn("size-full", fit === "cover" ? "object-cover" : "object-contain p-2")} />
+            {compact && (
+              <span className="absolute inset-x-0 bottom-0 bg-neutral/75 py-0.5 text-center text-[11px] font-medium text-neutral-content opacity-0 transition-opacity group-hover/thumb:opacity-100">
+                Changer
+              </span>
+            )}
+          </span>
         ) : (
-          <ImagePlus aria-hidden className="size-6" />
+          <span className="flex flex-col items-center gap-0.5">
+            <ImagePlus aria-hidden className="size-6" />
+            {compact && <span className="text-[11px] font-medium">Photo</span>}
+          </span>
         )}
       </button>
-      <div className="flex flex-col items-start gap-1">
+      <div className={cn("flex flex-col items-start gap-1", compact && "hidden")}>
         <button
           type="button"
           onClick={() => inputRef.current?.click()}

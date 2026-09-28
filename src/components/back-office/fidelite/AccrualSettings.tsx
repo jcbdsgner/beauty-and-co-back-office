@@ -95,41 +95,6 @@ export default function AccrualSettings({
         <SettingsRow label="Arrondi" help="Quand le calcul tombe entre deux points." wide muted={off}>
           <Select value={draft.rounding} onChange={(v) => set("rounding", v as LoyaltySettings["rounding"])} options={ROUNDING_OPTIONS} />
         </SettingsRow>
-
-        <SettingsRow
-          label="Clientes sans compte"
-          help="Attribuer des points même sans compte, avec le numéro de téléphone."
-          muted={off}
-        >
-          <Toggle
-            checked={draft.guestsEligible}
-            onChange={(v) => set("guestsEligible", v)}
-            aria-label="Clientes sans compte éligibles"
-          />
-        </SettingsRow>
-
-        <SettingsRow label="Expiration des points" help="Les points non utilisés finissent par expirer." muted={off}>
-          <Toggle
-            checked={draft.pointsExpire}
-            onChange={(v) => set("pointsExpire", v)}
-            aria-label="Expiration des points"
-          />
-        </SettingsRow>
-
-        <SettingsRow
-          label="Solde minimum pour échanger"
-          htmlFor="acc-min"
-          help="En dessous, aucune récompense ne peut être échangée."
-          wide
-          muted={off}
-        >
-          <UnitInput
-            id="acc-min"
-            unit="points"
-            value={String(draft.minRedeemBalance)}
-            onChange={(v) => set("minRedeemBalance", toPositiveInt(v))}
-          />
-        </SettingsRow>
       </SettingsGroup>
 
       <SavedNote show={justSaved && !dirty} />

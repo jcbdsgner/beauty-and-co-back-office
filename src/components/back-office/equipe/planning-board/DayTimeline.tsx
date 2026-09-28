@@ -136,8 +136,7 @@ function shiftCaption(shifts: Shift[], salonId: SalonId | null): { hours: string
   const here = salonId ? shifts.filter((s) => s.salonId === salonId) : shifts;
   const span = !salonId && salonIds.length > 1;
   return {
-    // Amplitude plutôt que plages : la pause déjeuner du back-office coupe la journée en deux
-    // plages du même salon, qui ne tiendraient pas dans l'en-tête — la zone grisée la montre.
+    // Amplitude plutôt que plages quand la journée se répartit sur plusieurs plages.
     hours: span || here.length > 1
       ? `${formatHour((span ? shifts : here)[0].start)}–${formatHour((span ? shifts : here).at(-1)!.end)}`
       : here.map(hours).join(" · "),
@@ -268,6 +267,7 @@ export function DayTimeline({
               >
                 <GripVertical aria-hidden className="size-3.5 shrink-0 cursor-grab text-base-content/25 active:cursor-grabbing" />
                 <Avatar
+                  photoUrl={p.photo}
                   initial={initials(p)}
                   size={32}
                   className={cn("shrink-0 text-[0.72rem] font-semibold", absent && "bg-base-200 text-base-content/40")}

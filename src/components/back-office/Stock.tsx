@@ -141,7 +141,7 @@ export default function Stock() {
 
       <StockList
         rows={rows}
-        scope={scope}
+        photos={photos}
         onOpen={(productId) => setView({ kind: "detail", productId })}
       />
 

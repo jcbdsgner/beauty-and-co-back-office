@@ -4,36 +4,95 @@
 // (`@/lib/mock/emails`).
 
 /* ------------------------------------------------------------------ */
-/* Lien du site + automatisations d'envoi                              */
+/* Lien du site                                                        */
 /* ------------------------------------------------------------------ */
-
-export type DelayUnit = "hours" | "days";
-
-export const DELAY_UNIT_OPTIONS: { value: DelayUnit; label: string }[] = [
-  { value: "hours", label: "heures" },
-  { value: "days", label: "jours" },
-];
-
-export const delayUnitLabel = (u: DelayUnit) =>
-  DELAY_UNIT_OPTIONS.find((o) => o.value === u)?.label ?? u;
-
-// Une règle d'envoi minuté : activée ou non, délai + unité.
-export type ReminderRule = { enabled: boolean; value: number; unit: DelayUnit };
-
-export type EmailAutomation = {
-  reminder1: ReminderRule; // 1er rappel avant le RDV
-  reminder2: ReminderRule; // 2e rappel avant le RDV
-  thankYou: ReminderRule; // email « merci pour votre visite » après le RDV
-};
 
 // Lien utilisé par le bouton « site web » au bas de tous les emails clients.
 export const defaultSiteLink = "https://linktr.ee/beautyandco";
 
-export const defaultAutomation: EmailAutomation = {
-  reminder1: { enabled: true, value: 1, unit: "days" },
-  reminder2: { enabled: true, value: 1, unit: "hours" },
-  thankYou: { enabled: true, value: 1, unit: "days" },
+/* ------------------------------------------------------------------ */
+/* Envoi automatique d'un modèle                                       */
+/* ------------------------------------------------------------------ */
+// Chaque modèle (hors emails transactionnels à déclencheur fixe) porte son
+// propre réglage d'envoi : manuel, ou automatique à l'occasion d'un
+// événement, N heures / jours / semaines / mois avant ou après (2026-09-28).
+
+export type EmailEvent = "rendez-vous" | "anniversaire" | "achat-produit" | "carte-cadeau" | "abonnement";
+
+type EventMeta = {
+  label: string; // menu « À l'occasion de »
+  ref: string; // « 2 jours avant le rendez-vous »
+  at: string; // délai nul : « Au moment du rendez-vous »
 };
+
+export const EMAIL_EVENTS: Record<EmailEvent, EventMeta> = {
+  "rendez-vous": { label: "Un rendez-vous", ref: "le rendez-vous", at: "Au moment du rendez-vous" },
+  anniversaire: { label: "Un anniversaire", ref: "l'anniversaire de la cliente", at: "Le jour de l'anniversaire de la cliente" },
+  "achat-produit": { label: "Un achat de produit", ref: "l'achat d'un produit", at: "Dès l'achat d'un produit" },
+  "carte-cadeau": { label: "Un achat de carte cadeau", ref: "l'achat d'une carte cadeau", at: "Dès l'achat d'une carte cadeau" },
+  abonnement: { label: "Une souscription à un abonnement", ref: "la souscription à un abonnement", at: "Dès la souscription à un abonnement" },
+};
+
+export const EMAIL_EVENT_OPTIONS = (Object.keys(EMAIL_EVENTS) as EmailEvent[]).map((value) => ({
+  value,
+  label: EMAIL_EVENTS[value].label,
+}));
+
+export type DelayUnit = "hours" | "days" | "weeks" | "months";
+
+const UNIT_WORDS: Record<DelayUnit, [string, string]> = {
+  hours: ["heure", "heures"],
+  days: ["jour", "jours"],
+  weeks: ["semaine", "semaines"],
+  months: ["mois", "mois"],
+};
+
+export const DELAY_UNIT_OPTIONS: { value: DelayUnit; label: string }[] = (
+  Object.keys(UNIT_WORDS) as DelayUnit[]
+).map((value) => ({ value, label: UNIT_WORDS[value][1] }));
+
+export const unitWord = (u: DelayUnit, n: number) => UNIT_WORDS[u][n > 1 ? 1 : 0];
+
+export type SendDirection = "before" | "after";
+
+export const DIRECTION_OPTIONS: { value: SendDirection; label: string }[] = [
+  { value: "before", label: "avant" },
+  { value: "after", label: "après" },
+];
+
+export const DELAY_MAX = 99;
+
+export type EmailSend = {
+  auto: boolean; // false = envoi manuel ; le reste est gardé pour une réactivation
+  event: EmailEvent;
+  value: number; // 0 = au moment même
+  unit: DelayUnit;
+  direction: SendDirection;
+};
+
+export const DEFAULT_SEND: EmailSend = {
+  auto: false,
+  event: "rendez-vous",
+  value: 1,
+  unit: "days",
+  direction: "before",
+};
+
+export const MANUAL_SEND_LABEL = "Envoi manuel depuis la fiche cliente";
+
+// « 2 jours avant le rendez-vous », « Dès l'achat d'un produit »…
+export function sendLabel(send: EmailSend): string {
+  if (!send.auto) return MANUAL_SEND_LABEL;
+  const ev = EMAIL_EVENTS[send.event];
+  if (send.value === 0) return ev.at;
+  const dir = send.direction === "before" ? "avant" : "après";
+  return `${send.value} ${unitWord(send.unit, send.value)} ${dir} ${ev.ref}`;
+}
+
+// Un achat ne s'anticipe pas : un email « avant » un achat ne peut partir
+// qu'à une date d'achat déjà connue — on le signale sans l'interdire.
+export const isPurchaseEvent = (e: EmailEvent) =>
+  e === "achat-produit" || e === "carte-cadeau" || e === "abonnement";
 
 /* ------------------------------------------------------------------ */
 /* Variables insérables dans un modèle                                 */
@@ -64,19 +123,62 @@ export type EmailTemplate = {
   kind: EmailTemplateKind;
   subject: string;
   body: string;
-  // Quand l'email part — libellé lisible, non modifiable pour les modèles système.
-  trigger: string;
+  // Email transactionnel : part sur une action précise (réservation,
+  // annulation…), déclencheur figé. Sinon, l'envoi se règle via `send`.
+  fixedTrigger?: string;
+  /** Rubrique de la liste pour un email transactionnel (ex. « Rendez-vous »). */
+  fixedGroup?: string;
+  send: EmailSend;
 };
 
-// Déclencheur par défaut d'un modèle personnalisé nouvellement créé.
-export const CUSTOM_TRIGGER = "Envoi manuel depuis la fiche cliente.";
+// Libellé d'envoi d'un modèle, quel que soit son type.
+export const templateSendLabel = (t: EmailTemplate) =>
+  t.fixedTrigger ?? sendLabel(t.send);
+
+// Rubriques de la liste des modèles : une par occasion, dans l'ordre de la
+// vie d'une cliente, puis les envois manuels.
+export const EVENT_GROUP_LABEL: Record<EmailEvent, string> = {
+  "rendez-vous": "Rendez-vous",
+  anniversaire: "Anniversaire",
+  "achat-produit": "Achat de produit",
+  "carte-cadeau": "Carte cadeau",
+  abonnement: "Abonnement",
+};
+export const MANUAL_GROUP = "Envoi manuel";
+const GROUP_ORDER = ["Nouvelle cliente", ...Object.values(EVENT_GROUP_LABEL), MANUAL_GROUP];
+
+const UNIT_HOURS: Record<DelayUnit, number> = { hours: 1, days: 24, weeks: 168, months: 720 };
+// Décalage signé par rapport à l'événement, pour trier « 1 jour avant »
+// avant « 2 heures avant » avant « 1 jour après ».
+const offsetHours = (s: EmailSend) =>
+  s.value * UNIT_HOURS[s.unit] * (s.direction === "before" ? -1 : 1);
+
+export function groupTemplates(templates: EmailTemplate[]): { label: string; items: EmailTemplate[] }[] {
+  const groupOf = (t: EmailTemplate) =>
+    t.fixedTrigger ? (t.fixedGroup ?? "Rendez-vous") : t.send.auto ? EVENT_GROUP_LABEL[t.send.event] : MANUAL_GROUP;
+  return GROUP_ORDER.map((label) => ({
+    label,
+    items: templates
+      .filter((t) => groupOf(t) === label)
+      // transactionnels d'abord (ordre des seeds), puis par moment d'envoi
+      .sort((a, b) =>
+        a.fixedTrigger || b.fixedTrigger
+          ? Number(Boolean(b.fixedTrigger)) - Number(Boolean(a.fixedTrigger))
+          : offsetHours(a.send) - offsetHours(b.send),
+      ),
+  })).filter((g) => g.items.length > 0);
+}
+
+export const isAutomatic = (t: EmailTemplate) => Boolean(t.fixedTrigger) || t.send.auto;
 
 export const defaultTemplates: EmailTemplate[] = [
   {
     id: "confirmation",
     name: "Confirmation de rendez-vous",
     kind: "system",
-    trigger: "Envoyé dès qu'une cliente réserve un rendez-vous.",
+    fixedTrigger: "Dès qu'une cliente réserve un rendez-vous",
+    fixedGroup: "Rendez-vous",
+    send: DEFAULT_SEND,
     subject: "Confirmation de votre rendez-vous — Beauty & Co",
     body: `Bonjour {{cliente}},
 
@@ -95,7 +197,7 @@ L'équipe Beauty & Co`,
     id: "rappel",
     name: "Rappel de rendez-vous",
     kind: "system",
-    trigger: "Envoyé avant le rendez-vous, selon les délais réglés ci-dessus.",
+    send: { auto: true, event: "rendez-vous", value: 1, unit: "days", direction: "before" },
     subject: "Rappel : votre rendez-vous du {{date}} — Beauty & Co",
     body: `Bonjour {{cliente}},
 
@@ -114,7 +216,9 @@ L'équipe Beauty & Co`,
     id: "modification",
     name: "Modification de rendez-vous",
     kind: "system",
-    trigger: "Envoyé quand la date ou l'heure d'un rendez-vous change.",
+    fixedTrigger: "Dès que la date ou l'heure d'un rendez-vous change",
+    fixedGroup: "Rendez-vous",
+    send: DEFAULT_SEND,
     subject: "Votre rendez-vous a été modifié — Beauty & Co",
     body: `Bonjour {{cliente}},
 
@@ -133,7 +237,9 @@ L'équipe Beauty & Co`,
     id: "annulation",
     name: "Annulation de rendez-vous",
     kind: "system",
-    trigger: "Envoyé quand un rendez-vous est annulé.",
+    fixedTrigger: "Dès qu'un rendez-vous est annulé",
+    fixedGroup: "Rendez-vous",
+    send: DEFAULT_SEND,
     subject: "Annulation de votre rendez-vous — Beauty & Co",
     body: `Bonjour {{cliente}},
 
@@ -148,7 +254,7 @@ L'équipe Beauty & Co`,
     id: "remerciement",
     name: "Merci pour votre visite",
     kind: "system",
-    trigger: "Envoyé après le rendez-vous, selon le délai réglé ci-dessus.",
+    send: { auto: true, event: "rendez-vous", value: 1, unit: "days", direction: "after" },
     subject: "Merci pour votre visite — Beauty & Co",
     body: `Bonjour {{cliente}},
 
@@ -163,7 +269,9 @@ L'équipe Beauty & Co`,
     id: "bienvenue",
     name: "Bienvenue",
     kind: "system",
-    trigger: "Envoyé à la création d'une fiche cliente.",
+    fixedTrigger: "Dès la création d'une fiche cliente",
+    fixedGroup: "Nouvelle cliente",
+    send: DEFAULT_SEND,
     subject: "Bienvenue chez Beauty & Co",
     body: `Bonjour {{cliente}},
 
@@ -178,7 +286,7 @@ L'équipe Beauty & Co`,
     id: "anniversaire",
     name: "Offre anniversaire",
     kind: "custom",
-    trigger: "Envoi programmé le mois de l'anniversaire de la cliente.",
+    send: { auto: true, event: "anniversaire", value: 0, unit: "days", direction: "before" },
     subject: "Un cadeau pour votre anniversaire — Beauty & Co",
     body: `Bonjour {{cliente}},
 
@@ -193,13 +301,67 @@ L'équipe Beauty & Co`,
     id: "relance",
     name: "Relance clientes",
     kind: "custom",
-    trigger: "Envoi manuel depuis la fiche cliente.",
+    send: DEFAULT_SEND,
     subject: "Vous nous manquez — Beauty & Co",
     body: `Bonjour {{cliente}},
 
 Cela fait un moment que nous ne vous avons pas vue chez Beauty & Co — {{salon}}.
 
 Nous aimerions beaucoup vous retrouver : prenez rendez-vous quand vous le souhaitez sur {{lien_site}}.
+
+À très bientôt,
+L'équipe Beauty & Co`,
+  },
+  {
+    id: "rappel-jour-meme",
+    name: "Rappel le jour même",
+    kind: "system",
+    send: { auto: true, event: "rendez-vous", value: 2, unit: "hours", direction: "before" },
+    subject: "À tout à l'heure chez Beauty & Co",
+    body: `Bonjour {{cliente}},
+
+Nous vous attendons aujourd'hui à {{heure}} chez Beauty & Co — {{salon}} pour votre {{prestation}}.
+
+À tout à l'heure,
+L'équipe Beauty & Co`,
+  },
+  {
+    id: "conseils-produit",
+    name: "Conseils d'utilisation",
+    kind: "custom",
+    send: { auto: true, event: "achat-produit", value: 1, unit: "weeks", direction: "after" },
+    subject: "Tirer le meilleur de votre produit — Beauty & Co",
+    body: `Bonjour {{cliente}},
+
+Vous utilisez votre nouveau produit depuis une semaine : nos praticiennes répondent volontiers à vos questions sur son utilisation.
+
+Pour aller plus loin, associez-le à un soin en salon, à réserver sur {{lien_site}}.
+
+À très bientôt,
+L'équipe Beauty & Co`,
+  },
+  {
+    id: "carte-cadeau",
+    name: "Merci pour votre carte cadeau",
+    kind: "custom",
+    send: { auto: true, event: "carte-cadeau", value: 0, unit: "hours", direction: "after" },
+    subject: "Votre carte cadeau Beauty & Co",
+    body: `Bonjour {{cliente}},
+
+Merci d'avoir offert une carte cadeau Beauty & Co. Elle est valable dans tous nos salons, sur toutes les prestations.
+
+À très bientôt,
+L'équipe Beauty & Co`,
+  },
+  {
+    id: "abonnement-bienvenue",
+    name: "Bienvenue dans votre abonnement",
+    kind: "custom",
+    send: { auto: true, event: "abonnement", value: 1, unit: "days", direction: "after" },
+    subject: "Votre abonnement Beauty & Co est actif",
+    body: `Bonjour {{cliente}},
+
+Votre abonnement est actif : vos prestations incluses sont disponibles dès maintenant. Réservez-les sur {{lien_site}}.
 
 À très bientôt,
 L'équipe Beauty & Co`,

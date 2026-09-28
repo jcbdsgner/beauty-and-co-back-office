@@ -75,7 +75,7 @@ export default function Reglages() {
       <PageHeader title="Réglages" />
 
       <div className="grid grid-cols-[232px_minmax(0,1fr)] items-start gap-10">
-        <nav aria-label="Sections des réglages" className="sticky top-24 space-y-6">
+        <nav aria-label="Sections des réglages" className="sticky top-8 space-y-6">
           {GROUPS.map((g) => (
             <div key={g.label}>
               <p className="mb-1.5 px-3 text-[13px] font-medium text-base-content/50">{g.label}</p>

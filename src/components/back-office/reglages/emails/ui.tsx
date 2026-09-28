@@ -48,39 +48,6 @@ export function SectionCard({
 export const fieldClass =
   "input w-full bg-base-100 text-[15px] disabled:bg-base-200 disabled:text-base-content/40";
 
-// Petit select stylé (unité de délai) — chevron superposé.
-export function MiniSelect<T extends string>({
-  value,
-  onChange,
-  options,
-  disabled = false,
-  "aria-label": ariaLabel,
-}: {
-  value: T;
-  onChange: (value: T) => void;
-  options: { value: T; label: string }[];
-  disabled?: boolean;
-  "aria-label"?: string;
-}) {
-  return (
-    <div className="relative">
-      <select
-        aria-label={ariaLabel}
-        value={value}
-        disabled={disabled}
-        onChange={(e) => onChange(e.target.value as T)}
-        className="select select-sm w-24 bg-base-100 text-sm"
-      >
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
-}
-
 /* ---------------------------------------------------------------------- boutons */
 
 // Bouton secondaire bordé — `Button variant="outline"` de point-de-vente.

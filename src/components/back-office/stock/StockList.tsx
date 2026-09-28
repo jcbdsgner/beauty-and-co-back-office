@@ -1,11 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Badge from "@/components/ui/badge/Badge";
-import { groupThousands, type SalonScope } from "@/lib/mock/beautyandco";
+import Image from "next/image";
+import { BoxIcon } from "@/icons";
+import { groupThousands } from "@/lib/mock/beautyandco";
 import { coverageTone, type StockRow } from "@/lib/mock/stock";
 import { PRODUCT_BRANDS, type ProductBrand } from "@/lib/mock/services";
-import Sparkline from "./Sparkline";
 
 type FilterId = "all" | "below" | "order";
 
@@ -15,41 +15,48 @@ const FILTERS: { id: FilterId; label: string }[] = [
   { id: "order", label: "À commander" },
 ];
 
-function CoverageBadge({ row }: { row: StockRow }) {
-  if (row.onHand === null) {
-    return (
-      <Badge size="sm" color="light">
-        Niveau inconnu
-      </Badge>
-    );
-  }
-  if (row.coverage === null) {
-    return (
-      <Badge size="sm" color="light">
-        Aucune sortie
-      </Badge>
-    );
-  }
+// Statut = combien de jours le stock peut tenir au rythme des sorties
+// récentes. Une pastille de couleur + une phrase, pas un code à décoder.
+const TONE_DOT = {
+  error: "bg-error-500",
+  warning: "bg-warning-500",
+  ok: "bg-success-500",
+  none: "bg-base-content/25",
+} as const;
+
+const TONE_TEXT = {
+  error: "text-error-700",
+  warning: "text-warning-700",
+  ok: "text-base-content/70",
+  none: "text-base-content/60",
+} as const;
+
+function coverageStatus(row: StockRow): { tone: keyof typeof TONE_DOT; label: string } {
+  if (row.onHand === null) return { tone: "none", label: "Jamais inventorié" };
+  if (row.onHand === 0) return { tone: "error", label: "En rupture" };
+  // Aucune sortie récente : impossible d'estimer une durée, mais un produit
+  // passé sous le seuil reste à signaler.
+  if (row.coverage === null)
+    return row.status === "order"
+      ? { tone: "warning", label: "Sous le seuil" }
+      : { tone: "none", label: "Aucune sortie récente" };
   const tone = coverageTone(row.coverage);
-  const color = tone === "error" ? "error" : tone === "warning" ? "warning" : "success";
-  return (
-    <Badge size="sm" color={color}>
-      ≈ {row.coverage} j
-    </Badge>
-  );
+  const days = row.coverage;
+  const label = days <= 1 ? "Moins de 2 jours de stock" : `${days} jours de stock`;
+  return { tone: tone === "none" ? "none" : tone, label };
 }
 
-// Grille de cartes produit — remplace l'ancien tableau `StockList` (2026-09-22,
-// passage listes → blocs demandé par l'utilisatrice, même grammaire que
-// `ClientCards`). Le niveau de stock reste le repère n°1 (mis en avant en
-// grand), seuil / conso / sparkline en pied de carte.
+// Grille de cartes produit : la photo, le nom, la quantité, le statut (combien
+// de jours ça peut tenir) — rien d'autre (2026-09-28, demande de la
+// propriétaire). Seuils, consommation, réserve et historique restent dans la
+// fiche produit, au clic.
 export default function StockList({
   rows,
-  scope,
+  photos,
   onOpen,
 }: {
   rows: StockRow[];
-  scope: SalonScope;
+  photos: Record<string, string>;
   onOpen: (productId: string) => void;
 }) {
   const [query, setQuery] = useState("");
@@ -67,8 +74,6 @@ export default function StockList({
       return true;
     });
   }, [rows, query, filter, brand]);
-
-  const stockLabel = scope === "all" ? "Stock entreprise" : "Stock du salon";
 
   return (
     <div className="space-y-4">
@@ -128,54 +133,54 @@ export default function StockList({
           <p className="text-sm text-base-content/60">Aucun produit ne correspond à ce filtre.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-          {visible.map((r) => (
-            <button
-              key={r.product.id}
-              type="button"
-              onClick={() => onOpen(r.product.id)}
-              className="flex flex-col gap-3 rounded-xl border border-base-300 bg-white p-4 text-left transition hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-theme-sm"
-            >
-              <div>
-                <p className="line-clamp-2 font-medium text-base-content">{r.product.name}</p>
-                <p className="mt-0.5 text-xs text-base-content/45">
-                  {PRODUCT_BRANDS.find((b) => b.id === r.product.brand)?.name}
-                  {r.product.gamme && ` · ${r.product.gamme}`}
-                </p>
-              </div>
+        <ul className="grid grid-cols-4 gap-4 xl:grid-cols-5 min-[1600px]:grid-cols-6">
+          {visible.map((r) => {
+            const photo = photos[r.product.id] ?? r.product.image;
+            const status = coverageStatus(r);
+            return (
+              <li key={r.product.id}>
+                <button
+                  type="button"
+                  onClick={() => onOpen(r.product.id)}
+                  className="group flex h-full w-full flex-col overflow-hidden rounded-box border border-base-300 bg-base-100 text-left transition-colors hover:border-base-content/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#fdcfca]"
+                >
+                  <div className="relative aspect-square bg-base-200">
+                    {photo ? (
+                      <Image
+                        src={photo}
+                        alt=""
+                        fill
+                        sizes="240px"
+                        unoptimized
+                        className="object-contain p-4 mix-blend-multiply transition-transform duration-300 ease-out group-hover:scale-[1.03]"
+                      />
+                    ) : (
+                      <span className="flex h-full items-center justify-center text-base-content/25">
+                        <BoxIcon className="size-10" />
+                      </span>
+                    )}
+                  </div>
 
-              <div>
-                <p className="text-xs text-base-content/45">{stockLabel}</p>
-                <p className="text-theme-xl font-semibold tabular-nums text-base-content">
-                  {r.onHand === null ? "—" : groupThousands(r.onHand)}
-                </p>
-                {scope === "all" && r.reserve !== null && (
-                  <p className="text-xs text-base-content/45">
-                    dont réserve {groupThousands(r.reserve)}
-                  </p>
-                )}
-              </div>
-
-              <div className="mt-auto flex items-end justify-between gap-2 border-t border-base-300 pt-3">
-                <div className="text-xs text-base-content/60">
-                  <p>Seuil {groupThousands(r.min)}</p>
-                  <p className="tabular-nums">
-                    {r.weekly > 0 ? `${groupThousands(Math.round(r.weekly))} / sem.` : "—"}
-                  </p>
-                </div>
-                <div className="flex shrink-0 flex-col items-end gap-1.5">
-                  <CoverageBadge row={r} />
-                  <Sparkline
-                    points={r.spark}
-                    tone={
-                      r.status === "order" ? "error" : r.status === "low" ? "warning" : "neutral"
-                    }
-                  />
-                </div>
-              </div>
-            </button>
-          ))}
-        </div>
+                  <div className="flex flex-1 flex-col gap-3 p-4">
+                    <p className="line-clamp-2 min-h-[2lh] text-[15px] leading-snug font-medium text-base-content">
+                      {r.product.name}
+                    </p>
+                    <div className="mt-auto">
+                      <p className="text-[26px] leading-none font-semibold tabular-nums text-base-content">
+                        {r.onHand === null ? "—" : groupThousands(r.onHand)}
+                        <span className="ml-1.5 text-sm font-normal text-base-content/60">en stock</span>
+                      </p>
+                      <p className={`mt-2.5 flex items-center gap-2 text-sm whitespace-nowrap ${TONE_TEXT[status.tone]}`}>
+                        <span aria-hidden className={`size-2 shrink-0 rounded-full ${TONE_DOT[status.tone]}`} />
+                        {status.label}
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
       )}
     </div>
   );

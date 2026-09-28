@@ -245,6 +245,7 @@ export default function ReservationCalendar({
                       {visibleAvatars.map((m, i) => (
                         <Avatar
                           key={m.id}
+                          photoUrl={m.photo}
                           initial={initials(m)}
                           size={AVATAR}
                           className={cn("bg-base-100 text-sm font-bold text-base-content ring-2 ring-[#fff1f1]", i > 0 && "-ml-3")}

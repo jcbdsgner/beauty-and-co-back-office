@@ -16,6 +16,7 @@ import {
 import { presenceFor, TODAY_ISO, type PlanningData } from "./planning";
 import { prestationSeeds, productPrice, serviceSeeds } from "./services";
 import { canPerform, fullName, members } from "./staff";
+import type { AppNotification } from "./notifications";
 
 export { fcfa, groupThousands };
 export type { PosteType };
@@ -189,8 +190,8 @@ export type RdvDetail = {
 /* ------------------------------------------------------------------ */
 
 export const staffBySalon: Record<SalonId, string[]> = {
-  almadies: ["Sophie Ndione", "Mariama Bâ", "Aïda Sarr"],
-  seaplaza: ["Bineta Cissé", "Coumba Faye"],
+  almadies: ["Gnagna", "Henry", "Adja", "Michelle"],
+  seaplaza: ["Bineta", "Fatou", "Marie Dominique", "Adja"],
 };
 
 /* ------------------------------------------------------------------ */
@@ -327,8 +328,8 @@ function normalize(r: RdvDetail): RdvDetail {
 // Mêmes réservations, mêmes prestations, mêmes heures demandées, mêmes
 // bénéficiaires et extras que la caisse. Ce qui change à la traduction :
 // - jours relatifs ancrés sur `TODAY_ISO` (et non sur la vraie date) ; les
-//   salons du back-office étant fermés le dimanche, le « dimanche chargé » de
-//   point-de-vente et tout ce qui tombait un dimanche passent au samedi ;
+//   salons du back-office étant fermés le lundi, ce qui tombait un lundi passe
+//   au mardi (le « dimanche chargé » reste le dimanche) ;
 // - clientes : `cl-N` de point-de-vente → fiches du back-office (`PDV_CLIENT`) ;
 // - praticiennes : l'équipe de point-de-vente n'existe pas ici. Chaque
 //   prestation est recalée (`fitPdvSeeds`) sur l'équipe du back-office, comme
@@ -499,10 +500,10 @@ const PDV_RESERVATIONS: PdvReservation[] = [
     ],
   },
   { id: "RV-1787725200000-cntxjnmv5", payer: "cl-9", day: 2, salon: AL, lines: [line("rdv-17a", "manucure-pedicure-smooth-pedicure", "13:00", 80)] },
-  { id: "RV-1787768400000-lllevewnh", payer: "cl-1", day: 2, salon: AL, lines: [line("rdv-29a", "spa-relax-me-time", "09:30", 80)] },
+  { id: "RV-1787768400000-lllevewnh", payer: "cl-1", day: 2, salon: AL, lines: [line("rdv-29a", "spa-relax-me-time", "10:00", 80)] },
 
   /* ── Dans trois jours ── */
-  { id: "RV-1787728800000-den7zmwoi", payer: "cl-4", day: 3, salon: SP, lines: [line("rdv-18a", "coiffure-tresses-cheveux", "09:30", 60)] },
+  { id: "RV-1787728800000-den7zmwoi", payer: "cl-4", day: 3, salon: SP, lines: [line("rdv-18a", "coiffure-tresses-cheveux", "10:00", 60)] },
   {
     id: "RV-1787732400000-e5gifm6hv", payer: "cl-1", day: 3, salon: SP,
     lines: [
@@ -543,7 +544,7 @@ const PDV_RESERVATIONS: PdvReservation[] = [
   ).map(([payer, prestationId, salon, start], i): PdvReservation => ({
     id: `RV-DIM-${String(i + 1).padStart(2, "0")}`,
     payer,
-    day: 3, // le dimanche qui vient, ramené au samedi (cf. plus haut)
+    day: 3, // le dimanche qui vient
     salon,
     lines: [
       line(
@@ -565,10 +566,10 @@ const isoPlusDays = (iso: string, n: number) => {
   return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
 };
 
-// Jour réel d'une réservation : décalage depuis `TODAY_ISO`, dimanche → samedi.
+// Jour réel d'une réservation : décalage depuis `TODAY_ISO`, lundi (fermé) → mardi.
 const pdvDay = (offset: number) => {
   const iso = isoPlusDays(TODAY_ISO, offset);
-  return new Date(`${iso}T12:00:00`).getDay() === 0 ? isoPlusDays(iso, -1) : iso;
+  return new Date(`${iso}T12:00:00`).getDay() === 1 ? isoPlusDays(iso, 1) : iso;
 };
 
 const categoryOf = (prestationId: string) => {
@@ -582,7 +583,7 @@ function fitPdvSeeds(input: PdvReservation[]): RdvDetail[] {
   const busy = new Map<string, { start: number; end: number }[]>(); // memberId|iso
 
   // Présente ce jour-là dans ce salon, toute la fenêtre dans ses horaires,
-  // hors coupure, et pas déjà prise.
+  // et pas déjà prise.
   const fits = (memberId: string, iso: string, salon: SalonId, start: number, dur: number) =>
     coversWindow(memberId, salon, iso, start, dur) &&
     !(busy.get(`${memberId}|${iso}`) ?? []).some((b) => start < b.end && b.start < start + dur);
@@ -826,7 +827,7 @@ export function isStaffFreeForWindow(
 //
 // Règle métier : une prestation n'attend jamais qu'on lui choisisse une
 // praticienne. Elle est affectée d'office à une praticienne compétente,
-// présente ce jour-là dans le salon du rendez-vous (horaires, coupure,
+// présente ce jour-là dans le salon du rendez-vous (horaires,
 // absences du planning) et libre sur toute sa fenêtre — la moins chargée de
 // la journée d'abord, comme la prise de RDV de point-de-vente. La propriétaire
 // peut ensuite changer d'intervenante, jamais « désaffecter ».
@@ -853,9 +854,6 @@ export function coversWindow(
   if (pres.state !== "present" || pres.salonId !== salon) return false;
   const end = startMin + durationMin;
   if (startMin < timeToMinutes(pres.start) || end > timeToMinutes(pres.end)) return false;
-  if (pres.breakStart && pres.breakEnd) {
-    if (startMin < timeToMinutes(pres.breakEnd) && timeToMinutes(pres.breakStart) < end) return false;
-  }
   return true;
 }
 
@@ -1066,6 +1064,57 @@ const sortRows = (rows: RdvRow[]): RdvRow[] =>
 
 // Copie modifiable de tous les rendez-vous — l'écran garde ça en état de session.
 export const allRendezvous = (): RdvDetail[] => SEEDS.map((r) => ({ ...r }));
+
+/* ------------------------------------------------------------------ */
+/* Alertes d'annulation (accueil)                                      */
+/* ------------------------------------------------------------------ */
+
+const SHORT_WEEKDAYS_FR = ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."];
+
+// « ven. 4 sept. à 15:30 »
+const shortDateTime = (iso: string) => {
+  const dt = new Date(`${iso.slice(0, 10)}T12:00:00`);
+  const month = MONTHS_FR[dt.getMonth()];
+  const short = month.length > 5 ? `${month.slice(0, 4)}.` : month;
+  return `${SHORT_WEEKDAYS_FR[dt.getDay()]} ${dt.getDate()} ${short} à ${iso.slice(11, 16)}`;
+};
+
+export const cancellationNotificationId = (rdvId: string) => `notif-annul-${rdvId}`;
+
+// Une annulation d'un rendez-vous encore devant nous remonte sur l'accueil
+// (« À régler aujourd'hui ») : le créneau se libère, il peut être reproposé.
+// `body` = « Payeuse — détail » (même convention que les demandes de l'équipe).
+export function cancellationNotification(r: RdvDetail, at = NOW_ISO): AppNotification {
+  const names = [...new Set(r.prestations.map((p) => p.name))];
+  const detail = [
+    shortDateTime(r.date),
+    names.length > 2 ? `${names.slice(0, 2).join(", ")} +${names.length - 2}` : names.join(", "),
+    r.salonLabel,
+    r.cancelReason,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  return {
+    id: cancellationNotificationId(r.id),
+    category: "rendez-vous",
+    title: "Rendez-vous annulé",
+    body: `${r.client.name} — ${detail}`,
+    date: at,
+    read: false,
+    tone: "warning",
+    href: `/rendez-vous/${r.id}`,
+  };
+}
+
+// Rendez-vous annulés dont la date n'est pas encore passée.
+export function cancellationNotifications(list: RdvDetail[] = SEEDS): AppNotification[] {
+  return list
+    .filter((r) => r.status === "annulé" && r.date >= NOW_ISO)
+    .map((r) => {
+      const at = r.events.find((e) => e.label === "Rendez-vous annulé")?.at ?? NOW_ISO;
+      return cancellationNotification(r, at);
+    });
+}
 
 export function rendezvousList(scope: SalonScope): RdvRow[] {
   return sortRows(SEEDS.filter((r) => scope === "all" || r.salon === scope).map(toRow));

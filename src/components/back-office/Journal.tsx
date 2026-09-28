@@ -11,11 +11,8 @@ import { salons, type SalonScope } from "@/lib/mock/beautyandco";
 import {
   ACTOR_ROLES,
   ACTOR_ROLE_FILTER_LABELS,
-  ACTOR_ROLE_LABELS,
   DOMAIN_LABELS,
-  actorInitials,
   filterJournal,
-  frDay,
   groupJournalByDay,
   journalClock,
   journalEntries,
@@ -26,6 +23,7 @@ import {
 } from "@/lib/mock/journal";
 import JournalPeriodPicker, {
   DEFAULT_JOURNAL_PERIOD,
+  presetRange,
   type JournalPeriod,
 } from "./journal/JournalPeriodPicker";
 import {
@@ -43,7 +41,7 @@ import {
 // 1. Où en est la propriétaire ? En supervision. Deux registres : le coup d'œil
 //    quotidien (« rien d'anormal depuis hier ? ») et l'enquête ponctuelle (« qui
 //    a remboursé cette cliente, et pourquoi ? »). Elle délègue l'exploitation à
-//    Rokhaya (manager) et Awa (caisse) et veut pouvoir vérifier sans avoir à
+//    Rokhaya (manager) et Ndiole (caisse) et veut pouvoir vérifier sans avoir à
 //    demander. Elle n'est pas développeuse : un journal doit se lire comme un
 //    relevé, pas comme des logs.
 // 2. Ce qui doit sauter aux yeux : QUI a fait QUOI, QUAND — la ligne se lit d'un
@@ -81,53 +79,45 @@ const TONE_TILE: Record<JournalTone, string> = {
   sensitive: "bg-error-50 text-error-600",
 };
 
-const TONE_BORDER: Record<JournalTone, string> = {
-  info: "border-transparent",
-  notable: "border-warning-300",
-  sensitive: "border-error-300",
-};
-
 const normalize = (s: string) =>
   s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+// Colonnes d'une ligne : heure · pictogramme du domaine · texte. L'heure mène
+// la lecture (un journal se parcourt de haut en bas, dans le temps), le
+// pictogramme porte le ton, le texte se lit d'un trait : qui, quoi, sur quoi.
+const ROW_GRID = "grid grid-cols-[3.5rem_2.25rem_minmax(0,1fr)] items-start gap-x-4";
 
 /* --------------------------------------------------------------------- ligne */
 
 function EntryRow({ entry }: { entry: JournalEntry }) {
   const Icon = DOMAIN_ICON[entry.domain];
-  const initials = actorInitials(entry.actorName);
+  const sensitive = entry.tone === "sensitive";
 
   const body = (
     <>
-      <span
-        className={`pointer-events-none mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${TONE_TILE[entry.tone]}`}
+      <time
+        dateTime={entry.at}
+        className="pt-2 text-sm tabular-nums text-base-content/60"
       >
-        <Icon className="h-4 w-4" />
+        {journalClock(entry.at)}
+      </time>
+      <span
+        className={`flex size-9 items-center justify-center rounded-lg ${TONE_TILE[entry.tone]}`}
+        aria-hidden
+      >
+        <Icon className="size-4" />
       </span>
-      <div className="pointer-events-none min-w-0 flex-1">
-        <div className="flex items-baseline justify-between gap-3">
-          <p className="flex min-w-0 items-center gap-2 text-sm">
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent text-[12px] font-semibold text-secondary">
-              {initials}
-            </span>
-            <span className="font-semibold text-base-content">{entry.actorName}</span>
-            <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-xs font-medium text-base-content/60">
-              {ACTOR_ROLE_LABELS[entry.actorRole]}
-            </span>
-          </p>
-          <span className="shrink-0 text-xs text-base-content/45">
-            {journalClock(entry.at)}
-          </span>
-        </div>
-        <p className="mt-1 text-sm text-base-content/80">
-          <span className="text-base-content/60">{entry.action}</span>
-          {" — "}
-          <span className="font-medium text-base-content">{entry.detail}</span>
+      <div className="min-w-0 max-w-[72ch]">
+        <p className="text-[15px] leading-6 text-base-content/70">
+          <span className="font-semibold text-base-content">{entry.actorName}</span>{" "}
+          {entry.action}
         </p>
-        <p className="mt-1 flex items-center gap-2 text-xs text-base-content/45">
+        <p className="text-[15px] leading-6 font-medium text-base-content">{entry.detail}</p>
+        <p className="mt-1 flex items-center gap-2 text-sm text-base-content/60">
           <span>{DOMAIN_LABELS[entry.domain]}</span>
-          {entry.tone === "sensitive" && (
-            <span className="font-semibold uppercase tracking-wide text-error-500">
-              · Action sensible
+          {sensitive && (
+            <span className="rounded-full bg-error-50 px-2 py-px text-xs font-semibold text-error-600">
+              Action sensible
             </span>
           )}
         </p>
@@ -135,24 +125,22 @@ function EntryRow({ entry }: { entry: JournalEntry }) {
     </>
   );
 
+  const rowClass = `${ROW_GRID} px-5 py-4 ${sensitive ? "bg-error-25" : ""}`;
+
   if (entry.href) {
     return (
-      <li
-        className={`group relative flex gap-4 border-l-2 px-5 py-4 transition-colors hover:bg-base-200 ${TONE_BORDER[entry.tone]}`}
-      >
+      <li>
         <Link
           href={entry.href}
-          aria-label={`${entry.actorName} ${entry.action}`}
-          className="absolute inset-0"
-        />
-        {body}
+          className={`${rowClass} transition-colors hover:bg-base-200 focus-visible:bg-base-200 focus-visible:outline-none`}
+        >
+          {body}
+        </Link>
       </li>
     );
   }
 
-  return (
-    <li className={`flex gap-4 border-l-2 px-5 py-4 ${TONE_BORDER[entry.tone]}`}>{body}</li>
-  );
+  return <li className={rowClass}>{body}</li>;
 }
 
 /* --------------------------------------------------------------- états vides */
@@ -174,21 +162,29 @@ function EmptyRole({ role, salonLabel }: { role: ActorRole; salonLabel: string }
   );
 }
 
-function EmptyFilter({ onReset }: { onReset: () => void }) {
+function EmptyFilter({
+  title,
+  actionLabel,
+  onAction,
+}: {
+  title: string;
+  actionLabel: string;
+  onAction: () => void;
+}) {
   return (
     <div className="flex flex-col items-center rounded-box border border-base-300 bg-white px-6 py-14 text-center">
       <span className="flex h-11 w-11 items-center justify-center rounded-full bg-muted text-base-content/45">
         <ListIcon className="h-5 w-5" />
       </span>
       <h3 className="mt-4 text-base font-semibold text-base-content">
-        Aucune action sur cette période
+        {title}
       </h3>
       <button
         type="button"
-        onClick={onReset}
+        onClick={onAction}
         className="mt-3 text-sm font-medium text-secondary hover:underline"
       >
-        Élargir aux 30 derniers jours
+        {actionLabel}
       </button>
     </div>
   );
@@ -230,107 +226,103 @@ export default function Journal() {
 
   const groups = useMemo(() => groupJournalByDay(visible), [visible]);
 
-  const periodLabel =
-    period.preset === "today"
-      ? "aujourd'hui"
-      : period.preset === "7j"
-        ? "sur 7 jours"
-        : period.preset === "30j"
-          ? "sur 30 jours"
-          : `du ${frDay(period.from)} au ${frDay(period.to)}`;
-
   return (
-    <div className="space-y-6">
+    <div>
       <PageHeader
         title="Journal d'activité"
         actions={
-          <>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-medium uppercase tracking-wide text-base-content/45">
-                Salon
-              </span>
-              <SegmentedControl
-                options={SALON_OPTIONS}
-                value={scope}
-                onChange={setScope}
-                aria-label="Filtrer par salon"
-                variant="tinted"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-medium uppercase tracking-wide text-base-content/45">
-                Période
-              </span>
-              <JournalPeriodPicker value={period} onChange={setPeriod} />
-            </div>
-          </>
+          <SegmentedControl
+            options={SALON_OPTIONS}
+            value={scope}
+            onChange={setScope}
+            aria-label="Filtrer par salon"
+            variant="tinted"
+          />
         }
       />
 
-      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-medium uppercase tracking-wide text-base-content/45">
-            Voir les actions
-          </span>
-          <SegmentedControl
-            options={ROLE_OPTIONS}
-            value={role}
-            onChange={setRole}
-            aria-label="Filtrer par rôle"
-          />
-        </div>
-        <div className="relative w-full max-w-xs">
-          <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-base-content/45">
-            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-              <path
-                fillRule="evenodd"
-                clipRule="evenodd"
-                d="M3.04 9.37a6.33 6.33 0 1 1 12.67 0 6.33 6.33 0 0 1-12.67 0ZM9.38 1.54a7.83 7.83 0 1 0 4.98 13.88l2.82 2.82a.75.75 0 1 0 1.06-1.06l-2.82-2.82A7.83 7.83 0 0 0 9.38 1.54Z"
-                fill="currentColor"
-              />
-            </svg>
-          </span>
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Rechercher une personne, une action…"
-            aria-label="Rechercher dans le journal"
-            className="h-10 w-full rounded-field border border-base-300 bg-white py-2 pl-10 pr-3 text-sm text-base-content placeholder:text-base-content/40 focus:outline-2 focus:outline-offset-2 focus:outline-[#fdcfca]"
-          />
-        </div>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-3">
+        <SegmentedControl
+          options={ROLE_OPTIONS}
+          value={role}
+          onChange={setRole}
+          aria-label="Voir les actions de"
+          size="sm"
+        />
+        {roleTotal > 0 && (
+          <div className="relative ml-auto w-80 shrink-0">
+            <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-base-content/45">
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path
+                  fillRule="evenodd"
+                  clipRule="evenodd"
+                  d="M3.04 9.37a6.33 6.33 0 1 1 12.67 0 6.33 6.33 0 0 1-12.67 0ZM9.38 1.54a7.83 7.83 0 1 0 4.98 13.88l2.82 2.82a.75.75 0 1 0 1.06-1.06l-2.82-2.82A7.83 7.83 0 0 0 9.38 1.54Z"
+                  fill="currentColor"
+                />
+              </svg>
+            </span>
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Personne, action, cliente…"
+              aria-label="Rechercher dans le journal"
+              className="h-10 w-full rounded-field border border-base-300 bg-white py-2 pl-10 pr-3 text-sm text-base-content placeholder:text-base-content/45 focus:outline-2 focus:outline-offset-2 focus:outline-[#fdcfca]"
+            />
+          </div>
+        )}
       </div>
 
-      {roleTotal === 0 ? (
-        <EmptyRole role={role} salonLabel={salonLabel} />
-      ) : visible.length === 0 ? (
-        <EmptyFilter
-          onReset={() => {
-            setQuery("");
-            setPeriod(DEFAULT_JOURNAL_PERIOD);
-          }}
-        />
-      ) : (
-        <>
-          <p className="text-sm text-base-content/60">
-            {visible.length} action{visible.length > 1 ? "s" : ""} {periodLabel}
-          </p>
-          <div className="space-y-6">
-            {groups.map((g) => (
-              <section key={g.day}>
-                <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-base-content/45">
-                  {g.label}
-                </h2>
-                <ul className="divide-y divide-base-300 overflow-hidden rounded-box border border-base-300 bg-white">
-                  {g.items.map((entry) => (
-                    <EntryRow key={entry.id} entry={entry} />
-                  ))}
-                </ul>
-              </section>
-            ))}
-          </div>
-        </>
-      )}
+      <div className="mt-6">
+        {roleTotal === 0 ? (
+          <EmptyRole role={role} salonLabel={salonLabel} />
+        ) : (
+          <>
+            <div className="mb-6 flex items-center justify-between gap-6">
+              <JournalPeriodPicker value={period} onChange={setPeriod} />
+                <p className="shrink-0 text-sm text-base-content/60">
+                {visible.length} action{visible.length > 1 ? "s" : ""}
+              </p>
+            </div>
+            {visible.length === 0 ? (
+              query.trim() ? (
+                <EmptyFilter
+                  title={`Aucune action ne correspond à « ${query.trim()} »`}
+                  actionLabel="Effacer la recherche"
+                  onAction={() => setQuery("")}
+                />
+              ) : (
+                <EmptyFilter
+                  title="Aucune action sur cette période"
+                  actionLabel="Élargir aux 30 derniers jours"
+                  onAction={() => setPeriod(presetRange("30j"))}
+                />
+              )
+            ) : (
+            <div className="space-y-8">
+              {groups.map((g) => (
+                <section key={g.day} aria-labelledby={`day-${g.day}`}>
+                  <h2
+                    id={`day-${g.day}`}
+                    className="mb-2.5 flex items-baseline gap-2 pl-1 text-[17px] font-semibold text-base-content"
+                  >
+                    {g.label.charAt(0).toUpperCase() + g.label.slice(1)}
+                    <span className="text-sm font-normal text-base-content/60">
+                      {g.items.length} action{g.items.length > 1 ? "s" : ""}
+                    </span>
+                  </h2>
+                  <ul className="divide-y divide-base-300 overflow-hidden rounded-box border border-base-300 bg-white">
+                    {g.items.map((entry) => (
+                      <EntryRow key={entry.id} entry={entry} />
+                    ))}
+                  </ul>
+                </section>
+              ))}
+            </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

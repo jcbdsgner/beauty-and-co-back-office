@@ -14,8 +14,8 @@ import { fullName, members, type Member } from "@/lib/mock/staff";
 /** Heures du salon (trame `standardHours` de `beautyandco.ts`) — la grille court de
  *  l'ouverture à 21h, la tranche après fermeture grisée « Fermé » (même principe que
  *  point-de-vente, ADR 0036 là-bas). */
-export const SALON_OPENING = "09:00";
-export const SALON_CLOSING = "19:00";
+export const SALON_OPENING = "10:00";
+export const SALON_CLOSING = "20:00";
 export const GRID_END = "21:00";
 
 export { timeToMinutes, minutesToTime };
@@ -57,17 +57,11 @@ export function planningRows(list: RdvDetail[]): PlanningRow[] {
 
 export const rowEnd = (r: PlanningRow) => minutesToTime(timeToMinutes(r.start) + r.durationMin);
 
-/** Plages du jour d'un membre : sa présence résolue (absence > ajustement > trame
- *  habituelle), coupée en deux autour de la pause. Absente ou en repos → aucune plage. */
+/** Plage du jour d'un membre : sa présence résolue (absence > ajustement > trame
+ *  habituelle), d'un seul tenant. Absente ou en repos → aucune plage. */
 export function shiftsFor(memberId: string, iso: string, data: PlanningData): Shift[] {
   const p = presenceFor(memberId, iso, data);
   if (p.state !== "present") return [];
-  if (p.breakStart && p.breakEnd) {
-    return [
-      { start: p.start, end: p.breakStart, salonId: p.salonId },
-      { start: p.breakEnd, end: p.end, salonId: p.salonId },
-    ];
-  }
   return [{ start: p.start, end: p.end, salonId: p.salonId }];
 }
 
@@ -89,10 +83,14 @@ export const atSalonLabel = (id: SalonId) => (id === "almadies" ? "Aux Almadies"
 
 export { isClosed };
 
-/** Équipe planifiable : praticiennes actives (la caisse et la manager ne prennent pas
- *  de prestations — même règle que l'accueil exclu du Planning de point-de-vente). */
+/** Équipe planifiable, comme point-de-vente : coiffeurs, puis esthéticiens, puis ménage
+ *  (la caisse / l'accueil et la manager n'y figurent pas). Ordre de `staff.ts` à
+ *  l'intérieur d'un métier. */
+const METIER_RANK: Record<Member["category"], number> = { coiffure: 0, esthetique: 1, staff: 2 };
 export const schedulableMembers = (): Member[] =>
-  members.filter((m) => m.active && m.roles.includes("praticienne"));
+  members
+    .filter((m) => m.active && (m.roles.includes("praticienne") || m.roles.includes("menage")))
+    .sort((a, b) => METIER_RANK[a.category] - METIER_RANK[b.category]);
 
 export const formatHour = (t: string) => {
   const [h, m] = t.split(":").map(Number);

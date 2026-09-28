@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Store } from "lucide-react";
 import { Avatar } from "@/components/ui/atoms/avatar";
@@ -10,7 +10,7 @@ import { useLocation } from "@/context/LocationContext";
 import { usePlanningData } from "@/context/PlanningContext";
 import { salons, type SalonId, type SalonScope } from "@/lib/mock/beautyandco";
 import { TODAY_ISO, addDays, mondayOf, newAbsenceId } from "@/lib/mock/planning";
-import { allRendezvous, autoAssign } from "@/lib/mock/rendezvous";
+import { allRendezvous, autoAssign, type RdvDetail } from "@/lib/mock/rendezvous";
 import { initials, type Member } from "@/lib/mock/staff";
 import { DayTimeline } from "./DayTimeline";
 import { WeekTimeline } from "./WeekTimeline";
@@ -53,7 +53,18 @@ const SALON_OPTIONS = [
   ...salons.map((s) => ({ value: s.id as string, label: s.name })),
 ];
 
-export default function PlanningBoard() {
+type Props = {
+  /** Rendez-vous de session (écran `/rendez-vous`, déjà affectés) — sinon les fixtures. */
+  rdvs?: RdvDetail[];
+  /** Ouverture d'un rendez-vous — sinon sa fiche en panneau latéral (route interceptée). */
+  onOpenRdv?: (id: string) => void;
+  /** Filtre salon masqué quand l'écran hôte le porte déjà dans son bandeau. */
+  showSalonFilter?: boolean;
+  /** Contenu ajouté à droite des filtres (ex. la bascule de vue de `/rendez-vous`). */
+  toolbarEnd?: ReactNode;
+};
+
+export default function PlanningBoard({ rdvs, onOpenRdv, showSalonFilter = true, toolbarEnd }: Props = {}) {
   const router = useRouter();
   const { scope, setScope } = useLocation();
   const { data, addAbsence } = usePlanningData();
@@ -84,7 +95,7 @@ export default function PlanningBoard() {
   }, [iso]);
 
   // Praticiennes réaffectées d'office si une absence vient d'être posée.
-  const rowsAll = useMemo(() => planningRows(autoAssign(allRendezvous(), data)), [data]);
+  const rowsAll = useMemo(() => planningRows(rdvs ?? autoAssign(allRendezvous(), data)), [rdvs, data]);
   const dayRows = useMemo(
     () => rowsAll.filter((r) => r.dateIso === iso && (!salonId || r.salonId === salonId)),
     [rowsAll, iso, salonId],
@@ -148,7 +159,7 @@ export default function PlanningBoard() {
       next.splice(next.indexOf(targetId), 0, draggedId);
       return next;
     });
-  const openRdv = (id: string) => router.push(`/rendez-vous/${id}`);
+  const openRdv = (id: string) => (onOpenRdv ? onOpenRdv(id) : router.push(`/rendez-vous/${id}`));
 
   return (
     <div className="flex flex-col gap-6">
@@ -160,13 +171,16 @@ export default function PlanningBoard() {
           options={METIER_OPTIONS}
           aria-label="Filtrer par métier"
         />
-        <SegmentedToggle
-          size="sm"
-          value={scope}
-          onChange={changeSalonFilter}
-          options={SALON_OPTIONS}
-          aria-label="Filtrer par salon"
-        />
+        {showSalonFilter && (
+          <SegmentedToggle
+            size="sm"
+            value={scope}
+            onChange={changeSalonFilter}
+            options={SALON_OPTIONS}
+            aria-label="Filtrer par salon"
+          />
+        )}
+        {toolbarEnd}
       </div>
 
       <PeriodNav period={period} onPeriodChange={setPeriod} iso={iso} onDateChange={setIso} todayIso={todayIso} />
@@ -205,6 +219,7 @@ export default function PlanningBoard() {
                   {elsewhereToday.map((p) => (
                     <Avatar
                       key={p.id}
+                      photoUrl={p.photo}
                       initial={initials(p)}
                       size={26}
                       className="bg-base-300 text-[0.65rem] font-semibold ring-2 ring-base-100"

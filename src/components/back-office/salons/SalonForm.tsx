@@ -23,13 +23,11 @@ import {
 const defaultHours = (): Record<Weekday, DayOpening> => {
   const open: DayOpening = {
     closed: false,
-    open: "09:00",
-    close: "19:00",
-    breakStart: "13:00",
-    breakEnd: "14:00",
+    open: "10:00",
+    close: "20:00",
   };
   return WEEKDAYS.reduce(
-    (acc, w) => ({ ...acc, [w]: w === "dim" ? { closed: true } : open }),
+    (acc, w) => ({ ...acc, [w]: w === "lun" ? { closed: true } : open }),
     {} as Record<Weekday, DayOpening>,
   );
 };

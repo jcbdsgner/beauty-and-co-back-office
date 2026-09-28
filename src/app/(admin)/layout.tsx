@@ -8,7 +8,6 @@ import { ClientsProvider } from "@/context/ClientsContext";
 import { PreferencesProvider } from "@/context/PreferencesContext";
 import { AutorisationsProvider } from "@/context/AutorisationsContext";
 import { FideliteProvider } from "@/context/FideliteContext";
-import AppHeader from "@/layout/AppHeader";
 import AppSidebar from "@/layout/AppSidebar";
 import React from "react";
 
@@ -35,10 +34,8 @@ export default function AdminLayout({
                 <div
                   className="ml-[260px] min-w-0 flex-1 bg-base-200 print:!ml-0"
                 >
-                  {/* Header */}
-                  <AppHeader />
                   {/* Page Content */}
-                  <div className="mx-auto max-w-[1440px] px-8 pt-2 pb-8 print:p-0">
+                  <div className="mx-auto max-w-[1440px] px-8 pt-8 pb-8 print:p-0">
                     {children}
                   </div>
                 </div>
