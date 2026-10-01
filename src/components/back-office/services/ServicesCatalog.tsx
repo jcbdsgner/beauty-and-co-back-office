@@ -158,9 +158,9 @@ export default function ServicesCatalog({
   for (const p of shown) if (p.serviceId) navCounts.set(p.serviceId, (navCounts.get(p.serviceId) ?? 0) + 1);
 
   return (
-    <div className="grid grid-cols-[232px_minmax(0,1fr)] items-start gap-8">
+    <div className="grid grid-cols-[288px_minmax(0,1fr)] items-start gap-8">
       <nav aria-label="Catégories" className="sticky top-8 space-y-1">
-        <p className="px-3 pb-2 text-xs font-medium uppercase tracking-wide text-base-content/45">
+        <p className="px-3 pb-2 text-sm font-medium uppercase tracking-wide text-base-content/45">
           Catégories
         </p>
         {hasOrphans && (
@@ -193,9 +193,9 @@ export default function ServicesCatalog({
         <button
           type="button"
           onClick={onOpenNewCategory}
-          className="mt-2 flex w-full items-center gap-2 rounded-field px-3 py-2 text-sm font-medium text-brand-600 transition hover:bg-accent hover:text-secondary"
+          className="mt-2 flex w-full items-center gap-2.5 rounded-field px-3 py-3 text-[16px] font-medium text-brand-600 transition hover:bg-accent hover:text-secondary"
         >
-          <Plus aria-hidden className="size-4" />
+          <Plus aria-hidden className="size-5" />
           Nouvelle catégorie
         </button>
       </nav>
@@ -347,14 +347,14 @@ function NavItem({
       onClick={onClick}
       disabled={disabled}
       aria-current={active ? "location" : undefined}
-      className={`flex w-full items-center gap-2.5 rounded-field px-3 py-2 text-left text-[15px] transition disabled:cursor-default disabled:opacity-40 ${
+      className={`flex w-full items-center gap-3 rounded-field px-3 py-3 text-left text-[17px] transition disabled:cursor-default disabled:opacity-40 ${
         active
           ? "bg-accent font-semibold text-secondary"
           : "text-base-content/75 hover:bg-muted hover:text-base-content"
       }`}
     >
-      {image !== undefined && <CategoryThumb image={image} name={label} size={24} />}
-      <span className={`min-w-0 flex-1 truncate ${muted ? "text-base-content/45" : ""}`}>{label}</span>
+      {image !== undefined && <CategoryThumb image={image} name={label} size={36} />}
+      <span className={`min-w-0 flex-1 leading-snug ${muted ? "text-base-content/45" : ""}`}>{label}</span>
       {warn && (
         <span
           aria-label="Contient des prestations non réservables"
@@ -362,7 +362,7 @@ function NavItem({
           className="size-2 shrink-0 rounded-full bg-warning-500"
         />
       )}
-      <span className="shrink-0 text-xs tabular-nums text-base-content/45">{count}</span>
+      <span className="shrink-0 text-sm tabular-nums text-base-content/55">{count}</span>
     </button>
   );
 }

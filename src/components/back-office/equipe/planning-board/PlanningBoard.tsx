@@ -62,9 +62,11 @@ type Props = {
   showSalonFilter?: boolean;
   /** Contenu ajouté à droite des filtres (ex. la bascule de vue de `/rendez-vous`). */
   toolbarEnd?: ReactNode;
+  /** Contenu posé à gauche de la barre d'outils (ex. la bascule Horaires / Rendez-vous d'Équipe). */
+  toolbarStart?: ReactNode;
 };
 
-export default function PlanningBoard({ rdvs, onOpenRdv, showSalonFilter = true, toolbarEnd }: Props = {}) {
+export default function PlanningBoard({ rdvs, onOpenRdv, showSalonFilter = true, toolbarEnd, toolbarStart }: Props = {}) {
   const router = useRouter();
   const { scope, setScope } = useLocation();
   const { data, addAbsence } = usePlanningData();
@@ -164,6 +166,7 @@ export default function PlanningBoard({ rdvs, onOpenRdv, showSalonFilter = true,
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-end gap-3">
+        {toolbarStart && <div className="mr-auto">{toolbarStart}</div>}
         <SegmentedToggle
           size="sm"
           value={metierFilter}

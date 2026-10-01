@@ -93,7 +93,8 @@ import {
   type RdvExtra,
   type RdvPrestation,
 } from "@/lib/mock/rendezvous";
-import { prestationSeeds, serviceSeeds } from "@/lib/mock/services";
+import { conflictWith, prestationSeeds, serviceSeeds } from "@/lib/mock/services";
+import { useServicesData } from "@/components/back-office/services/ServicesData";
 import "@/components/prise-rdv/prise-rdv.css";
 
 /**
@@ -477,6 +478,9 @@ function PriseRdvFlow({
       ?.label ?? null;
 
   // L'agenda réel : quels horaires tiennent, et qui pose chaque prestation.
+  // Jours / horaires et périodes d'indisponibilité de chaque prestation, tels que réglés dans Services (état de session).
+  const { prestations: catalog } = useServicesData();
+  const availabilityOf = (id: string) => catalog.find((p) => p.id === id);
   const planItems: PlanItem[] = cartItems.map((item) => ({
     key: item.id,
     personId: item.personId,
@@ -492,6 +496,7 @@ function PriseRdvFlow({
           salonId: SALON_ID_BY_LOCATION[locationId],
           rdvs,
           planningData,
+          availabilityOf,
         }
       : null;
   const timeSlots = planContext
@@ -535,11 +540,17 @@ function PriseRdvFlow({
         })
       : [];
 
+  // Incompatibilités « même visite » réglées dans Services : une prestation
+  // incompatible avec ce que la personne a déjà choisi ne s'ajoute pas.
+  const conflictFor = (personId: string, subServiceId: string) =>
+    conflictWith(catalog, subServiceId, selections[personId] ?? []);
+
   const toggleSubService = (personId: string, subServiceId: string) => {
     setSelections((prev) => {
       const next = { ...prev };
       const current = new Set(next[personId] ?? []);
       if (current.has(subServiceId)) current.delete(subServiceId);
+      else if (conflictWith(catalog, subServiceId, current)) return prev;
       else current.add(subServiceId);
       next[personId] = current;
       return next;
@@ -896,6 +907,7 @@ function PriseRdvFlow({
               people={people}
               selections={selections}
               onToggleSubService={toggleSubService}
+              conflictFor={conflictFor}
               questionAnswers={questionAnswers}
               onAnswerQuestion={answerQuestion}
               onContinue={() => setStep("creneau")}

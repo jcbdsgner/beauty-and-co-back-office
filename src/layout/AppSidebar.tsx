@@ -11,6 +11,7 @@ import {
   Gift,
   LayoutDashboard,
   MessageCircle,
+  Package,
   Settings,
   Sparkles,
   UserRoundGroup,
@@ -23,8 +24,8 @@ type NavItem = { name: string; icon: React.ReactNode; path: string };
 // accessibles ailleurs (Salons → menu compte du header). Ils restent
 // atteignables via des raccourcis sur le tableau de bord (Rapports,
 // Satisfaction, Journal) et le menu compte (Salons) — voir Dashboard.tsx.
-// Stock retiré à son tour (2026-09-27) : déjà présent dans les « Accès
-// Rapides » du tableau de bord (dashboard/AccesRapides.tsx).
+// Stock, retiré le 2026-09-27, y est revenu le 2026-09-28 (entre Services et
+// Fidélité).
 const menuItems: NavItem[] = [
   { icon: <LayoutDashboard />, name: "Tableau de bord", path: "/" },
   { icon: <CalendarCheck2 />, name: "Rendez-vous", path: "/rendez-vous" },
@@ -32,6 +33,7 @@ const menuItems: NavItem[] = [
   { icon: <FileUser />, name: "Clients", path: "/clients" },
   { icon: <UserRoundGroup />, name: "Équipe", path: "/equipe" },
   { icon: <Sparkles />, name: "Services", path: "/services" },
+  { icon: <Package />, name: "Stock", path: "/stock" },
   { icon: <Gift />, name: "Fidélité", path: "/fidelite" },
   { icon: <Settings />, name: "Réglages", path: "/reglages" },
 ];

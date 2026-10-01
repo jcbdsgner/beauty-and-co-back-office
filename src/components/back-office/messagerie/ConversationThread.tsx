@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { FileUser } from "lucide-react";
+import { Button } from "@/components/ui/atoms/button";
 import {
   channelLabel,
   displayName,
@@ -103,6 +105,18 @@ export default function ConversationThread({
         </div>
 
         <div className="flex shrink-0 items-center gap-1.5">
+          {/* Fiche cliente : ouverte en panneau latéral (route interceptée). */}
+          {conversation.clientId && (
+            <Button
+              href={`/clients/${conversation.clientId}`}
+              variant="outline"
+              size="sm"
+              icon={<FileUser className="h-4 w-4" />}
+              className="mr-2"
+            >
+              Voir la fiche
+            </Button>
+          )}
           {conversation.channels.map((ch) => (
             <span
               key={ch}

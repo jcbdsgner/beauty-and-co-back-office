@@ -88,6 +88,10 @@ tout design » → voir @design.md.
 ### Racine `src/`
 
 - `svg.d.ts`, `../next-env.d.ts` — déclarations de types
+- `lib/markdown-lite.ts` (2026-09-28) — `markdownToHtml` (gras, italique,
+  liens http(s), puces, titres `#`/`##`, paragraphes, `&nbsp;` = espace ;
+  texte échappé d'abord) et `markdownToPlain` (version SMS), pour
+  `messagerie/EnvoyerMessage`
 - `lib/utils.ts` (2026-09-27) — `cn()` (clsx + tailwind-merge), même helper que
   point-de-vente, requis par ses composants (`ui/atoms`, `ui/molecules`)
 - `icons/index.tsx` — barrel de **tous** les icônes SVG (importer `@/icons`). Les 7
@@ -112,14 +116,21 @@ tout design » → voir @design.md.
   - `@modal/` — slot parallèle porté par `layout.tsx`, dédié aux fiches
     présentées en panneau latéral droit (client, rendez-vous — voir « Fiches en
     panneau latéral » plus bas). `default.tsx` (rendu par défaut, `null`) ;
-    `(.)clients/[id]/page.tsx` et `(.)rendez-vous/[id]/page.tsx` — routes
-    interceptées : tout clic depuis l'intérieur de l'admin vers `/clients/[id]`
-    ou `/rendez-vous/[id]` atterrit ici au lieu de la page dédiée, affichée en
-    panneau par-dessus l'écran d'origine resté monté (fermeture = `router.back()`)
+    `(.)clients/[id]/page.tsx` — route interceptée : tout clic depuis
+    l'intérieur de l'admin vers `/clients/[id]` atterrit ici au lieu de la page
+    dédiée, affichée en panneau par-dessus l'écran d'origine resté monté
+    (fermeture = `router.back()`). `(.)rendez-vous/[id]` **supprimée le
+    2026-09-28** : la fiche rendez-vous est désormais une page (voir « Fiche
+    rendez-vous en page » en bas de fichier)
   - `page.tsx` — tableau de bord (rend `<Dashboard />`, cf. `components/back-office/`)
   - `satisfaction/page.tsx` — satisfaction client (rend `<Satisfaction />`)
   - `rapports/page.tsx` — générateur de rapports paramétrables (rend `<Rapports />`)
   - `messagerie/page.tsx` — boîte de réception SMS + WhatsApp (rend `<Messagerie />`)
+    ; `messagerie/envoyer/page.tsx` (2026-09-28) — « Envoyer un email » (rend
+    `<EnvoyerMessage />` dans `<Suspense>` pour `?client=<id>` — adresse
+    préremplie). Atteint par le bouton du bandeau de Messagerie et par l'e-mail
+    des fiches cliente (`ClientDetailModal`, ligne E-mail + repli de
+    « Contacter ») et rendez-vous (`RendezVousDetail`) — plus de `mailto:`
   - `rendez-vous/page.tsx` — rendez-vous : deux vues (Liste triable + Agenda —
     frise horaire maison par praticienne, voir plus bas), fiche latérale avec
     affectation d'une praticienne par
@@ -157,8 +168,8 @@ tout design » → voir @design.md.
     (metadata) qui rend `<Journal />`
   - `stock/page.tsx` — Stock : niveaux par produit / salon, couverture, projection
     de réappro (rend `<Stock />`, dans `<Suspense>` pour `?produit=<id>`)
-  - `salons/page.tsx` — Salons : identité, postes par type, heures d'ouverture,
-    fermetures exceptionnelles (rend `<Salons />`)
+  - `salons/page.tsx` — **redirige vers `/reglages?section=salons`** depuis le
+    2026-10-01 (les salons se règlent dans Réglages, groupe « Établissement »)
   - `fidelite/page.tsx` — « Fidélité & abonnements » : wrapper serveur (metadata)
     qui rend `<Fidelite />` — depuis le 2026-09-27, **le seul suivi**
     (abonnements souscrits + packs vendus, côte à côte, sans onglets) ; la
@@ -168,8 +179,8 @@ tout design » → voir @design.md.
   - `services/` — parcours « Services » unifié : catégories + prestations
     facturables + questions d'accueil + recettes de consommation + boissons.
     **Deux onglets = deux routes** (2026-09-27) : `layout.tsx` (monte
-    `services/ServicesData` — état du catalogue partagé entre les deux
-    routes), `page.tsx` = **Prestations** (carte des services, rend
+    `services/ServicesData` — état du catalogue, monté par le layout
+    `(admin)` depuis le 2026-09-28, `services/layout.tsx` supprimé), `page.tsx` = **Prestations** (carte des services, rend
     `<Services section="prestations" />`), `boissons/page.tsx` = **Boissons**
     (`<Services section="boissons" />`). Remplace les anciennes routes
     séparées Gestion / Prestations / Questions / Inventaire·Recettes.
@@ -221,6 +232,11 @@ tout design » → voir @design.md.
   - `page.tsx` — toutes les sections (couleurs, typo, boutons, composants back-office…)
   - `layout.tsx`, `Shell.tsx` — chrome dédié à cette page
 
+> **2026-09-28 : Stock revient dans la sidebar** (entre Services et
+> Fidélité, icône `Package` — **9 entrées**) et quitte « Autres écrans » du
+> tableau de bord (`dashboard/AccesRapides` : Rapports, Avis clients, Journal).
+> Ce qui suit sur les 8 entrées est historique.
+>
 > Note : `AppSidebar` liste ses modules à plat (plus de regroupement par
 > catégorie ni d'en-têtes de section, retirés le 2026-09-14). Depuis le
 > 2026-09-27, elle n'en compte plus que **8** : Tableau de bord (`/`),
@@ -351,8 +367,16 @@ tout design » → voir @design.md.
   la variation (`direction`) laissé à la donnée réelle plutôt que copié du
   Figma — son mock affiche une flèche verte sur toutes les cartes y compris
   « Nouveaux clients », dont la donnée du projet est en réalité en baisse),
-  `Journal` (shell client de `/journal` : liste antéchronologique des actions de
-  l'équipe groupée par jour, filtre rôle `SegmentedControl` (Manager / Caisse /
+  `Journal` (shell client de `/journal` — **2026-10-01 : bascule Actions /
+  Pointage** en tête de la barre d'outils ; salon et période communs. Vue
+  **Pointage** = `journal/PointageLog` : heures badgées de toute l'équipe active
+  groupées par jour (« 9 personnes · 1 retard · 1 absence »), tableau à colonnes
+  fixes Personne (→ fiche membre) · Salon · Prévu · Arrivée · Départ · Présence ;
+  menu « Toute l'équipe / <une personne> » → bilan de la période
+  (`shared/PointageCells.PointageSummaryBar`) + un seul tableau avec colonne
+  Jour ; « Seulement les écarts » ; états vides (rien sur la période → 30 j,
+  aucun écart → tout afficher). Vue **Actions** = ce qui suit : liste
+  antéchronologique des actions de l'équipe groupée par jour, filtre rôle `SegmentedControl` (Manager / Caisse /
   Praticiennes — **Manager** par défaut) + salon global `useLocation()` +
   `JournalPeriodPicker` + recherche libre. Mise en page (passe `impeccable
   layout`, 2026-09-28) : bandeau = titre + salon seul ; barre d'outils = rôle
@@ -538,7 +562,18 @@ tout design » → voir @design.md.
   `messagerie/` : `ConversationList` (panneau gauche : recherche + filtre canal +
   liste), `ConversationThread` (panneau droit : en-tête + fil groupé par jour +
   pied), `MessageComposer` (réponse : bascule de canal + repli WhatsApp quand le
-  SMS est coupé + `⌘`+Entrée), `glyphs` (pictos WhatsApp / SMS /
+  SMS est coupé + `⌘`+Entrée), `EnvoyerMessage` (2026-09-28, sur une capture fournie — formulaire à
+  gauche : canaux Email / SMS / WhatsApp cumulables, « Envoyer à toutes les
+  clientes » (confirmation avant l'envoi groupé), destinataires séparés par
+  des virgules (SMS / WhatsApp = numéros des fiches reconnues par l'adresse),
+  objet (email seulement), message Markdown + compteur SMS 480 ; aperçu email
+  à droite (wordmark, objet, rendu `@/lib/markdown-lite`, pied « site web »
+  = `defaultSiteLink`) ; « Envois récents » en état de session, rien ne part ;
+  **2026-10-01** : titre « Envoyer un message », aperçu par canal coché
+  (email, ou bulle SMS / WhatsApp en texte brut + nombre de SMS), « Quand
+  l'envoyer ? » Maintenant / Programmer (date + heure, refus d'un moment
+  passé), « Envois programmés » avec Envoyer maintenant / Annuler),
+  `glyphs` (pictos WhatsApp / SMS /
   actualiser / recherche / alerte / image + `ChannelIcon`),
   `Clients` (shell client de l'écran clientèle : recherche nom/email/téléphone +
   filtre `Toutes / Actives / À relancer / Nouvelles` (2026-09-22, dernier —
@@ -653,7 +688,12 @@ tout design » → voir @design.md.
   modifié, bandeau si programme désactivé, champ variable selon la base
   d'accumulation), `TiersPanel` (onglet Paliers : liste triée par seuil +
   formulaire ajout/édition + suppression confirmée en ligne), `RewardsPanel`
-  (onglet Récompenses : idem avec type de récompense),
+  (onglet Récompenses : idem avec type de récompense ; **2026-09-28** : type
+  « Prestation offerte » / « Produit offert » → `RewardItemPicker` sous le type
+  au lieu du champ valeur, `LoyaltyReward.itemId`, nom proposé d'office),
+  `RewardItemPicker` (2026-09-28 — choix unique de la prestation (groupée par
+  catégorie) ou du produit (groupé par marque, vignette photo) offert :
+  recherche pliée sans accent + liste défilante `max-h-80`),
   `ForfaitsPanel` (CRUD forfaits : label, description, **prix libre**, cycle
   (`CYCLE_PRESETS` + jours si « Personnalisé »), `PrestationPicker` sans prix —
   prestations résolues affichées, jamais de somme), `PacksPanel` (CRUD packs :
@@ -663,7 +703,8 @@ tout design » → voir @design.md.
   par service + recherche pliée sans accent ; `showPricing` masque prix/durée
   pour les forfaits ; partagé Forfaits/Packs),
   `AbonnementsPanel` (suivi : liste des abonnements actifs — souscripteur (+
-  bénéficiaire), forfait, `Badge` statut `ABONNEMENT_STATUS_META`, prochaine
+  bénéficiaire ; nom + n° client, lien vers `/clients/[id]` en panneau latéral,
+  « Hors fichier » si coordonnées libres — 2026-09-28), forfait, `Badge` statut `ABONNEMENT_STATUS_META`, prochaine
   échéance, prestations disponibles ce cycle — actions **Marquer payé**
   (`PayControl` : stepper cycles 1–12 + montant `amountDueForCycles` + aperçu
   `estimatePrepaidDueDate` → `markAbonnementPaid`) et **Révoquer** (confirm
@@ -694,7 +735,9 @@ tout design » → voir @design.md.
   catégories, prestations, questions, boissons — `useServicesData`, monté
   par `app/(admin)/services/layout.tsx` pour survivre au changement
   d'onglet, 2026-09-27),
-  `ServicesCatalog` (la page Prestations — grille sommaire 232px + contenu :
+  `ServicesCatalog` (la page Prestations — grille sommaire 288px + contenu
+  (sommaire agrandi le 2026-09-28 : libellés 17px sur deux lignes au besoin,
+  vignettes 36px) :
   sommaire `sticky` des catégories (vignette, nom, nombre, point d'alerte si
   prestations non réservables, section courante suivie par
   `IntersectionObserver`, clic = défilement doux, « Nouvelle catégorie » en
@@ -752,6 +795,15 @@ tout design » → voir @design.md.
   Supprimés (remplacés par ce qui précède) : `ServicesList`, `ServiceDetail`,
   `PrestationsPanel`, `OrphansPanel`, puis le 2026-09-27 `ServicesBoard`,
   `CategoryColumn`, `PrestationCard`, `UnassignedColumn` (Kanban).
+  **2026-10-01 — Salons dans Réglages** : section « Salons » (groupe
+  « Établissement », en tête, section par défaut) qui monte `Salons` ; la vue
+  vit dans l'URL (`&salon=<id>` / `&salon=nouveau`) ; état (`useSalonsState`,
+  exporté par `Salons.tsx`) tenu par `Reglages`. Menu compte et `journal.ts`
+  pointent vers `/reglages?section=salons`.
+  `reglages/LivraisonPanel` (2026-10-01 — Réglages › **Livraison**, groupe
+  « Cartes cadeaux », `?section=livraison` : quartiers + prix de livraison
+  d'une carte cadeau, ajout / modification en `kit/EditorPanel`, doublon de
+  nom refusé ; état tenu par `Reglages` pour survivre au changement de section),
   `reglages/kit` (2026-09-28 — primitives de l'écran Réglages : `SettingsGroup`,
   `SettingsRow`, `UnitInput`, `SaveBar`, `ItemRow`, `EditorPanel`… voir
   « Refonte de l'écran Réglages » en bas de fichier),
@@ -837,9 +889,10 @@ tout design » → voir @design.md.
   Plaza » — pas un rattachement figé), pastille `Badge`
   « N demande(s) » ton warning sur un membre qui a des demandes en attente),
   `MemberDetail` (fiche : en-tête (badge salon remplacé par
-  `weekSalonSummary(member.id)`) + « supprimer définitivement » ; 3 onglets —
+  `weekSalonSummary(member.id)`) + « supprimer définitivement » ; 4 onglets —
   **Activité** (défaut, rend `MemberActivityPanel` ; pastille de compte des
-  demandes en attente sur le libellé) / **Identité & accès** (`MemberIdentityForm`
+  demandes en attente sur le libellé) / **Présence** (2026-09-28,
+  `MemberPresencePanel`) / **Identité & accès** (`MemberIdentityForm`
   + `MemberAccessPanel` empilés) / **Compétences** (`MemberSkillsPanel` ; bloc « Horaires habituels »
   retiré le 2026-09-28 à la demande de la propriétaire — la trame
   `baseHours` reste dans les données, lue par le Planning)),
@@ -873,11 +926,45 @@ tout design » → voir @design.md.
   via `onChange` → `applyCapability`, compteur + « Réinitialiser » par colonne
   quand `roleDiffersFromDefault`, `Alert` d'avertissement si un rôle n'a aucune
   autorisation, carte info « vos accès à vous ne changent pas » via
-  `useAccount()`), `MemberSkillsPanel` (prestations groupées
-  par service, `CheckPill`, compteur, Alert si praticienne sans compétence ou
-  seule compétente), `AddMemberFlow` (création : identité +
+  `useAccount()`), `MemberSkillsPanel` (**2026-09-28, passe `impeccable`** —
+  récap écrit en lecture : prestations réalisées par catégorie (« 24 sur
+  41 », liste en 2 colonnes, mention « seule à la réaliser »), ligne « Non
+  réalisées », Alert si praticienne sans compétence ; bouton « Modifier les
+  compétences » → `SkillsDialog`), `SkillsDialog` (2026-09-28 — grande fenêtre
+  `ui/molecules/dialog` `max-w-5xl` × 86vh : sommaire des catégories avec
+  compteurs à gauche, recherche pliée sans accent sur tout le catalogue (nom +
+  sous-catégorie), lignes à cocher (sous-catégorie, durée · prix, « Seule
+  praticienne à la réaliser »), « Tout cocher » par groupe / « Cocher ces
+  résultats » en recherche ; brouillon local, pied « N cochées · N ajoutées,
+  N retirées » + alerte des prestations qui deviendraient non réservables,
+  Enregistrer actif seulement si modifié ; exporte `SKILL_GROUPS`,
+  `SKILL_TOTAL`, `soleProviderIds`), `MemberPresencePanel` (2026-09-28 —
+  onglet « Présence » : période Cette semaine / Semaine dernière / 30 derniers
+  jours + « Afficher seulement les écarts » ; bande de bilan (temps de
+  présence vs prévu, jours travaillés + absences, retards + cumul, départs
+  anticipés) + ligne d'erreur si départ non badgé ; registre `<table>` groupé
+  par semaine (total de la semaine) : jour, salon, prévu, arrivée (+N min en
+  ocre si retard > 5 min), départ (−N min si > 10 min avant, « En poste »
+  aujourd'hui, « Départ non badgé »), présence ; absences en ligne muette ;
+  états vides — lit `@/lib/mock/pointage`), `AddMemberFlow` (création : identité +
   compétences — trame horaire par défaut lun–sam, plus éditable —, puis « inviter maintenant ? »), `ui` (`BackButton`,
   `CheckPill`, `Avatar` + réexport des primitives de `../fidelite/ui`),
+  sous-dossier `equipe/schedule/` (2026-09-28, onglet **Planning** d'Équipe,
+  mode **Horaires** — par défaut ; bascule Horaires / Rendez-vous portée par
+  `Equipe.tsx`, le mode Rendez-vous = `PlanningBoard` ci-dessous, prop
+  `toolbarStart`) : `ScheduleEditor` (grille semaine membres × jours, toute
+  l'équipe active groupée Coiffure / Esthétique / Accueil, gestion & entretien ;
+  navigation par semaine, filtre salon global, « Copier la semaine précédente »,
+  « Rétablir l'habituel », « Ajouter une absence » ; case = horaire + salon (ou
+  nb de rdv sous un filtre salon), point de marque si modifié ce jour, absence en
+  ton warning, autre salon hachuré, colonne fermée grisée ; pied « Praticiennes
+  sur place » par salon, rouge à 0 ; toast avec « Annuler » après chaque
+  changement), `ShiftForm` (popover Radix d'une case : Travaille / Repos /
+  Absent·e, salon, arrivée / départ au pas de 30 min dans les heures du salon,
+  « Tous les <jour>s » = horaire habituel, « y revenir », alerte si des rdv
+  affectés sortent du créneau), `AbsenceDialog` (absence sur plage Du / Au),
+  `schedule` (transformations pures : `applyDay`, `restoreDay`, `resetWeek`,
+  `copyPreviousWeek`, `weekChanges`, `rdvOutside`, `timeSteps`…),
   sous-dossier `equipe/planning-board/` (2026-09-27, onglet **Planning** de
   `Equipe` — **copie de l'écran Planning de point-de-vente**
   (`components/planning/{planning-board,period-nav,day-timeline,week-timeline}.tsx`),
@@ -974,7 +1061,10 @@ tout design » → voir @design.md.
   point-de-vente » en bas de fichier) — `board` (`Legend`, `Board`, `BoardEmpty`,
   `ChipFilter` : primitives « Le Tableau » de point-de-vente), `ClientAdvantages`
   (abonnements / packs / carte cadeau d'une cliente : `AbonnementsPacksBoard`,
-  `AvantageChip`, `rdvCoverage`), `BirthdaySelect` (anniversaire jour + mois).
+  `AvantageChip`, `rdvCoverage`), `BirthdaySelect` (anniversaire jour + mois). `PointageCells` (2026-10-01 —
+  `ArrivalValue`, `DepartureValue`, `PointageFigure`, `PointageSummaryBar` :
+  lecture d'un pointage, partagée par `equipe/MemberPresencePanel` et
+  `journal/PointageLog`).
   `rendezvous/DayList` et `rendezvous/ReservationCalendar` (vues Liste /
   Calendrier de `/rendez-vous`) remplacent `rendezvous/ListView` (supprimé) ;
   `ClientRowActions` et `shared/ClientPreferencesView` supprimés.
@@ -1095,6 +1185,8 @@ tout design » → voir @design.md.
   `/rendez-vous` (voir « Refonte fonctionnelle RDV/Planning » plus bas) et
   l'onglet Planning de `/equipe` lisent et modifient la même donnée — poser une
   absence depuis l'un se voit immédiatement dans l'autre
+  **2026-09-28** : + `baseHours` / `setBaseHours` (horaires habituels modifiés
+  depuis l'éditeur, par membre — inclus dans `data.baseHours`) ; `data` mémoïsé.
 - `AutorisationsContext.tsx` (2026-09-27) — autorisations par rôle
   (`useAutorisations` → `autorisations` / `setRoleCapability` (cascade
   `applyCapability`) / `resetRole`), état de session, fourni par
@@ -1366,7 +1458,11 @@ fichiers template supprimés : `index.ts`, `types.ts`, `customers.ts`,
   lisible « 3j Almadies · 2j Sea Plaza », remplace l'ancien badge « salons de
   rattachement » sur la fiche membre et la liste Équipe), et les
   helpers `addDays`, `mondayOf`, `shiftRangeLabel`, `newAbsenceId`,
-  `newOverrideId`
+  `newOverrideId`. **2026-09-28** (éditeur des horaires) : `ShiftOverride.off`
+  (repos exceptionnel), `PlanningData.baseHours` + `baseHoursOf(member, data)`
+  (lu par `presenceFor`), `dayPlan` (présence + origine habituel / ajusté /
+  absence), `sameShift`, `absenceWithout` (retire un jour d'une plage),
+  `isoWeekday` exporté
 - `messagerie.ts` — fixtures de la boîte de réception (conversations `sms` /
   `whatsapp` — appels et chat retirés le 2026-09-28 —, événements `ThreadEvent` datés).
   **Indépendant du barrel** : importer directement `@/lib/mock/messagerie`.
@@ -1378,7 +1474,10 @@ fichiers template supprimés : `index.ts`, `types.ts`, `customers.ts`,
   + `conversationByClientId(clientId)`, sur le modèle de point-de-vente
   (`lib/data/conversations.ts`) — 3 fils de démo rattachés (`c-awa` → `c01`,
   `c-aicha` → `c04`, `c-marieme` → `c03`), les autres restent sans cliente
-  connue (numéro seul, comme avant)
+  connue (numéro seul, comme avant). **2026-09-28** : + `c-sokhna` → `c11`, `c-fatou` → `c02`,
+  `c-ndeye` → `c05` ; l'en-tête du fil (`messagerie/ConversationThread`) porte
+  un bouton « Voir la fiche » → `/clients/<clientId>` (panneau latéral) dès
+  que `clientId` est connu
 - `fidelite.ts` — fixtures du programme de fidélité (`LoyaltySettings` : base
   d'accumulation `visit` / `amount`, arrondi, points — invités, expiration,
   solde min. et multiplicateur de palier retirés le 2026-09-28 à la demande de
@@ -1444,8 +1543,9 @@ fichiers template supprimés : `index.ts`, `types.ts`, `customers.ts`,
   `DEPOSIT_AMOUNT` du spec (le back-office garde `@/lib/mock/paiement`).
 - `services.ts` — **2026-09-27, aligné sur la réservation b&co**
   (`point-de-vente/lib/prise-rdv/data/booking-services.ts`, que le back-office
-  définit et que la réservation / la caisse consomment) : **8 catégories**
-  (Mini & Co · Hair et Mini & Co · Spa distinctes), `Service.image: string |
+  définit et que la réservation / la caisse consomment) : **7 catégories**
+  (**Mini & Co = une catégorie `s-mini`, sous-catégories Hair / Spa** depuis le
+  2026-09-28 — elles étaient deux catégories distinctes le 2026-09-27), `Service.image: string |
   null` (image importée ou visuel `public/images/categories/` — remplace
   `icon`/`ServiceIconKey`/`SERVICE_ICON_OPTIONS`, supprimés), les **11
   sous-catégories réelles** de Coiffure, `twoPractitioners` réel (**77** des
@@ -1576,6 +1676,10 @@ fichiers template supprimés : `index.ts`, `types.ts`, `customers.ts`,
   `isPurchaseEvent`, `groupTemplates` (rubriques par occasion, triées par
   moment d'envoi, puis « Envoi manuel »), `TEMPLATE_VARIABLES`,
   `templateKindLabel`. **Indépendant du barrel** : `@/lib/mock/emails`.
+- `livraison.ts` (2026-10-01) — livraison des cartes cadeaux : `DeliveryZone`
+  (`name` = quartier, `priceFcfa`, 0 = offerte), `deliveryZoneSeeds` (9
+  quartiers de Dakar), `newDeliveryZoneId`, `foldZoneName` (doublons sans
+  casse ni accents). Édité dans Réglages › Livraison.
 - `paiement.ts` — fixtures des paramètres de paiement (`PaymentSettings` :
   `liveMode` encaissement réel / mode test, `depositMode` `fixed` / `percent` /
   `none`, `depositFixed` FCFA, `depositPercent` %, `waveEnabled` /
@@ -1621,6 +1725,19 @@ fichiers template supprimés : `index.ts`, `types.ts`, `customers.ts`,
   journal aligné). N'importe que des types. Expose `remises`, `remiseById`,
   `remiseNotificationId`, `remiseNotifications()` (concaténée dans
   `NotificationsContext`, ton `warning` → file « À régler aujourd'hui »).
+- `pointage.ts` (2026-09-28) — heures d'arrivée / de départ badgées à la caisse
+  (consultation seule). `PointageDay` (`worked` : salon, prévu, `arrival`,
+  `departure`, `ongoing` aujourd'hui · `absent` : type d'absence) ; synthétisé
+  de façon déterministe (hash FNV) sur 6 semaines depuis `presenceFor` (seeds du
+  planning, pas l'état live) — surtout à l'heure, quelques retards, départs
+  anticipés, rares oublis de badge. Expose `pointagesFor(memberId)`,
+  `POINTAGE_PERIOD_OPTIONS` / `periodRange` / `inRange`, `LATE_TOLERANCE_MIN`
+  (5) / `EARLY_TOLERANCE_MIN` (10), `lateMinutes`, `earlyLeaveMinutes`,
+  `offsetMinutes`, `presenceMinutes`, `missingPunch`, `hasAnomaly`,
+  `summarize`, `groupByWeek`, `hoursLabel` (« 9 h 05 »). **2026-10-01** :
+  une absence porte `salonId` (salon attendu ce jour-là, d'après les horaires
+  habituels) ; `teamPointagesByDay(range, scope, memberId?)` (toute l'équipe
+  active, par jour, filtrée par salon — Journal › Pointage).
 - `rh.ts` — fixtures « RH » : demandes déposées par les collaboratrices.
   **Indépendant du barrel** : importer directement `@/lib/mock/rh`. `StaffRequest`
   (`kind` `avance` / `conge`, `status` `en_attente` / `acceptee` / `refusee`,
@@ -2712,8 +2829,7 @@ Nouvelle page (`back-office/Dashboard.tsx`) :
   `todayTitle` (« Jeudi 3 septembre », jour dérivé de `TODAY_ISO` — l'ancien
   `today.label` « mardi » de `beautyandco.ts` est faux et n'est plus lu ici).
 - `dashboard/DashboardHeader.tsx` — titre = la date du jour ; filtre salon +
-  « Nouveau rendez-vous » (seul bouton plein de la page). Sous le bandeau, une
-  phrase-bilan (« Il reste 3 rendez-vous d'ici 17:00 et 6 points à régler »).
+  « Nouveau rendez-vous » (seul bouton plein de la page). (Phrase-bilan sous le bandeau retirée le 2026-10-01.)
 - `dashboard/DayDecisions.tsx` (nouveau, remplace `NotificationsPanel`) —
   « À régler aujourd'hui » : prestations sans praticienne des RDV encore devant
   nous (→ fiche RDV, « Affecter »), demandes de l'équipe rédigées en phrase
@@ -2730,6 +2846,10 @@ Nouvelle page (`back-office/Dashboard.tsx`) :
   « Voir plus » ouvre `dashboard/RemiseDialog.tsx` sur place (montant, total avant /
   après, motif, et trois lignes cliquables : cliente → `/clients/[id]`, rendez-vous →
   `/rendez-vous/[id]`, auteur → `/equipe?membre=`) ; marquée lue à la fermeture.
+  **2026-09-28** : titre = « N demandes à traiter » (nombre de lignes affichées,
+  + « N masquées ») ; interrupteurs Remises / Stock / Rendez-vous / Équipe (état
+  local, tous actifs par défaut) — les autres alertes (paiement, avis) restent
+  toujours visibles.
 - `dashboard/DayFeed.tsx` (nouveau, remplace `TodayAppointments`) — « La
   journée » : fil unique tous salons, passé replié derrière une ligne
   dépliable, trait « Maintenant · 13:20 », « En cours » / « Prochain », pastille
@@ -2904,13 +3024,17 @@ point-de-vente pour autorité. Prime sur les descriptions plus anciennes de
   `fiche-cliente-view.tsx` — bandeau collant (n° client, palier, « cliente
   depuis · dernière visite », Contacter, Nouveau rendez-vous →
   `/rendez-vous?nouveau=1&client=<id>`), ligne « en un coup d'œil »,
-  Préférences / Abonnements & Packs / Notes internes à gauche, Coordonnées
-  (+ praticienne préférée) / Carte de fidélité / Échanges à droite ; en plus
-  back-office : rendez-vous à venir et dernières visites. Formulaires
+  Préférences / Abonnements & Packs / Échanges à gauche, Coordonnées
+  (+ praticienne préférée) / Carte de fidélité / Notes internes à droite
+  (interverties le 2026-09-28) ; en plus
+  back-office : rendez-vous à venir et dernières visites. Chaque ligne liée à une
+  réservation porte un bouton « Voir le détail » → `/rendez-vous/[id]` en
+  panneau latéral (2026-09-28). Formulaires
   « Nouvelle cliente » et « Modifier les coordonnées » = ceux de la caisse
   (champs obligatoires, alerte de doublon de téléphone) + genre et salon.
 - **`/rendez-vous`** : section « Rendez-vous » de l'Accueil de la caisse —
-  recherche cliente ou n° de rendez-vous (+ fiches clientes trouvées), dates
+  recherche cliente ou n° de rendez-vous (champ maison 56px, contrasté, en tête
+  à gauche de la bascule de vue — 2026-09-28 ; dates Du / Au sur la ligne dessous) (+ fiches clientes trouvées), dates
   Du / Au (défaut aujourd'hui) — plus de bascule des annulés (retirée le 2026-09-28, masqués sauf recherche par n°) ; vues **Liste**
   (`DayList` : par jour puis tranches de 2 h sur rail horaire, cartes
   payeuse · composition, heure, 3 lignes + « + N de plus », Total) et
@@ -2990,3 +3114,118 @@ RDV, menu d'absence avec `AbsenceDialog`).
   esthétique, sinon enregistrement bloqué) + **Genre** Femme / Homme
   (`Member.gender`, accorde « Coiffeuse » / « Coiffeur »). `EquipeList` filtre
   par Tous / Coiffeurs / Esthéticiens / Caisse / Managers / Ménage.
+
+## Fiche rendez-vous en page (2026-09-28)
+
+Demande de l'utilisatrice, sur une référence fournie (skill `impeccable`) : la
+fiche rendez-vous n'est plus un panneau latéral mais une **page**. **Prime sur
+toute description antérieure de `RendezVousDetail`** (panneau `Dialog
+variant="side"`, prop `closeMode`, route interceptée).
+
+- `RendezVousDetail.tsx` — barre du haut « ← Retour » / **« Modifier »**
+  (`EditRdvDialog`, RDV à venir) ou « Rétablir le rendez-vous » (annulé) ; plus
+  de « Reprogrammer ». En-tête : nom de la payeuse + palier + statut, n° de
+  rendez-vous, Date / Horaire (+ durée) / Salon / Réservé pour, total à droite.
+  Colonne principale : tableau **Prestations** (colonnes Prestation · Horaire
+  début–fin + durée · Praticienne(s) avec photo, sélecteur pour changer
+  d'intervenante et 2ᵉ praticienne si « à deux » · Prix, barré si couvert),
+  groupé par bénéficiaire si plusieurs, boissons & produits, Total ; questions
+  de réservation ; historique ; « Annuler le rendez-vous ». Colonne droite
+  collante : payeuse (Fiche, téléphone / WhatsApp / e-mail cliquables,
+  avantages, préférences, dernière note) + préférences des autres
+  bénéficiaires qui ont une fiche. Alertes : praticienne demandée absente,
+  prestations sans praticienne disponible.
+- `RendezVous.tsx` — un clic sur un rendez-vous (Liste, Calendrier, Par
+  praticienne) affiche la fiche **à la place de l'écran**, branchée sur l'état
+  de session ; « Retour » rend la liste telle qu'on l'a laissée.
+- `/rendez-vous/[id]` (tableau de bord, fiche cliente, notifications, URL
+  directe) rend la même page, autonome (seeds) ; « Retour » = historique du
+  navigateur, sinon `/rendez-vous`.
+- Pas de « Supprimer définitivement » (retiré le 2026-09-28 au profit de
+  l'annulation, cf. « RDV et clientèle repris de point-de-vente »).
+
+## Disponibilité des prestations et stock vente / prestations (2026-09-28)
+
+Demande de l'utilisatrice. **Prime sur les descriptions antérieures** de
+`Prestation`, `PrestationPanel`, `ServicesData`, `stock.ts`, `StockList`,
+`StockDetail`, `Stock`.
+
+- **Jours de disponibilité d'une prestation** — `Prestation.availability?:
+  PrestationAvailability | null` (`services.ts`, même forme que les heures d'un
+  salon ; absent = heures d'ouverture du salon) + `defaultAvailability`,
+  `prestationAvailableAt`, `availabilitySummary`, `weekdayOfIso`.
+  `PrestationPanel` : « Jours de disponibilité » — Comme le salon / Jours
+  précis (réutilise `salons/HoursEditor`, qui gagne `closedLabel` /
+  `openLabel`). `PrestationRow` : mention « Jours limités » (détail au
+  survol). Appliqué à la prise de rendez-vous : `PlanContext.availabilityOf`
+  dans `lib/prise-rdv/planifier.ts` (`planAt` refuse un horaire hors des jours /
+  heures de la prestation), alimenté par `prise-rdv-modal.tsx` depuis
+  `useServicesData()`. Pour ça, `ServicesDataProvider` est monté par
+  `app/(admin)/layout.tsx` (et `app/(admin)/services/layout.tsx` supprimé).
+- **Périodes d'indisponibilité** (2026-10-01) — `Prestation.unavailablePeriods?:
+  PrestationPause[]` (`{ id, from, to, reason }`, bornes ISO incluses, en plus
+  des jours de la semaine) + `pauseOn`, `upcomingPauses`, `pauseRangeLabel`
+  (« du 1 au 12 sept. 2026 »), `pauseDayLabel`, `newPauseId` ; seeds
+  `PAUSE_SEEDS` (Hydrafacial en cours, Silk Press à venir).
+  `prestationAvailableAt` prend désormais les règles de la prestation
+  (`availability` + `unavailablePeriods`) et `PlanContext.availabilityOf`
+  renvoie la prestation entière. `services/PausesEditor.tsx` (nouveau) —
+  bloc « Périodes d'indisponibilité » de `PrestationPanel`, sous les jours de
+  disponibilité : liste (« En cours », motif, nombre de RDV déjà pris sur la
+  période via `allRendezvous()`), ajout Du / Au / Motif facultatif (dates
+  inversées ou chevauchant une autre période refusées, avertissement si des
+  RDV existent — ils restent maintenus), retrait, compteur des périodes
+  passées. `PrestationRow` : « Pause jusqu'au 12 sept. » (en cours, ocre) ou
+  « Pause prévue » (à venir), détail au survol — « aujourd'hui » =
+  `TODAY_ISO` de `@/lib/mock/planning`.
+- **Deux stocks par salon** (`stock.ts`) : `StockUse` = `vente` /
+  `prestations` (`STOCK_USES`, `STOCK_USE_LABELS`), `ProductUsage` = `vente` /
+  `prestations` / `mixte` (`PRODUCT_USAGE_OPTIONS`, `productUsage`, `usesOf` —
+  déduit des recettes pour les seeds : présent dans une recette = mixte).
+  `ProductStock.prestations` = part du niveau réservée aux prestations (seeds :
+  35 % pour un produit mixte). `StockMovement.use?` (déduit sinon :
+  prestation → prestations, le reste → vente), `movementUse`, `poolOnHand`,
+  `scopePoolOnHand` ; `StockRow.uses` / `pools`. La réserve centrale reste un
+  seul stock, affecté au transfert. Totaux, seuils et projections inchangés
+  (sur le total).
+  - `StockList` : bascule « Tout le stock / Stock vente / Stock prestations » ;
+    en « Tout », répartition « Vente · Prestations · Réserve » sous la
+    quantité (ou « Vente uniquement » / « Prestations uniquement »).
+  - `StockDetail` : répartition par salon dans « Où est le stock » ; Ajuster
+    choisit le stock (Vente / Prestations) dans un salon ; Transférer choisit
+    le stock de destination ; nouveau mode **Répartir** (`SplitForm`, d'un
+    stock à l'autre dans un salon).
+- **Ajout d'un produit** : bouton « Nouveau produit » du bandeau de `Stock` →
+  `stock/NewProductPanel.tsx` (panneau latéral : photo, nom, marque, gamme,
+  usage, prix de vente si vendu, unité de recette si utilisé en cabine, stock
+  de départ par emplacement et par stock, seuils salon / entreprise, délai
+  fournisseur). `registerProduct` / `newProductId` (`stock.ts`) ajoutent le
+  produit au catalogue du module mock pour la session (liste, fiche, recettes
+  de Services) — pas de persistance ; la fiche du nouveau produit s'ouvre.
+
+## Incompatibilités entre prestations (2026-10-01)
+
+Demande de l'utilisatrice : certaines prestations ne vont pas ensemble. Portée
+retenue : **pas pour la même personne dans la même visite** (pas de délai
+entre deux visites) ; l'effet est sur la **prise de rendez-vous**.
+
+- `services.ts` — `Prestation.incompatibleWith?: string[]` ; relation
+  symétrique : `incompatiblesOf(prestations, id)` la lit des deux côtés,
+  `setIncompatibilities(prestations, id, ids)` l'écrit des deux côtés,
+  `conflictWith(prestations, id, selected)` renvoie la prestation déjà choisie
+  qui bloque. Seeds de démo `INCOMPATIBLE_SEEDS` : Soin Kératine ↔ les deux
+  défrisages, Hydrafacial Deep Clean ↔ épilation menton / sourcils.
+- `services/PrestationPanel` — section « Incompatible avec » (pastilles
+  retirables + `fidelite/PrestationPicker`, qui gagne `label` / `catalog` /
+  `excludeId`) ; `Services.tsx` applique `setIncompatibilities` à
+  l'enregistrement et nettoie les références à la suppression.
+  `PrestationRow` : mention « N incompatibles » (noms au survol).
+- Prise de RDV (`prise-rdv-modal` → `steps/services-step` →
+  `category-prestation-list`) : par bénéficiaire, une prestation incompatible
+  avec ce qu'il ou elle a déjà choisi est grisée, non cliquable, avec « Ne
+  peut pas être combinée avec <X> lors de la même visite. » ; le toggle du
+  modal refuse aussi l'ajout ; les suggestions « Beaucoup ajoutent aussi » ne
+  proposent jamais une prestation incompatible. Lit l'état de session de
+  Services (`useServicesData`).
+- **Non couvert** : `rendezvous/EditRdvDialog` (édition d'un RDV existant) ne
+  contrôle pas ; un pack dont le contenu serait incompatible n'est pas signalé.

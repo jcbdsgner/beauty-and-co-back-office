@@ -9,15 +9,18 @@ import SegmentedControl, {
 import Alert from "@/components/ui/alert/Alert";
 import { useLocation } from "@/context/LocationContext";
 import { salonName, salons, type SalonId, type SalonScope } from "@/lib/mock/beautyandco";
+import { Plus } from "lucide-react";
 import {
   emptyThresholds,
   productStock,
+  registerProduct,
   stockRows,
   type StockMovement,
   type ThresholdOverride,
 } from "@/lib/mock/stock";
 import StockList from "./stock/StockList";
 import StockDetail from "./stock/StockDetail";
+import NewProductPanel from "./stock/NewProductPanel";
 
 // Écran « Stock » — suivi des consommables, sorti du parcours « Services ».
 //
@@ -52,6 +55,10 @@ export default function Stock() {
   const [extraMovements, setExtraMovements] = useState<StockMovement[]>([]);
   const [thresholds, setThresholds] = useState<ThresholdOverride>(emptyThresholds);
   const [photos, setPhotos] = useState<Record<string, string>>({});
+  const [newOpen, setNewOpen] = useState(false);
+  // Les produits créés en session rejoignent le catalogue du module mock :
+  // ce compteur force le recalcul de la liste après un ajout.
+  const [catalogVersion, setCatalogVersion] = useState(0);
 
   // Deep-link : /stock?produit=<id> (depuis une notification « Stock bas ») ouvre
   // directement la fiche produit — au montage comme lorsqu'on clique la
@@ -69,7 +76,8 @@ export default function Stock() {
 
   const rows = useMemo(
     () => stockRows(scope, { movements: extraMovements, thresholds }),
-    [scope, extraMovements, thresholds],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [scope, extraMovements, thresholds, catalogVersion],
   );
 
   const toReplenish = rows.filter((r) => r.status === "order").length;
@@ -113,13 +121,23 @@ export default function Stock() {
       <PageHeader
         title="Stock"
         actions={
-          <SegmentedControl
-            options={SALON_OPTIONS}
-            value={scope}
-            onChange={setScope}
-            aria-label="Filtrer par salon"
-            variant="tinted"
-          />
+          <>
+            <SegmentedControl
+              options={SALON_OPTIONS}
+              value={scope}
+              onChange={setScope}
+              aria-label="Filtrer par salon"
+              variant="tinted"
+            />
+            <button
+              type="button"
+              onClick={() => setNewOpen(true)}
+              className="btn btn-primary btn-sm gap-2 text-[15px] font-semibold normal-case active:scale-[0.97]"
+            >
+              <Plus className="h-[14px] w-[14px]" />
+              Nouveau produit
+            </button>
+          </>
         }
       />
 
@@ -156,6 +174,19 @@ export default function Stock() {
           onSetThreshold={setThreshold}
           onSetPhoto={setPhoto}
           onBack={() => setView({ kind: "list" })}
+        />
+      )}
+
+      {newOpen && (
+        <NewProductPanel
+          onClose={() => setNewOpen(false)}
+          onCreate={(input, photo) => {
+            registerProduct(input);
+            if (photo) setPhoto(input.product.id, photo);
+            setCatalogVersion((v) => v + 1);
+            setNewOpen(false);
+            setView({ kind: "detail", productId: input.product.id });
+          }}
         />
       )}
     </div>

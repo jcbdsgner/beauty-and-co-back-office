@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, type ComponentType, type ReactNode } from "react";
 import { Bell, CalendarClock, CalendarX2, Check, Package, Palmtree, TicketPercent, Wallet } from "lucide-react";
 import { buttonVariants } from "@/components/ui/atoms/button";
+import { Switch } from "@/components/ui/atoms/switch";
 import { useNotifications } from "@/context/NotificationsContext";
 import { fcfa } from "@/lib/mock/beautyandco";
 import { leaveDays, leaveRange, staffRequests } from "@/lib/mock/rh";
@@ -21,8 +22,21 @@ import { visitSalon, type TodayVisit } from "@/components/back-office/dashboard/
 
 type Tone = "urgent" | "team" | "neutral";
 
+// Familles d'alertes que la propriétaire peut masquer d'un interrupteur. Les
+// alertes hors famille (paiement, avis…) restent toujours visibles.
+type DecisionKind = "remise" | "stock" | "rendez-vous" | "equipe" | "autre";
+type FilterKind = Exclude<DecisionKind, "autre">;
+
+const FILTERS: { kind: FilterKind; label: string }[] = [
+  { kind: "remise", label: "Remises" },
+  { kind: "stock", label: "Stock" },
+  { kind: "rendez-vous", label: "Rendez-vous" },
+  { kind: "equipe", label: "Équipe" },
+];
+
 export type Decision = {
   key: string;
+  kind: DecisionKind;
   icon: ComponentType<{ className?: string }>;
   tone: Tone;
   sentence: ReactNode;
@@ -51,6 +65,7 @@ function assignDecisions(visits: TodayVisit[], showSalon: boolean): Decision[] {
       const missing = v.rdv.prestations.filter((p) => p.staff === null).map((p) => p.name);
       return {
         key: `assign-${v.rdv.id}`,
+        kind: "rendez-vous",
         icon: CalendarClock,
         tone: "urgent",
         sentence: (
@@ -85,6 +100,7 @@ function notificationDecisions(list: AppNotification[]): Decision[] {
           const days = leaveDays(request.from, request.to);
           return {
             key: n.id,
+            kind: "equipe",
             icon: Palmtree,
             tone: "team",
             sentence: (
@@ -100,6 +116,7 @@ function notificationDecisions(list: AppNotification[]): Decision[] {
         }
         return {
           key: n.id,
+          kind: "equipe",
           icon: Wallet,
           tone: "team",
           sentence: (
@@ -117,6 +134,7 @@ function notificationDecisions(list: AppNotification[]): Decision[] {
       if (remise) {
         return {
           key: n.id,
+          kind: "remise",
           icon: TicketPercent,
           tone: "urgent",
           sentence: (
@@ -136,6 +154,7 @@ function notificationDecisions(list: AppNotification[]): Decision[] {
         const [who, ...rest] = n.body.split(" — ");
         return {
           key: n.id,
+          kind: "rendez-vous",
           icon: CalendarX2,
           tone: "urgent",
           sentence: (
@@ -153,6 +172,7 @@ function notificationDecisions(list: AppNotification[]): Decision[] {
       if (n.category === "stock") {
         return {
           key: n.id,
+          kind: "stock",
           icon: Package,
           tone: "neutral",
           sentence: <strong className="font-semibold text-base-content">{n.title}</strong>,
@@ -164,6 +184,7 @@ function notificationDecisions(list: AppNotification[]): Decision[] {
       }
       return {
         key: n.id,
+        kind: "autre",
         icon: Bell,
         tone: "neutral",
         sentence: <strong className="font-semibold text-base-content">{n.title}</strong>,
@@ -191,21 +212,53 @@ export default function DayDecisions({
   // La remise ouverte reste affichée même une fois sa ligne retirée de la file
   // (marquée lue à la fermeture).
   const [openRemise, setOpenRemise] = useState<{ remise: Remise; notificationId?: string } | null>(null);
+  const [shown, setShown] = useState<Record<FilterKind, boolean>>({
+    remise: true,
+    stock: true,
+    "rendez-vous": true,
+    equipe: true,
+  });
+  const visible = decisions.filter((d) => d.kind === "autre" || shown[d.kind]);
+  const hidden = decisions.length - visible.length;
+  const countOf = (kind: FilterKind) => decisions.filter((d) => d.kind === kind).length;
 
   return (
     <section
       aria-labelledby="decisions-title"
       className="overflow-hidden rounded-box border border-base-300 bg-base-100"
     >
-      <header className="flex items-baseline justify-between gap-3 px-6 pt-5 pb-4">
-        <h2 id="decisions-title" className="text-[20px] font-semibold text-base-content">
-          À régler aujourd&apos;hui
-        </h2>
-        {decisions.length > 0 && (
-          <span className="text-sm tabular-nums text-base-content/60">
-            {decisions.length} point{decisions.length > 1 ? "s" : ""}
-          </span>
-        )}
+      <header className="px-6 pt-5 pb-4">
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 id="decisions-title" className="text-[20px] font-semibold text-base-content">
+            {visible.length === 0 ? (
+              "Aucune demande à traiter"
+            ) : (
+              <>
+                <span className="tabular-nums">{visible.length}</span> demande
+                {visible.length > 1 ? "s" : ""} à traiter
+              </>
+            )}
+          </h2>
+          {hidden > 0 && (
+            <span className="text-sm tabular-nums text-base-content/60">
+              {hidden} masquée{hidden > 1 ? "s" : ""}
+            </span>
+          )}
+        </div>
+        <div role="group" aria-label="Alertes affichées" className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
+          {FILTERS.map(({ kind, label }) => (
+            <div key={kind} className="flex items-center gap-2 text-sm text-base-content/70">
+              <Switch
+                checked={shown[kind]}
+                onChange={(v) => setShown((prev) => ({ ...prev, [kind]: v }))}
+                label={`Afficher les alertes ${label.toLowerCase()}`}
+                className="size-auto"
+              />
+              <span aria-hidden>{label}</span>
+              <span aria-hidden className="tabular-nums text-base-content/45">{countOf(kind)}</span>
+            </div>
+          ))}
+        </div>
       </header>
 
       {decisions.length === 0 ? (
@@ -222,9 +275,15 @@ export default function DayDecisions({
             </p>
           </div>
         </div>
+      ) : visible.length === 0 ? (
+        <p className="border-t border-base-300 px-6 py-6 text-sm text-base-content/60">
+          {decisions.length > 1
+            ? `Les ${decisions.length} demandes en cours sont masquées : réactivez une famille d'alertes ci-dessus pour les voir.`
+            : "La demande en cours est masquée : réactivez sa famille d'alertes ci-dessus pour la voir."}
+        </p>
       ) : (
         <ul className="divide-y divide-base-300 border-t border-base-300">
-          {decisions.map((d) => {
+          {visible.map((d) => {
             const Icon = d.icon;
             return (
               <li key={d.key} className="flex items-center gap-4 px-6 py-4">

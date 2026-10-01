@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import Badge from "@/components/ui/badge/Badge";
-import { fcfa, frLongDate } from "@/lib/mock/beautyandco";
+import { clientNumberLabel, fcfa, frLongDate } from "@/lib/mock/beautyandco";
+import { useClientsData } from "@/context/ClientsContext";
 import {
   getForfaitPrestations,
   type Forfait,
@@ -22,6 +24,7 @@ import {
   revokeAbonnement,
   todayIso,
   type Abonnement,
+  type Contact,
 } from "@/lib/mock/abonnements";
 import { SectionCard, SelectField, EmptyList, btnPrimary, btnGhost, Toggle, SettingRow } from "./ui";
 import ContactField, { type ContactChoice } from "./ContactField";
@@ -30,6 +33,31 @@ const EMPTY_CHOICE: ContactChoice = {
   clientId: null,
   contact: { firstName: "", lastName: "", sex: "", email: "", phone: "", whatsapp: "" },
 };
+
+/** Nom du souscripteur + n° client ; lien vers sa fiche s'il est dans le fichier. */
+function SubscriberRef({ clientId, contact }: { clientId: string | null; contact: Contact }) {
+  const { getDetail } = useClientsData();
+  const row = clientId ? getDetail(clientId)?.row : null;
+  if (!row) {
+    return (
+      <>
+        {contactName(contact)}
+        <span className="text-xs font-normal text-base-content/45">Hors fichier</span>
+      </>
+    );
+  }
+  return (
+    <Link
+      href={`/clients/${row.id}`}
+      className="inline-flex items-baseline gap-2 hover:underline underline-offset-2"
+    >
+      {contactName(contact)}
+      <span className="text-xs font-medium tabular-nums text-base-content/60">
+        {clientNumberLabel(row.number)}
+      </span>
+    </Link>
+  );
+}
 
 function PayControl({
   forfait,
@@ -111,7 +139,7 @@ function Row({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-base-content">
-            {contactName(ab.subscriber)}
+            <SubscriberRef clientId={ab.clientId} contact={ab.subscriber} />
             <Badge size="sm" color={meta.tone}>
               {meta.label}
             </Badge>
@@ -292,7 +320,7 @@ export default function AbonnementsPanel({
                   key={ab.id}
                   className="rounded-xl border border-base-300 bg-base-200 px-4 py-3 text-sm text-base-content/60"
                 >
-                  {contactName(ab.subscriber)} · {f?.label ?? ab.forfaitId} · révoqué le{" "}
+                  <SubscriberRef clientId={ab.clientId} contact={ab.subscriber} /> · {f?.label ?? ab.forfaitId} · révoqué le{" "}
                   {ab.revokedAt ? frLongDate(ab.revokedAt) : "—"}
                 </li>
               );

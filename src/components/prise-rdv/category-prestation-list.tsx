@@ -9,6 +9,8 @@ type CategoryPrestationListProps = {
   category: BookingService;
   selectedSubServiceIds: Set<string>;
   onToggleSubService: (subServiceId: string) => void;
+  /** Back-office : nom de la prestation déjà choisie qui rend celle-ci incompatible (même visite), sinon null. */
+  blockedBy?: (subServiceId: string) => string | null;
   questionAnswers: Record<string, string>;
   onAnswerQuestion: (questionId: string, value: string) => void;
   showQuestionErrors: boolean;
@@ -34,15 +36,18 @@ function FlatSubServiceRow({
   selected,
   onToggle,
   coverageSource,
+  blockedBy,
 }: {
   sub: BookingSubService;
   selected: boolean;
   onToggle: () => void;
   coverageSource?: "pack" | "abonnement";
+  blockedBy?: string | null;
 }) {
+  const blocked = !selected && Boolean(blockedBy);
   return (
     <li className="flex items-center gap-3 border-b border-[var(--color-gray-200)] py-4 last:border-b-0">
-      <div className="min-w-0 flex-1">
+      <div className={cn("min-w-0 flex-1", blocked && "[&>*:not([data-blocked-note])]:opacity-50")}>
         <p className="truncate text-[19px] font-bold text-[var(--color-gray-800)]">{toSentenceCase(sub.label)}</p>
         {sub.description && <p className="mt-1 text-[15px] text-[var(--color-gray-500)]">{sub.description}</p>}
         <div className="mt-2 flex items-center gap-2">
@@ -58,14 +63,20 @@ function FlatSubServiceRow({
             <span className="text-[17px] font-[500] text-[var(--color-gray-800)]">· {formatPrice(sub.price)}</span>
           )}
         </div>
+        {blocked && (
+          <p data-blocked-note className="mt-2 text-[15px] font-[450] text-[var(--color-gray-800)]">
+            Ne peut pas être combinée avec {blockedBy} lors de la même visite.
+          </p>
+        )}
       </div>
       <button
         type="button"
         onClick={onToggle}
+        disabled={blocked}
         aria-pressed={selected}
         aria-label={selected ? `${sub.label} — sélectionné` : `${sub.label} — sélectionner`}
         className={cn(
-          "flex size-6 shrink-0 items-center justify-center rounded border transition sm:hidden",
+          "flex size-6 shrink-0 items-center justify-center rounded border transition disabled:cursor-not-allowed disabled:opacity-40 sm:hidden",
           selected ? "border-[var(--brand-taupe-muted)] bg-[var(--brand-taupe-muted)]" : "border-[var(--color-slate-900)] bg-white",
         )}
       >
@@ -74,9 +85,10 @@ function FlatSubServiceRow({
       <button
         type="button"
         onClick={onToggle}
+        disabled={blocked}
         aria-pressed={selected}
         className={cn(
-          "hidden shrink-0 rounded-full border border-[var(--brand-taupe-muted)] px-[13px] py-[7px] text-[15px] font-[450] whitespace-nowrap transition sm:block",
+          "hidden shrink-0 disabled:cursor-not-allowed disabled:opacity-40 rounded-full border border-[var(--brand-taupe-muted)] px-[13px] py-[7px] text-[15px] font-[450] whitespace-nowrap transition sm:block",
           selected ? "bg-[var(--brand-taupe-muted)] text-white" : "bg-white text-[var(--brand-taupe-muted)] hover:bg-[var(--brand-taupe-muted)]/5",
         )}
       >
@@ -90,6 +102,7 @@ export function CategoryPrestationList({
   category,
   selectedSubServiceIds,
   onToggleSubService,
+  blockedBy,
   questionAnswers,
   onAnswerQuestion,
   showQuestionErrors,
@@ -166,6 +179,7 @@ export function CategoryPrestationList({
                         selected={selectedSubServiceIds.has(sub.id)}
                         onToggle={() => onToggleSubService(sub.id)}
                         coverageSource={coverageBySubServiceId?.get(sub.id)}
+                        blockedBy={blockedBy?.(sub.id)}
                       />
                     ))}
                   </ul>
@@ -183,6 +197,7 @@ export function CategoryPrestationList({
               selected={selectedSubServiceIds.has(sub.id)}
               onToggle={() => onToggleSubService(sub.id)}
               coverageSource={coverageBySubServiceId?.get(sub.id)}
+              blockedBy={blockedBy?.(sub.id)}
             />
           ))}
         </ul>

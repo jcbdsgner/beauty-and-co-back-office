@@ -6,6 +6,8 @@ import {
   durationLabel,
   prestationSeeds,
   serviceSeeds,
+  type Prestation,
+  type Service,
 } from "@/lib/mock/services";
 import CategoryThumb from "../shared/CategoryThumb";
 
@@ -14,6 +16,10 @@ import CategoryThumb from "../shared/CategoryThumb";
 //
 // `showPricing` : sur un forfait, seuls comptent le nom et la catégorie (le prix
 // est libre au niveau du forfait) → on masque prix / durée.
+//
+// Aussi utilisée par la fiche prestation (« Incompatible avec ») : `catalog`
+// lit alors l'état de session de Services, `excludeId` retire la prestation
+// elle-même de la liste.
 
 const fold = (s: string) =>
   s
@@ -25,26 +31,33 @@ export default function PrestationPicker({
   selected,
   onChange,
   showPricing = true,
+  label = "Prestations incluses",
+  catalog,
+  excludeId,
 }: {
   selected: string[];
   onChange: (next: string[]) => void;
   showPricing?: boolean;
+  label?: string;
+  catalog?: { services: Service[]; prestations: Prestation[] };
+  excludeId?: string;
 }) {
   const [query, setQuery] = useState("");
 
   const groups = useMemo(() => {
     const q = fold(query.trim());
-    return serviceSeeds
+    return (catalog?.services ?? serviceSeeds)
       .map((service) => ({
         service,
-        prestations: prestationSeeds.filter(
+        prestations: (catalog?.prestations ?? prestationSeeds).filter(
           (p) =>
             p.serviceId === service.id &&
+            p.id !== excludeId &&
             (q === "" || fold(p.name).includes(q) || fold(service.name).includes(q)),
         ),
       }))
       .filter((g) => g.prestations.length > 0);
-  }, [query]);
+  }, [query, catalog, excludeId]);
 
   const toggle = (id: string) =>
     onChange(
@@ -56,7 +69,7 @@ export default function PrestationPicker({
   return (
     <div>
       <div className="mb-1.5 flex items-center justify-between">
-        <span className="text-sm font-medium text-base-content">Prestations incluses</span>
+        <span className="text-sm font-medium text-base-content">{label}</span>
         <span className="text-xs text-base-content/60">
           {selected.length} sélectionnée{selected.length > 1 ? "s" : ""}
         </span>

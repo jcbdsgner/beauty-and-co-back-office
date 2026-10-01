@@ -21,7 +21,7 @@ import {
   salonName,
   salons,
 } from "./beautyandco";
-import { type Member, members } from "./staff";
+import { type DayShift, type Member, members } from "./staff";
 
 // Repère temporel figé pour la démo (aligné sur `beautyandco.ts`).
 export const TODAY_ISO = "2026-09-03";
@@ -55,6 +55,8 @@ export type Absence = {
 
 // Ajustement ponctuel d'horaire pour un jour donné : remplace la trame habituelle
 // (heure de début tardive, journée écourtée, renfort sur l'autre salon…).
+// `off: true` (2026-09-28) = repos exceptionnel ce jour-là, sans motif d'absence
+// (salonId / start / end sont alors ignorés).
 export type ShiftOverride = {
   id: string;
   memberId: string;
@@ -62,6 +64,7 @@ export type ShiftOverride = {
   salonId: SalonId;
   start: string; // "HH:MM"
   end: string; // "HH:MM"
+  off?: true;
 };
 
 /* ------------------------------------------------------------------ */
@@ -143,7 +146,7 @@ export type Presence =
 
 const WEEKDAY_BY_JS_DAY: Weekday[] = ["dim", "lun", "mar", "mer", "jeu", "ven", "sam"];
 
-const isoWeekday = (iso: string): Weekday =>
+export const isoWeekday = (iso: string): Weekday =>
   WEEKDAY_BY_JS_DAY[new Date(`${iso}T00:00:00`).getDay()];
 
 export const addDays = (iso: string, n: number): string => {
@@ -164,9 +167,21 @@ const SALON_IDS: SalonId[] = salons.map((s) => s.id);
 
 // Absences / ajustements pris en compte. Les écrans qui éditent ces listes en
 // mémoire de session passent leur propre état ; par défaut, les seeds.
-export type PlanningData = { absences: Absence[]; shiftOverrides: ShiftOverride[] };
+// `baseHours` (2026-09-28) : horaires habituels modifiés depuis l'éditeur du
+// Planning, par membre — remplace `Member.baseHours` des seeds quand présent.
+export type PlanningData = {
+  absences: Absence[];
+  shiftOverrides: ShiftOverride[];
+  baseHours?: Record<string, Record<Weekday, DayShift>>;
+};
 
 const SEED_DATA: PlanningData = { absences, shiftOverrides };
+
+// Trame habituelle d'un membre (session si modifiée, sinon seeds).
+export const baseHoursOf = (
+  member: Member,
+  data: PlanningData = SEED_DATA,
+): Record<Weekday, DayShift> => data.baseHours?.[member.id] ?? member.baseHours;
 
 // Présence d'un membre un jour donné.
 // Priorité : absence > ajustement ponctuel > horaire habituel ; puis recoupe les
@@ -188,7 +203,7 @@ export function presenceFor(
     (o) => o.memberId === memberId && o.date === iso,
   );
   if (override) {
-    if (isClosed(override.salonId, iso)) return { state: "off" };
+    if (override.off || isClosed(override.salonId, iso)) return { state: "off" };
     return {
       state: "present",
       salonId: override.salonId,
@@ -197,7 +212,7 @@ export function presenceFor(
     };
   }
 
-  const shift = member.baseHours[isoWeekday(iso)];
+  const shift = baseHoursOf(member, data)[isoWeekday(iso)];
   if (shift.off) return { state: "off" };
   if (isClosed(shift.salonId, iso)) return { state: "off" };
 
@@ -360,6 +375,49 @@ export function weekSalonSummary(
     .sort((a, b) => b[1] - a[1])
     .map(([id, n]) => `${n}j ${salonName(id)}`)
     .join(" · ");
+}
+
+/* ------------------------------------------------------------------ */
+/* Édition du planning (2026-09-28)                                    */
+/* ------------------------------------------------------------------ */
+
+// Lecture détaillée d'une case du planning : la présence résolue ET d'où elle
+// vient — la trame habituelle, un ajustement de ce jour, une absence — plus
+// l'horaire habituel qui s'appliquerait sans exception. Sert à l'éditeur de
+// la semaine (marque « modifié », « Rétablir l'horaire habituel »).
+export type DayPlan = {
+  presence: Presence;
+  source: "habituel" | "ajuste" | "absence";
+  habitual: DayShift;
+  override?: ShiftOverride;
+  absence?: Absence;
+  // Salon de l'horaire prévu fermé ce jour-là (fermeture hebdo ou exceptionnelle).
+  closedSalon?: SalonId;
+};
+
+export function dayPlan(memberId: string, iso: string, data: PlanningData = SEED_DATA): DayPlan {
+  const member = members.find((m) => m.id === memberId);
+  const habitual: DayShift = member ? baseHoursOf(member, data)[isoWeekday(iso)] : { off: true };
+  const presence = presenceFor(memberId, iso, data);
+  const absence = data.absences.find((a) => a.memberId === memberId && iso >= a.from && iso <= a.to);
+  if (absence) return { presence, source: "absence", habitual, absence };
+  const override = data.shiftOverrides.find((o) => o.memberId === memberId && o.date === iso);
+  const planned = override ? (override.off ? null : override.salonId) : habitual.off ? null : habitual.salonId;
+  const closedSalon = planned && isClosed(planned, iso) ? planned : undefined;
+  return { presence, source: override ? "ajuste" : "habituel", habitual, override, closedSalon };
+}
+
+// Deux horaires de jour identiques (repos = repos).
+export const sameShift = (a: DayShift, b: DayShift): boolean =>
+  a.off === b.off && (a.off || (!b.off && a.salonId === b.salonId && a.start === b.start && a.end === b.end));
+
+// Retire un jour d'une absence sur plage : 0, 1 ou 2 absences restantes.
+export function absenceWithout(absence: Absence, iso: string): Absence[] {
+  if (iso < absence.from || iso > absence.to) return [absence];
+  const out: Absence[] = [];
+  if (absence.from < iso) out.push({ ...absence, to: addDays(iso, -1) });
+  if (absence.to > iso) out.push({ ...absence, id: `${absence.id}-${iso}`, from: addDays(iso, 1) });
+  return out;
 }
 
 /* ------------------------------------------------------------------ */

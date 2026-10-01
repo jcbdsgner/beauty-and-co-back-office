@@ -19,17 +19,21 @@ import MemberActivityPanel from "./MemberActivityPanel";
 import MemberIdentityForm from "./MemberIdentityForm";
 import MemberAccessPanel from "./MemberAccessPanel";
 import MemberSkillsPanel from "./MemberSkillsPanel";
+import MemberPresencePanel from "./MemberPresencePanel";
 import { Avatar, BackButton } from "./ui";
 
-// Fiche membre — 3 onglets :
+// Fiche membre — 4 onglets :
 //  · Activité (défaut) : note de satisfaction client + commentaires, charge de
 //    rendez-vous, et le bloc « Demandes » (bandeau de décision avance / congé +
 //    historique daté). C'est l'état de la personne, pas sa config.
+//  · Présence : registre des heures d'arrivée / de départ badgées, en regard
+//    de l'horaire prévu (`@/lib/mock/pointage`).
 //  · Identité & accès : coordonnées / métier / rôles + membre actif, puis
 //    accès à la plateforme et récap des autorisations par rôle.
-//  · Compétences : prestations réalisées.
+//  · Compétences : récap écrit des prestations réalisées, modification dans
+//    une grande fenêtre avec recherche (`SkillsDialog`).
 
-type TabId = "activite" | "identite" | "competences";
+type TabId = "activite" | "presence" | "identite" | "competences";
 
 type Props = {
   member: Member;
@@ -87,6 +91,7 @@ export default function MemberDetail({
         </span>
       ),
     },
+    { id: "presence", label: "Présence" },
     { id: "identite", label: "Identité & accès" },
     { id: "competences", label: `Compétences · ${member.skills.length}` },
   ];
@@ -188,7 +193,11 @@ export default function MemberDetail({
         })}
       </div>
 
-      <div className={tab === "activite" ? "max-w-4xl" : "max-w-3xl"}>
+      <div
+        className={
+          tab === "identite" ? "max-w-3xl" : tab === "activite" ? "max-w-4xl" : "max-w-5xl"
+        }
+      >
         {tab === "activite" && (
           <MemberActivityPanel
             member={member}
@@ -197,6 +206,8 @@ export default function MemberDetail({
             onDecideRequest={onDecideRequest}
           />
         )}
+
+        {tab === "presence" && <MemberPresencePanel member={member} />}
 
         {tab === "identite" && (
           <div className="space-y-6">

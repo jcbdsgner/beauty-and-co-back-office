@@ -16,8 +16,9 @@
 //
 // « Sans catégorie » = éléments orphelins (`serviceId === null`), à rattacher.
 //
-// Catégories : les 8 catégories réelles de la réservation (Mini&Co · Hair et
-// Mini&Co · Spa distinctes, 2026-09-27 — elles étaient fusionnées jusque-là).
+// Catégories : les catégories réelles de la réservation ; Mini & Co est UNE
+// catégorie à deux sous-catégories Hair / Spa (2026-09-28, à la demande de la
+// propriétaire — la réservation les présente en deux cartes).
 // « Brows / Lashes » (prestations fictives) a été retiré : absent du catalogue réel.
 //
 // Produits : le catalogue de consommables était fictif ; il est remplacé par le vrai
@@ -27,7 +28,17 @@
 // Coiffure n'ont pas de recette : aucune donnée réelle de consommation n'existe pour
 // elles côté point-de-vente.
 
-import { fcfa, salonName, salons, type SalonId, type SalonScope } from "./beautyandco";
+import {
+  WEEKDAYS,
+  fcfa,
+  salonConfig,
+  salonName,
+  salons,
+  type DayOpening,
+  type SalonId,
+  type SalonScope,
+  type Weekday,
+} from "./beautyandco";
 import { membersForPrestation } from "./staff";
 
 export { fcfa };
@@ -274,7 +285,100 @@ export type Prestation = {
   // activé ici sur quelques prestations longues à rallonges/extensions où deux
   // mains en simultané sont plausibles.
   twoPractitioners?: boolean;
+  // Jours et horaires où la prestation se réserve (2026-09-28, même grammaire
+  // que les heures d'un salon). Absent / `null` = pendant toutes les heures
+  // d'ouverture du salon. Toujours recoupé avec l'ouverture du salon : un jour
+  // où le salon est fermé reste fermé.
+  availability?: PrestationAvailability | null;
+  // Périodes où la prestation n'est pas proposée du tout (2026-10-01 — rupture
+  // d'un produit, formation, saison…). Bornes ISO incluses ; s'ajoute aux jours
+  // de la semaine ci-dessus.
+  unavailablePeriods?: PrestationPause[];
+  // Prestations qui ne peuvent pas être réservées pour la même personne dans
+  // la même visite (2026-10-01). Relation symétrique : `setIncompatibilities`
+  // écrit la règle des deux côtés, `incompatiblesOf` la lit des deux côtés.
+  incompatibleWith?: string[];
 };
+
+export type PrestationAvailability = Record<Weekday, DayOpening>;
+
+/** Période d'indisponibilité d'une prestation. Bornes ISO `yyyy-mm-dd` incluses. */
+export type PrestationPause = { id: string; from: string; to: string; reason: string };
+
+export const newPauseId = () => `pp-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
+
+/** La période qui couvre `iso`, s'il y en a une. */
+export const pauseOn = (periods: PrestationPause[] | undefined, iso: string): PrestationPause | null =>
+  periods?.find((p) => iso >= p.from && iso <= p.to) ?? null;
+
+/** Périodes en cours ou à venir à partir de `fromIso`, triées par date de début. */
+export const upcomingPauses = (periods: PrestationPause[] | undefined, fromIso: string): PrestationPause[] =>
+  (periods ?? []).filter((p) => p.to >= fromIso).sort((a, b) => a.from.localeCompare(b.from));
+
+const FR_MONTHS_SHORT = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
+const frDay = (iso: string) => {
+  const [y, m, d] = iso.split("-").map(Number);
+  return { d, m: FR_MONTHS_SHORT[m - 1], y };
+};
+
+/** « 12 oct. 2026 » — sans l'année avec `short`. */
+export const pauseDayLabel = (iso: string, short = false) => {
+  const { d, m, y } = frDay(iso);
+  return short ? `${d} ${m}` : `${d} ${m} ${y}`;
+};
+
+/** « le 12 oct. 2026 » / « du 12 au 15 oct. 2026 » / « du 28 sept. au 3 oct. 2026 ». */
+export function pauseRangeLabel(p: Pick<PrestationPause, "from" | "to">): string {
+  const a = frDay(p.from);
+  const b = frDay(p.to);
+  if (p.from === p.to) return `le ${a.d} ${a.m} ${a.y}`;
+  if (a.y !== b.y) return `du ${a.d} ${a.m} ${a.y} au ${b.d} ${b.m} ${b.y}`;
+  if (a.m !== b.m) return `du ${a.d} ${a.m} au ${b.d} ${b.m} ${b.y}`;
+  return `du ${a.d} au ${b.d} ${b.m} ${b.y}`;
+}
+
+// Point de départ d'un réglage personnalisé : les heures du 1er salon qui la propose.
+export const defaultAvailability = (salonId: SalonId): PrestationAvailability => ({ ...salonConfig(salonId).hours });
+
+const toMin = (hhmm: string) => {
+  const [h, m] = hhmm.split(":").map(Number);
+  return h * 60 + m;
+};
+const WEEKDAY_BY_JS_DAY: Weekday[] = ["dim", "lun", "mar", "mer", "jeu", "ven", "sam"];
+export const weekdayOfIso = (iso: string): Weekday => WEEKDAY_BY_JS_DAY[new Date(`${iso}T00:00:00`).getDay()];
+
+/** La prestation peut-elle se tenir ce jour-là, sur [startMin, endMin[ ? (hors ouverture du salon) */
+export function prestationAvailableAt(
+  rules: Pick<Prestation, "availability" | "unavailablePeriods"> | null | undefined,
+  iso: string,
+  startMin: number,
+  endMin: number,
+): boolean {
+  if (pauseOn(rules?.unavailablePeriods, iso)) return false;
+  const availability = rules?.availability;
+  if (!availability) return true;
+  const d = availability[weekdayOfIso(iso)];
+  if (d.closed) return false;
+  return startMin >= toMin(d.open) && endMin <= toMin(d.close);
+}
+
+const SHORT_DAY: Record<Weekday, string> = { lun: "lun", mar: "mar", mer: "mer", jeu: "jeu", ven: "ven", sam: "sam", dim: "dim" };
+
+/** Résumé lisible d'un réglage personnalisé — « Mar, jeu, sam · 10:00–14:00 » ; `null` si aucun. */
+export function availabilitySummary(availability: PrestationAvailability | null | undefined): string | null {
+  if (!availability) return null;
+  const open = WEEKDAYS.filter((w) => !availability[w].closed);
+  if (open.length === 0) return "Aucun jour";
+  const days = open.map((w) => SHORT_DAY[w]).join(", ");
+  const ranges = [
+    ...new Set(open.map((w) => {
+      const d = availability[w] as Extract<DayOpening, { closed: false }>;
+      return `${d.open}–${d.close}`;
+    })),
+  ];
+  const label = days.charAt(0).toUpperCase() + days.slice(1);
+  return ranges.length === 1 ? `${label} · ${ranges[0]}` : `${label} · horaires variables`;
+}
 
 export type ServiceQuestion = {
   id: string;
@@ -306,9 +410,9 @@ export type Service = {
 /* ------------------------------------------------------------------ */
 
 // Catégories et sous-catégories = celles du parcours de réservation b&co
-// (`booking-services.ts` de point-de-vente, 2026-09-27) : 8 catégories — Mini&Co
-// en deux (Hair / Spa), comme à la réservation —, et les 11 sous-catégories
-// réelles de Coiffure (les autres catégories n'en ont pas). Images = les
+// (`booking-services.ts` de point-de-vente, 2026-09-27) : 7 catégories — Mini & Co
+// en une seule, sous-catégories Hair / Spa —, et les 11 sous-catégories réelles
+// de Coiffure (les autres catégories n'en ont pas). Images = les
 // visuels réels de la réservation, copiés dans `public/images/categories/`.
 export const serviceSeeds: Service[] = [
   {
@@ -378,22 +482,16 @@ export const serviceSeeds: Service[] = [
     subcategories: [],
   },
   {
-    id: "s-mini-hair",
-    name: "Mini & Co · Hair",
+    id: "s-mini",
+    name: "Mini & Co",
     image: "/images/categories/service-coiffure.svg",
-    description: "Coiffure des enfants — jours Mini&Co : mardi, mercredi, dimanche.",
+    description: "Coiffure, soins et spa des enfants — jours Mini&Co : mardi, mercredi, dimanche.",
     active: true,
     salonIds: ["almadies", "seaplaza"],
-    subcategories: [],
-  },
-  {
-    id: "s-mini-spa",
-    name: "Mini & Co · Spa",
-    image: "/images/categories/service-spa.svg",
-    description: "Soins et spa des enfants.",
-    active: true,
-    salonIds: ["almadies", "seaplaza"],
-    subcategories: [],
+    subcategories: [
+      { id: "sub-mini-hair", name: "Hair" },
+      { id: "sub-mini-spa", name: "Spa" },
+    ],
   },
 ];
 
@@ -521,16 +619,16 @@ const rawPrestations: Omit<Prestation, "salonIds">[] = [
   { id: "epilation-soin-vagifacial-maillot-integral", serviceId: "s-epilation", name: "Soin Vagifacial + Maillot Intégral", priceFcfa: 49000, durationMin: 60, active: true, recipe: [] },
 
   // Mini & Co
-  { id: "mini-co-mini-hair-treat-mini-co", serviceId: "s-mini-hair", name: "Mini Hair Treat (Mini&Co)", priceFcfa: 28000, durationMin: 90, active: true, recipe: [] },
-  { id: "mini-co-mini-hair-treat-braids-mini-co", serviceId: "s-mini-hair", name: "Mini Hair Treat + Braids (Mini&Co)", priceFcfa: 46000, durationMin: 180, active: true, recipe: [] },
-  { id: "mini-co-supplement-coiffure-enfant", serviceId: "s-mini-hair", name: "Supplément Coiffure Enfant", priceFcfa: 10000, durationMin: 50, active: true, recipe: [] },
-  { id: "mini-co-definition-boucles-enfant", serviceId: "s-mini-hair", name: "Définition Boucles Enfant", priceFcfa: 9000, durationMin: 30, active: true, recipe: [] },
-  { id: "mini-co-defaire-tresses-enfant", serviceId: "s-mini-hair", name: "Défaire Tresses Enfant", priceFcfa: 5000, durationMin: 45, active: true, recipe: [] },
-  { id: "mini-co-coupe-pointes-enfants-mini-co", serviceId: "s-mini-hair", name: "Coupe Pointes Enfants (Mini&Co)", priceFcfa: 9000, durationMin: 25, active: true, recipe: [] },
-  { id: "mini-co-supplement-brushing-enfant", serviceId: "s-mini-hair", name: "Supplément Brushing Enfant", priceFcfa: 9000, durationMin: 60, active: true, recipe: [] },
-  { id: "mini-co-supplements-tresses-enfants-mini-and-co", serviceId: "s-mini-hair", name: "Suppléments Tresses Enfants Mini&Co", priceFcfa: 19000, durationMin: 60, active: true, recipe: [] },
-  { id: "mini-co-mini-jely-manucure", serviceId: "s-mini-spa", name: "Mini Jelly Manucure", priceFcfa: 12000, durationMin: 30, active: true, recipe: [] },
-  { id: "mini-co-mini-cutie-pedicure", serviceId: "s-mini-spa", name: "Mini Cutie Pédicure", priceFcfa: 15000, durationMin: 35, active: true, recipe: [] },
+  { id: "mini-co-mini-hair-treat-mini-co", serviceId: "s-mini", name: "Mini Hair Treat (Mini&Co)", priceFcfa: 28000, durationMin: 90, active: true, recipe: [] },
+  { id: "mini-co-mini-hair-treat-braids-mini-co", serviceId: "s-mini", name: "Mini Hair Treat + Braids (Mini&Co)", priceFcfa: 46000, durationMin: 180, active: true, recipe: [] },
+  { id: "mini-co-supplement-coiffure-enfant", serviceId: "s-mini", name: "Supplément Coiffure Enfant", priceFcfa: 10000, durationMin: 50, active: true, recipe: [] },
+  { id: "mini-co-definition-boucles-enfant", serviceId: "s-mini", name: "Définition Boucles Enfant", priceFcfa: 9000, durationMin: 30, active: true, recipe: [] },
+  { id: "mini-co-defaire-tresses-enfant", serviceId: "s-mini", name: "Défaire Tresses Enfant", priceFcfa: 5000, durationMin: 45, active: true, recipe: [] },
+  { id: "mini-co-coupe-pointes-enfants-mini-co", serviceId: "s-mini", name: "Coupe Pointes Enfants (Mini&Co)", priceFcfa: 9000, durationMin: 25, active: true, recipe: [] },
+  { id: "mini-co-supplement-brushing-enfant", serviceId: "s-mini", name: "Supplément Brushing Enfant", priceFcfa: 9000, durationMin: 60, active: true, recipe: [] },
+  { id: "mini-co-supplements-tresses-enfants-mini-and-co", serviceId: "s-mini", name: "Suppléments Tresses Enfants Mini&Co", priceFcfa: 19000, durationMin: 60, active: true, recipe: [] },
+  { id: "mini-co-mini-jely-manucure", serviceId: "s-mini", name: "Mini Jelly Manucure", priceFcfa: 12000, durationMin: 30, active: true, recipe: [] },
+  { id: "mini-co-mini-cutie-pedicure", serviceId: "s-mini", name: "Mini Cutie Pédicure", priceFcfa: 15000, durationMin: 35, active: true, recipe: [] },
 ];
 
 // Données réelles de la réservation b&co (`booking-services.ts` de
@@ -662,14 +760,85 @@ const COIFFURE_SUBCATEGORY_BY_ID: Record<string, string> = {
   "coiffure-soin-reparateur-olapex-new-in": "sub-coiffure-nos-rituels-soins",
 };
 
+// Mini & Co : les deux cartes de la réservation deviennent deux sous-catégories.
+const MINI_SUBCATEGORY_BY_ID: Record<string, string> = {
+  "mini-co-mini-hair-treat-mini-co": "sub-mini-hair",
+  "mini-co-mini-hair-treat-braids-mini-co": "sub-mini-hair",
+  "mini-co-supplement-coiffure-enfant": "sub-mini-hair",
+  "mini-co-definition-boucles-enfant": "sub-mini-hair",
+  "mini-co-defaire-tresses-enfant": "sub-mini-hair",
+  "mini-co-coupe-pointes-enfants-mini-co": "sub-mini-hair",
+  "mini-co-supplement-brushing-enfant": "sub-mini-hair",
+  "mini-co-supplements-tresses-enfants-mini-and-co": "sub-mini-hair",
+  "mini-co-mini-jely-manucure": "sub-mini-spa",
+  "mini-co-mini-cutie-pedicure": "sub-mini-spa",
+};
+
+// Exemples de démo (2026-10-01) — un seul côté suffit, `incompatiblesOf` lit
+// la relation dans les deux sens.
+const INCOMPATIBLE_SEEDS: Record<string, string[]> = {
+  "coiffure-soin-keratine": [
+    "coiffure-defrisage-professionnel-beauty-and-co-texlax",
+    "coiffure-defrisage-professionnel-soin-fortifiant-anti-casse",
+  ],
+  "soin-du-visage-hydrafacial-deep-clean": ["epilation-epilation-menton", "epilation-epilation-sourcils"],
+};
+
 // `salonIds: []` = héritée du service parent (aucune restriction propre à la
 // prestation) — le catalogue réel ne distingue pas les prestations par salon.
+// Périodes d'indisponibilité de démonstration (monde ancré au 03/09/2026) :
+// une en cours, une à venir.
+const PAUSE_SEEDS: Record<string, PrestationPause[]> = {
+  "soin-du-visage-hydrafacial-deep-clean": [
+    { id: "pp-hydra", from: "2026-09-01", to: "2026-09-12", reason: "Machine Hydrafacial en révision" },
+  ],
+  "coiffure-silk-press": [
+    { id: "pp-silk", from: "2026-10-12", to: "2026-10-18", reason: "Formation de l'équipe coiffure" },
+  ],
+};
+
 export const prestationSeeds: Prestation[] = rawPrestations.map((p) => ({
   ...p,
   salonIds: [],
   twoPractitioners: TWO_PRACTITIONER_IDS.has(p.id),
-  subcategoryId: COIFFURE_SUBCATEGORY_BY_ID[p.id] ?? null,
+  subcategoryId: COIFFURE_SUBCATEGORY_BY_ID[p.id] ?? MINI_SUBCATEGORY_BY_ID[p.id] ?? null,
+  incompatibleWith: INCOMPATIBLE_SEEDS[p.id] ?? [],
+  unavailablePeriods: PAUSE_SEEDS[p.id] ?? [],
 }));
+
+/* -------------------------------------------------------------------------- */
+/* Incompatibilités « même visite »                                            */
+/* -------------------------------------------------------------------------- */
+
+// Ids des prestations incompatibles avec `id`, lues des deux côtés de la
+// relation (tolère une liste qui ne serait renseignée que d'un côté).
+export function incompatiblesOf(prestations: Prestation[], id: string): string[] {
+  const own = prestations.find((p) => p.id === id)?.incompatibleWith ?? [];
+  const out = new Set(own);
+  for (const p of prestations) if (p.id !== id && p.incompatibleWith?.includes(id)) out.add(p.id);
+  out.delete(id);
+  return [...out].filter((x) => prestations.some((p) => p.id === x));
+}
+
+// Remplace les incompatibilités de `id` par `ids`, et répercute sur les
+// prestations visées (ajout comme retrait) pour garder la relation symétrique.
+export function setIncompatibilities(prestations: Prestation[], id: string, ids: string[]): Prestation[] {
+  const next = new Set(ids.filter((x) => x !== id));
+  return prestations.map((p) => {
+    if (p.id === id) return { ...p, incompatibleWith: [...next] };
+    const has = p.incompatibleWith?.includes(id) ?? false;
+    if (next.has(p.id) && !has) return { ...p, incompatibleWith: [...(p.incompatibleWith ?? []), id] };
+    if (!next.has(p.id) && has) return { ...p, incompatibleWith: p.incompatibleWith!.filter((x) => x !== id) };
+    return p;
+  });
+}
+
+// Première prestation déjà choisie qui empêche d'ajouter `id`, ou null.
+export function conflictWith(prestations: Prestation[], id: string, selected: Iterable<string>): string | null {
+  const blocked = new Set(incompatiblesOf(prestations, id));
+  for (const s of selected) if (s !== id && blocked.has(s)) return s;
+  return null;
+}
 
 // Questions obligatoires réelles de la réservation b&co (`requiredQuestions`
 // de `booking-services.ts`, point-de-vente — 2026-09-27). Ids conservés quand

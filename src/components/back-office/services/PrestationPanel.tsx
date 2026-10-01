@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { X } from "lucide-react";
 import DetailModal from "@/components/back-office/detail/DetailModal";
 import Alert from "@/components/ui/alert/Alert";
 import { TrashBinIcon } from "@/icons";
@@ -8,12 +9,21 @@ import { salonName, type SalonId } from "@/lib/mock/beautyandco";
 import { membersForPrestation } from "@/lib/mock/staff";
 import {
   digitsToInt,
+  availabilitySummary,
+  defaultAvailability,
   durationLabel,
   fcfa,
+  incompatiblesOf,
   type Prestation,
+  type PrestationAvailability,
+  type PrestationPause,
   type RecipeItem,
   type Service,
 } from "@/lib/mock/services";
+import PrestationPicker from "../fidelite/PrestationPicker";
+import HoursEditor, { hoursHaveError } from "../salons/HoursEditor";
+import { useServicesData } from "./ServicesData";
+import PausesEditor from "./PausesEditor";
 import RecipeEditor from "./RecipeEditor";
 import { SelectField, TextInput, Toggle, btnGhost, btnPrimary } from "./ui";
 
@@ -27,11 +37,15 @@ type Draft = {
   twoPractitioners: boolean;
   serviceId: string;
   subcategoryId: string | null;
+  availability: PrestationAvailability | null; // null = heures d'ouverture du salon
+  unavailablePeriods: PrestationPause[];
+  incompatibleWith: string[];
 };
 
 const draftOf = (
   service: Service,
   initialSubcategoryId: string | null,
+  catalog: Prestation[],
   p?: Prestation,
 ): Draft => ({
   name: p?.name ?? "",
@@ -43,6 +57,9 @@ const draftOf = (
   twoPractitioners: p?.twoPractitioners ?? false,
   serviceId: service.id,
   subcategoryId: p ? p.subcategoryId ?? null : initialSubcategoryId,
+  availability: p?.availability ?? null,
+  unavailablePeriods: p?.unavailablePeriods ?? [],
+  incompatibleWith: p ? incompatiblesOf(catalog, p.id) : [],
 });
 
 function RealiseePar({ prestationId }: { prestationId: string | null }) {
@@ -99,9 +116,11 @@ export default function PrestationPanel({
   onSave,
   onDelete,
 }: Props) {
+  const { prestations: catalog } = useServicesData();
   const [draft, setDraft] = useState<Draft>(
-    draftOf(initialService, initialSubcategoryId, prestation ?? undefined),
+    draftOf(initialService, initialSubcategoryId, catalog, prestation ?? undefined),
   );
+  const [pickIncompatible, setPickIncompatible] = useState(false);
   const service = services.find((s) => s.id === draft.serviceId) ?? initialService;
 
   // Changer de catégorie : la sous-catégorie et les salons dépendent du
@@ -114,7 +133,12 @@ export default function PrestationPanel({
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const valid =
-    draft.name.trim() !== "" && digitsToInt(draft.price) > 0 && digitsToInt(draft.duration) > 0;
+    draft.name.trim() !== "" &&
+    digitsToInt(draft.price) > 0 &&
+    digitsToInt(draft.duration) > 0 &&
+    !(draft.availability && hoursHaveError(draft.availability));
+  // Premier salon qui la propose : sert de point de départ aux jours personnalisés.
+  const refSalon: SalonId | undefined = (draft.salonIds.length > 0 ? draft.salonIds : service.salonIds)[0];
 
   const toggleSalon = (id: SalonId) => {
     const next = draft.salonIds.includes(id)
@@ -135,6 +159,9 @@ export default function PrestationPanel({
       recipe: draft.recipe,
       salonIds: draft.salonIds.length > 0 ? draft.salonIds : [],
       twoPractitioners: draft.twoPractitioners,
+      availability: draft.availability,
+      unavailablePeriods: draft.unavailablePeriods,
+      incompatibleWith: draft.incompatibleWith,
     });
   };
 
@@ -240,6 +267,59 @@ export default function PrestationPanel({
           </p>
         </div>
 
+        <div>
+          <span className="mb-1.5 block text-sm font-medium text-base-content">Jours de disponibilité</span>
+          <div role="radiogroup" aria-label="Jours de disponibilité" className="grid grid-cols-2 gap-2">
+            {[
+              { custom: false, title: "Comme le salon", hint: "Tous les jours et heures d'ouverture" },
+              { custom: true, title: "Jours précis", hint: "Certains jours ou certaines heures seulement" },
+            ].map((o) => {
+              const checked = (draft.availability !== null) === o.custom;
+              return (
+                <button
+                  key={o.title}
+                  type="button"
+                  role="radio"
+                  aria-checked={checked}
+                  disabled={o.custom && !refSalon}
+                  onClick={() =>
+                    setDraft({
+                      ...draft,
+                      availability: o.custom ? (draft.availability ?? (refSalon ? defaultAvailability(refSalon) : null)) : null,
+                    })
+                  }
+                  className={`rounded-lg border px-3 py-2.5 text-left transition ${
+                    checked ? "border-primary bg-accent" : "border-base-300 bg-white hover:bg-base-200"
+                  }`}
+                >
+                  <span className="block text-sm font-medium text-base-content">{o.title}</span>
+                  <span className="text-xs text-base-content/60">{o.hint}</span>
+                </button>
+              );
+            })}
+          </div>
+          {draft.availability && (
+            <div className="mt-3">
+              <HoursEditor
+                hours={draft.availability}
+                onChange={(availability) => setDraft({ ...draft, availability })}
+                closedLabel="Indisponible"
+                openLabel="disponible"
+              />
+              <p className="mt-2 text-xs text-base-content/60">
+                {availabilitySummary(draft.availability)} — les jours où le salon est fermé restent fermés. La prise de
+                rendez-vous ne propose que ces créneaux.
+              </p>
+            </div>
+          )}
+        </div>
+
+        <PausesEditor
+          prestationId={prestation?.id ?? null}
+          pauses={draft.unavailablePeriods}
+          onChange={(unavailablePeriods) => setDraft({ ...draft, unavailablePeriods })}
+        />
+
         {/* Pas de « mode de réservation » (praticienne choisie par la cliente ou
             non, retiré le 2026-09-27) : la réservation pose la praticienne
             d'office, la moins chargée parmi les libres. Seul réglage réel :
@@ -257,6 +337,63 @@ export default function PrestationPanel({
             aria-label="Réalisable à deux praticiennes"
           />
         </label>
+
+        <div>
+          <span className="block text-sm font-medium text-base-content">Incompatible avec</span>
+          <p className="mb-2 text-xs text-base-content/60">
+            Ces prestations ne peuvent pas être réservées pour la même personne dans la même visite. La règle
+            s&apos;applique dans les deux sens.
+          </p>
+          {draft.incompatibleWith.length > 0 ? (
+            <ul className="mb-2 flex flex-wrap gap-2">
+              {draft.incompatibleWith.map((id) => {
+                const other = catalog.find((p) => p.id === id);
+                if (!other) return null;
+                const cat = services.find((s) => s.id === other.serviceId)?.name;
+                return (
+                  <li
+                    key={id}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-base-300 bg-white py-1 pr-1.5 pl-3 text-sm text-base-content"
+                  >
+                    {other.name}
+                    {cat && cat !== service.name && <span className="text-xs text-base-content/50">· {cat}</span>}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setDraft({ ...draft, incompatibleWith: draft.incompatibleWith.filter((x) => x !== id) })
+                      }
+                      aria-label={`Retirer ${other.name}`}
+                      className="rounded-full p-0.5 text-base-content/45 transition hover:bg-base-200 hover:text-base-content"
+                    >
+                      <X className="size-3.5" />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            !pickIncompatible && <p className="mb-2 text-sm text-base-content/60">Compatible avec tout le catalogue.</p>
+          )}
+          {pickIncompatible ? (
+            <div className="rounded-lg border border-base-300 bg-white p-3">
+              <PrestationPicker
+                label="Choisir les prestations incompatibles"
+                selected={draft.incompatibleWith}
+                onChange={(incompatibleWith) => setDraft({ ...draft, incompatibleWith })}
+                showPricing={false}
+                catalog={{ services, prestations: catalog }}
+                excludeId={prestation?.id}
+              />
+              <button type="button" onClick={() => setPickIncompatible(false)} className={`${btnGhost} mt-2`}>
+                Terminé
+              </button>
+            </div>
+          ) : (
+            <button type="button" onClick={() => setPickIncompatible(true)} className={btnGhost}>
+              {draft.incompatibleWith.length > 0 ? "Modifier la liste" : "Ajouter une incompatibilité"}
+            </button>
+          )}
+        </div>
 
         <div className="rounded-lg border border-base-300 bg-white p-3">
           <RealiseePar prestationId={prestation?.id ?? null} />

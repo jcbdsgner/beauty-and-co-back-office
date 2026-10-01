@@ -7,6 +7,7 @@ import {
   type RdvDetail,
 } from "@/lib/mock/rendezvous";
 import { canPerform, fullName, members } from "@/lib/mock/staff";
+import { prestationAvailableAt, type Prestation } from "@/lib/mock/services";
 
 /**
  * Le pont entre le parcours b&co recopié de point-de-vente et l'agenda réel du back-office : quels
@@ -59,6 +60,8 @@ export type PlanContext = {
   planningData?: PlanningData;
   /** Rendez-vous en cours de modification — ignoré comme occupation. */
   excludeRdvId?: string;
+  /** Jours / horaires et périodes d'indisponibilité d'une prestation (réglés dans Services) ; absent = heures du salon. */
+  availabilityOf?: (prestationId: string) => Pick<Prestation, "availability" | "unavailablePeriods"> | null | undefined;
 };
 
 const practitioners = () =>
@@ -131,6 +134,7 @@ export function planAt(
       const durationMin = lineDuration(item, twoPractitioners);
       const iv = { start: cursor, end: cursor + durationMin };
       if (iv.start < hours.open || iv.end > hours.close) return null;
+      if (!prestationAvailableAt(ctx.availabilityOf?.(item.serviceId), ctx.date, iv.start, iv.end)) return null;
       const need = twoPractitioners && item.twoPractitionersEligible ? 2 : 1;
       const free = freeStaff(ctx, busy, item.serviceId, iv);
       const wanted = overrides[item.key];

@@ -1,8 +1,21 @@
 "use client";
 
-import { Users } from "lucide-react";
+import { Ban, CalendarDays, CalendarOff, Users } from "lucide-react";
 import Badge from "@/components/ui/badge/Badge";
-import { durationLabel, fcfa, isUnbookable, type Prestation } from "@/lib/mock/services";
+import { TODAY_ISO } from "@/lib/mock/planning";
+import {
+  availabilitySummary,
+  durationLabel,
+  fcfa,
+  incompatiblesOf,
+  isUnbookable,
+  pauseDayLabel,
+  pauseOn,
+  pauseRangeLabel,
+  upcomingPauses,
+  type Prestation,
+} from "@/lib/mock/services";
+import { useServicesData } from "./ServicesData";
 import { Toggle } from "./ui";
 
 type Props = {
@@ -20,6 +33,13 @@ export const ROW_GRID = "grid grid-cols-[minmax(0,1fr)_96px_128px_52px] items-ce
 // d'œil vertical —, interrupteur actif. Le clic ouvre la fiche en panneau.
 export default function PrestationRow({ prestation: p, onOpen, onToggleActive }: Props) {
   const unbookable = isUnbookable(p);
+  const days = availabilitySummary(p.availability);
+  const pausedNow = pauseOn(p.unavailablePeriods, TODAY_ISO);
+  const nextPause = pausedNow ? null : upcomingPauses(p.unavailablePeriods, TODAY_ISO)[0] ?? null;
+  const { prestations } = useServicesData();
+  const incompatibles = incompatiblesOf(prestations, p.id)
+    .map((id) => prestations.find((x) => x.id === id)?.name)
+    .filter(Boolean);
 
   return (
     <div
@@ -35,9 +55,9 @@ export default function PrestationRow({ prestation: p, onOpen, onToggleActive }:
       }}
       className={`${ROW_GRID} cursor-pointer rounded-field border border-base-300 bg-base-100 px-4 py-2.5 transition hover:border-brand-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#fdcfca]`}
     >
-      <div className="flex min-w-0 items-center gap-2">
+      <div className="flex min-w-0 items-center gap-2 overflow-hidden">
         <span
-          className={`truncate text-[15px] font-medium ${
+          className={`min-w-28 truncate text-[15px] font-medium ${
             p.active ? "text-base-content" : "text-base-content/45"
           }`}
         >
@@ -63,6 +83,41 @@ export default function PrestationRow({ prestation: p, onOpen, onToggleActive }:
           >
             <title>Réalisable à deux praticiennes</title>
           </Users>
+        )}
+        {/* Jours / horaires restreints : signalés d'un mot (le détail au survol et dans la fiche). */}
+        {days && (
+          <span title={days} className="inline-flex shrink-0 items-center gap-1 text-xs whitespace-nowrap text-base-content/60">
+            <CalendarDays aria-hidden className="size-3.5" />
+            Jours limités
+          </span>
+        )}
+        {/* Période d'indisponibilité : en cours (le vrai signal) ou à venir (discret). */}
+        {pausedNow && (
+          <span
+            title={`Indisponible ${pauseRangeLabel(pausedNow)}${pausedNow.reason ? ` — ${pausedNow.reason}` : ""}`}
+            className="inline-flex shrink-0 items-center gap-1 text-xs font-medium whitespace-nowrap text-warning-600"
+          >
+            <CalendarOff aria-hidden className="size-3.5" />
+            Pause jusqu&apos;au {pauseDayLabel(pausedNow.to, true)}
+          </span>
+        )}
+        {nextPause && (
+          <span
+            title={`Indisponible ${pauseRangeLabel(nextPause)}${nextPause.reason ? ` — ${nextPause.reason}` : ""}`}
+            className="inline-flex shrink-0 items-center gap-1 text-xs whitespace-nowrap text-base-content/60"
+          >
+            <CalendarOff aria-hidden className="size-3.5" />
+            Pause prévue
+          </span>
+        )}
+        {incompatibles.length > 0 && (
+          <span
+            title={`Pas dans la même visite que : ${incompatibles.join(", ")}`}
+            className="inline-flex min-w-0 items-center gap-1 overflow-hidden text-xs whitespace-nowrap text-base-content/60"
+          >
+            <Ban aria-hidden className="size-3.5" />
+            {incompatibles.length} incompatible{incompatibles.length > 1 ? "s" : ""}
+          </span>
         )}
       </div>
       <span className="text-sm text-base-content/60">{durationLabel(p.durationMin)}</span>

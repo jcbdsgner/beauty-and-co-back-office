@@ -4,7 +4,8 @@ import { useMemo, useState } from "react";
 import Image from "next/image";
 import { BoxIcon } from "@/icons";
 import { groupThousands } from "@/lib/mock/beautyandco";
-import { coverageTone, type StockRow } from "@/lib/mock/stock";
+import { SegmentedToggle } from "@/components/ui/molecules/segmented-toggle";
+import { coverageTone, STOCK_USE_LABELS, type StockRow, type StockUse } from "@/lib/mock/stock";
 import { PRODUCT_BRANDS, type ProductBrand } from "@/lib/mock/services";
 
 type FilterId = "all" | "below" | "order";
@@ -46,6 +47,10 @@ function coverageStatus(row: StockRow): { tone: keyof typeof TONE_DOT; label: st
   return { tone: tone === "none" ? "none" : tone, label };
 }
 
+// Quel stock regarder : tout, ou seulement celui de la vente / des prestations
+// (les deux stocks d'un salon sont séparés, cf. `StockUse`).
+type PoolView = "all" | StockUse;
+
 // Grille de cartes produit : la photo, le nom, la quantité, le statut (combien
 // de jours ça peut tenir) — rien d'autre (2026-09-28, demande de la
 // propriétaire). Seuils, consommation, réserve et historique restent dans la
@@ -63,20 +68,33 @@ export default function StockList({
   const [filter, setFilter] = useState<FilterId>("all");
   // Marque (catégorie produit de point-de-vente) — « all » = toutes.
   const [brand, setBrand] = useState<ProductBrand | "all">("all");
+  const [pool, setPool] = useState<PoolView>("all");
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     return rows.filter((r) => {
       if (q && !r.product.name.toLowerCase().includes(q)) return false;
       if (brand !== "all" && r.product.brand !== brand) return false;
+      if (pool !== "all" && !r.uses.includes(pool)) return false;
       if (filter === "below") return r.onHand !== null && r.onHand < r.min;
       if (filter === "order") return r.status === "order";
       return true;
     });
-  }, [rows, query, filter, brand]);
+  }, [rows, query, filter, brand, pool]);
 
   return (
     <div className="space-y-4">
+      <SegmentedToggle
+        value={pool}
+        onChange={(v) => setPool(v as PoolView)}
+        aria-label="Stock affiché"
+        className="w-[480px]"
+        options={[
+          { value: "all", label: "Tout le stock" },
+          { value: "vente", label: "Stock vente" },
+          { value: "prestations", label: "Stock prestations" },
+        ]}
+      />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div
           role="tablist"
@@ -136,7 +154,13 @@ export default function StockList({
         <ul className="grid grid-cols-4 gap-4 xl:grid-cols-5 min-[1600px]:grid-cols-6">
           {visible.map((r) => {
             const photo = photos[r.product.id] ?? r.product.image;
-            const status = coverageStatus(r);
+            // Vue d'un seul stock : sa quantité (salons du périmètre) ; épuisé = rupture de ce stock.
+            const shown = pool === "all" ? r.onHand : r.pools[pool];
+            const status =
+              pool !== "all" && shown === 0
+                ? { tone: "error" as const, label: `Épuisé côté ${STOCK_USE_LABELS[pool].toLowerCase()}` }
+                : coverageStatus(r);
+            const split = pool === "all" && r.uses.length > 1 && r.pools.vente !== null;
             return (
               <li key={r.product.id}>
                 <button
@@ -167,9 +191,21 @@ export default function StockList({
                     </p>
                     <div className="mt-auto">
                       <p className="text-[26px] leading-none font-semibold tabular-nums text-base-content">
-                        {r.onHand === null ? "—" : groupThousands(r.onHand)}
-                        <span className="ml-1.5 text-sm font-normal text-base-content/60">en stock</span>
+                        {shown === null ? "—" : groupThousands(shown)}
+                        <span className="ml-1.5 text-sm font-normal text-base-content/60">
+                          {pool === "all" ? "en stock" : `en ${STOCK_USE_LABELS[pool].toLowerCase()}`}
+                        </span>
                       </p>
+                      {split ? (
+                        <p className="mt-1.5 text-xs tabular-nums text-base-content/60">
+                          Vente {groupThousands(r.pools.vente ?? 0)} · Prestations {groupThousands(r.pools.prestations ?? 0)}
+                          {r.reserve ? ` · Réserve ${groupThousands(r.reserve)}` : ""}
+                        </p>
+                      ) : pool === "all" && r.uses.length === 1 ? (
+                        <p className="mt-1.5 text-xs text-base-content/60">
+                          {r.uses[0] === "vente" ? "Vente uniquement" : "Prestations uniquement"}
+                        </p>
+                      ) : null}
                       <p className={`mt-2.5 flex items-center gap-2 text-sm whitespace-nowrap ${TONE_TEXT[status.tone]}`}>
                         <span aria-hidden className={`size-2 shrink-0 rounded-full ${TONE_DOT[status.tone]}`} />
                         {status.label}

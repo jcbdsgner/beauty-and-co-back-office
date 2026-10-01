@@ -128,7 +128,21 @@ export const preferenceQuestionSeeds: PreferenceQuestion[] = [
   },
   {
     id: "coiffure-style",
-    target: { serviceIds: ["s-coiffure", "s-mini-hair"], prestationIds: [], drinks: false },
+    // Coiffure entière + la partie Hair de Mini & Co (pas les soins Spa enfants).
+    target: {
+      serviceIds: ["s-coiffure"],
+      prestationIds: [
+        "mini-co-mini-hair-treat-mini-co",
+        "mini-co-mini-hair-treat-braids-mini-co",
+        "mini-co-supplement-coiffure-enfant",
+        "mini-co-definition-boucles-enfant",
+        "mini-co-defaire-tresses-enfant",
+        "mini-co-coupe-pointes-enfants-mini-co",
+        "mini-co-supplement-brushing-enfant",
+        "mini-co-supplements-tresses-enfants-mini-and-co",
+      ],
+      drinks: false,
+    },
     title: "Quelle coiffure a-t-elle faite ?",
     subtitle: "Plusieurs réponses possibles.",
     noteLabel: "Style",

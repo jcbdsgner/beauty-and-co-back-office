@@ -13,10 +13,9 @@ import {
 } from "@/lib/mock/services";
 
 // État de session du catalogue (catégories, prestations, questions, boissons),
-// porté par `app/(admin)/services/layout.tsx` depuis que Prestations et Boissons
-// sont deux routes (`/services`, `/services/boissons`, 2026-09-27) : passer
-// d'un onglet à l'autre démonte la page, pas le layout — sans ce fournisseur,
-// les modifications du catalogue seraient perdues au changement d'onglet.
+// porté par `app/(admin)/layout.tsx` (2026-09-28 ; avant : le layout de
+// `/services`) : survit au changement d'onglet Prestations / Boissons, et la
+// prise de rendez-vous lit les jours de disponibilité des prestations.
 
 type Setter<T> = React.Dispatch<React.SetStateAction<T>>;
 

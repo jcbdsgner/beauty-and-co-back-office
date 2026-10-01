@@ -8,6 +8,7 @@ import { ClientsProvider } from "@/context/ClientsContext";
 import { PreferencesProvider } from "@/context/PreferencesContext";
 import { AutorisationsProvider } from "@/context/AutorisationsContext";
 import { FideliteProvider } from "@/context/FideliteContext";
+import { ServicesDataProvider } from "@/components/back-office/services/ServicesData";
 import AppSidebar from "@/layout/AppSidebar";
 import React from "react";
 
@@ -27,6 +28,8 @@ export default function AdminLayout({
             <PreferencesProvider>
             <AutorisationsProvider>
             <FideliteProvider>
+            {/* Catalogue de session (Services) — lu aussi par la prise de rendez-vous. */}
+            <ServicesDataProvider>
               <div className="min-h-screen xl:flex">
                 {/* Sidebar fixe 260px (Figma « Point de vente », node 381:497) */}
                 <AppSidebar />
@@ -41,6 +44,7 @@ export default function AdminLayout({
                 </div>
               </div>
               {modal}
+            </ServicesDataProvider>
             </FideliteProvider>
             </AutorisationsProvider>
             </PreferencesProvider>

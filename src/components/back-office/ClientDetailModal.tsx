@@ -383,7 +383,7 @@ function CoordonneesBoard({ row, onEdit }: { row: ClientRow; onEdit: () => void 
           value={row.whatsapp}
           href={row.whatsapp ? `https://wa.me/${row.whatsapp.replace(/\D/g, "")}` : undefined}
         />
-        <Row icon={<Mail className="size-5" />} label="E-mail" value={row.email} href={`mailto:${row.email}`} />
+        <Row icon={<Mail className="size-5" />} label="E-mail" value={row.email} href={`/messagerie/envoyer?client=${row.id}`} />
         <Row icon={<Briefcase className="size-5" />} label="Profession" value={row.profession} />
         <Row icon={<MapPin className="size-5" />} label="Adresse" value={row.address} />
         <Row icon={<Globe className="size-5" />} label="Pays de résidence" value={row.residenceCountry} />
@@ -462,26 +462,41 @@ function EchangesBoard({ firstName, conversation, clientId }: { firstName: strin
 
 /* --- rendez-vous ----------------------------------------------------- */
 
+// Le détail d'un rendez-vous s'ouvre en panneau latéral (route interceptée) ;
+// le fermer ramène à cette fiche. Les visites anciennes sans réservation
+// rattachée (`rdvId` absent) n'ont pas de détail à ouvrir.
+const detailColumn: Column<ClientVisit> = {
+  key: "detail",
+  header: "",
+  align: "right",
+  render: (v) =>
+    v.rdvId ? (
+      <Button variant="outline" size="sm" href={`/rendez-vous/${v.rdvId}`}>
+        Voir le détail
+      </Button>
+    ) : null,
+};
+
+const dateColumn: Column<ClientVisit> = {
+  key: "date",
+  header: "Date",
+  render: (v) => (
+    <span className="font-medium">
+      {frShortDate(v.date)}
+      {v.time && ` · ${v.time}`}
+    </span>
+  ),
+};
+
 const upcomingColumns: Column<ClientVisit>[] = [
-  {
-    key: "date",
-    header: "Date",
-    render: (v) =>
-      v.rdvId ? (
-        <Link href={`/rendez-vous/${v.rdvId}`} className="font-medium text-primary underline-offset-2 hover:underline">
-          {frShortDate(v.date)}
-          {v.time && ` · ${v.time}`}
-        </Link>
-      ) : (
-        frShortDate(v.date)
-      ),
-  },
+  dateColumn,
   { key: "service", header: "Prestations" },
   { key: "staff", header: "Praticienne" },
+  detailColumn,
 ];
 
 const historyColumns: Column<ClientVisit>[] = [
-  upcomingColumns[0],
+  dateColumn,
   { key: "service", header: "Prestation" },
   { key: "staff", header: "Praticienne" },
   {
@@ -504,6 +519,7 @@ const historyColumns: Column<ClientVisit>[] = [
     align: "right",
     render: (v) => (v.status === "honoré" ? fcfa(v.amount) : "—"),
   },
+  detailColumn,
 ];
 
 /* --- fiche ----------------------------------------------------------- */
@@ -537,7 +553,7 @@ export default function ClientDetailModal({
   const contact = () => {
     if (row.whatsapp) window.open(`https://wa.me/${row.whatsapp.replace(/\D/g, "")}`, "_blank");
     else if (row.phone) window.open(`tel:${row.phone.replace(/\s/g, "")}`, "_self");
-    else if (row.email) window.open(`mailto:${row.email}`, "_self");
+    else if (row.email) router.push(`/messagerie/envoyer?client=${row.id}`);
   };
 
   return (
@@ -579,14 +595,14 @@ export default function ClientDetailModal({
       </div>
 
       <div className="grid items-start gap-7 grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
-        {/* Ce qui sert au passage : goûts, prépayé, ce que l'équipe a noté. */}
+        {/* Ce qui sert au passage : goûts, prépayé, ce qu'on s'est écrit. */}
         <div className="flex flex-col gap-7">
           <PreferencesBoard prefs={preferences} questions={prefQuestions} onEdit={() => setEditingPreferences(true)} />
           <AbonnementsPacksBoard clientId={row.id} />
-          <NotesBoard clientId={row.id} />
+          <EchangesBoard firstName={row.name.split(" ")[0]} conversation={conversation} clientId={row.id} />
         </div>
 
-        {/* La référence : la joindre, l'identifier, et ce qu'on s'est écrit. */}
+        {/* La référence : la joindre, l'identifier, et ce que l'équipe a noté. */}
         <div className="flex flex-col gap-7">
           <CoordonneesBoard row={row} onEdit={() => setEditingCoordonnees(true)} />
           <Board legend="Carte de fidélité">
@@ -602,7 +618,7 @@ export default function ClientDetailModal({
               <DemoQr seed={row.id} />
             </div>
           </Board>
-          <EchangesBoard firstName={row.name.split(" ")[0]} conversation={conversation} clientId={row.id} />
+          <NotesBoard clientId={row.id} />
         </div>
       </div>
 

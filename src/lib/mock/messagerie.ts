@@ -163,6 +163,7 @@ export const conversations: Conversation[] = [
     name: "Sokhna Ndiaye",
     phone: "+221 77 401 88 52",
     salon: "seaplaza",
+    clientId: "c11",
     channels: ["whatsapp"],
     events: [
       {
@@ -232,6 +233,7 @@ export const conversations: Conversation[] = [
     name: "Fatou Camara",
     phone: "+221 77 908 33 21",
     salon: "seaplaza",
+    clientId: "c02",
     channels: ["sms"],
     events: [
       {
@@ -251,6 +253,7 @@ export const conversations: Conversation[] = [
     name: "Mariam Kane",
     phone: "+221 76 220 47 63",
     salon: "almadies",
+    clientId: "c05",
     channels: ["whatsapp"],
     events: [
       {

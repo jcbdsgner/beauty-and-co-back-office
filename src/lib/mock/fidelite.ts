@@ -4,6 +4,7 @@
 // directement ce fichier (`@/lib/mock/fidelite`).
 
 import { fcfa, groupThousands } from "./beautyandco";
+import { prestationSeeds, productName } from "./services";
 
 /* ------------------------------------------------------------------ Réglages */
 
@@ -75,7 +76,10 @@ export type LoyaltyReward = {
   name: string;
   costPoints: number; // coût en points
   type: RewardType;
-  value: number; // FCFA (remise fixe) ou pourcentage (remise en %)
+  value: number; // FCFA (remise fixe) ou pourcentage (remise en %) ; 0 si offert
+  // Prestation (id catalogue) ou produit (id produit) offert — types
+  // « service » / « product » uniquement.
+  itemId?: string;
   description?: string;
 };
 
@@ -107,9 +111,11 @@ export const rewardValueLabel = (r: LoyaltyReward) => {
       return `Remise de ${fcfa(r.value)}`;
     case "percent":
       return `Remise de ${r.value} %`;
-    case "service":
-      return "Prestation offerte";
+    case "service": {
+      const name = prestationSeeds.find((p) => p.id === r.itemId)?.name;
+      return name ? `Offert : ${name}` : "Prestation offerte";
+    }
     case "product":
-      return "Produit offert";
+      return r.itemId ? `Offert : ${productName(r.itemId)}` : "Produit offert";
   }
 };

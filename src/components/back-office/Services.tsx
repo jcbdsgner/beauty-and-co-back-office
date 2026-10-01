@@ -11,6 +11,7 @@ import { useLocation } from "@/context/LocationContext";
 import { salons, type SalonScope } from "@/lib/mock/beautyandco";
 import {
   newId,
+  setIncompatibilities,
   type Prestation,
   type Service,
   type ServiceQuestion,
@@ -113,7 +114,15 @@ export default function Services({ section }: { section: ServicesSection }) {
         : [...list, next],
     );
   const deletePrestation = (id: string) =>
-    setPrestations((list) => list.filter((p) => p.id !== id));
+    setPrestations((list) =>
+      list
+        .filter((p) => p.id !== id)
+        .map((p) =>
+          p.incompatibleWith?.includes(id)
+            ? { ...p, incompatibleWith: p.incompatibleWith.filter((x) => x !== id) }
+            : p,
+        ),
+    );
 
   const movePrestation = (
     prestationId: string,
@@ -272,7 +281,10 @@ export default function Services({ section }: { section: ServicesSection }) {
           initialSubcategoryId={prestationView.subcategoryId}
           onClose={closePanel}
           onSave={(data) => {
-            upsertPrestation({ id: editingPrestation?.id ?? newId("pr"), ...data });
+            const id = editingPrestation?.id ?? newId("pr");
+            upsertPrestation({ id, ...data });
+            // Incompatibilités : écrites des deux côtés de la relation.
+            setPrestations((list) => setIncompatibilities(list, id, data.incompatibleWith ?? []));
             closePanel();
           }}
           onDelete={() => {

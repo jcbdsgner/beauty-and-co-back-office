@@ -13,6 +13,8 @@ import EquipeList from "./equipe/EquipeList";
 import MemberDetail from "./equipe/MemberDetail";
 import AddMemberFlow from "./equipe/AddMemberFlow";
 import PlanningBoard from "./equipe/planning-board/PlanningBoard";
+import ScheduleEditor from "./equipe/schedule/ScheduleEditor";
+import { SegmentedToggle } from "@/components/ui/molecules/segmented-toggle";
 import { useEquipeData } from "./equipe/EquipeData";
 import { BackButton } from "./equipe/ui";
 
@@ -48,6 +50,9 @@ export default function Equipe({ tab }: { tab: EquipeTab }) {
   const { members, setMembers, requests, setRequests } = useEquipeData();
   const { autorisations } = useAutorisations();
   const [view, setView] = useState<View>({ kind: "list" });
+  // Planning : « Horaires » (le programme de chaque membre, éditable — 2026-09-28) ou
+  // « Rendez-vous » (la journée / la semaine telles que réservées, lecture).
+  const [planningMode, setPlanningMode] = useState<"horaires" | "rendez-vous">("horaires");
 
   // Arrivée depuis une notification « demande en attente » : ?membre=<id> ouvre
   // directement la fiche — y compris si la propriétaire est déjà sur /equipe et
@@ -172,7 +177,25 @@ export default function Equipe({ tab }: { tab: EquipeTab }) {
           onOpen={(id) => setView({ kind: "detail", id })}
         />
       ) : (
-        <PlanningBoard />
+        (() => {
+          const modeSwitch = (
+            <SegmentedToggle
+              size="sm"
+              value={planningMode}
+              onChange={(v) => setPlanningMode(v as "horaires" | "rendez-vous")}
+              aria-label="Affichage du planning"
+              options={[
+                { value: "horaires", label: "Horaires" },
+                { value: "rendez-vous", label: "Rendez-vous" },
+              ]}
+            />
+          );
+          return planningMode === "horaires" ? (
+            <ScheduleEditor modeSwitch={modeSwitch} />
+          ) : (
+            <PlanningBoard toolbarStart={modeSwitch} />
+          );
+        })()
       )}
     </div>
   );

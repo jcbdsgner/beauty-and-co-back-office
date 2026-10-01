@@ -32,7 +32,10 @@ import {
   companyOnHand,
   movementReasonLabel,
   newMovementId,
+  poolOnHand,
   prestationsUsing,
+  STOCK_USE_LABELS,
+  usesOf,
   productLocations,
   PROJECTION_MODEL_OPTIONS,
   projectRunout,
@@ -43,6 +46,7 @@ import {
   type ProjectionModel,
   type StockLocation,
   type StockMovement,
+  type StockUse,
   type ThresholdOverride,
 } from "@/lib/mock/stock";
 import { PRODUCT_BRANDS, products } from "@/lib/mock/services";
@@ -75,13 +79,22 @@ export default function StockDetail({
   onBack,
 }: Props) {
   const [model, setModel] = useState<ProjectionModel>("4w");
-  const [action, setAction] = useState<"adjust" | "transfer">("adjust");
+  const [action, setAction] = useState<"adjust" | "transfer" | "split">("adjust");
 
   const product = products.find((p) => p.id === productId);
 
   const locs = productLocations(productId);
   const hasReserve = locs.includes(RESERVE);
   const salonLocs = locs.filter((l): l is SalonId => l !== RESERVE);
+  const uses = usesOf(productId);
+  const mixed = uses.length > 1;
+  const poolsHint = (salonId: SalonId) => {
+    if (!mixed) return uses[0] === "vente" ? "Vente uniquement" : "Prestations uniquement";
+    const v = poolOnHand(productId, salonId, "vente", extraMovements);
+    const pr = poolOnHand(productId, salonId, "prestations", extraMovements);
+    if (v === null || pr === null) return "En salon";
+    return `Vente ${groupThousands(v)} · Prestations ${groupThousands(pr)}`;
+  };
 
   const reserveLevel = hasReserve ? locationOnHand(productId, RESERVE, extraMovements) : null;
   const companyTotal = companyOnHand(productId, extraMovements);
@@ -101,7 +114,7 @@ export default function StockDetail({
   // Consommation : honore le filtre salon global (comme avant).
   const scopeWeekly = weeklyConsumption(productId, scope);
   const breakdown = consumptionBreakdown(productId, scope);
-  const uses = prestationsUsing(productId);
+  const recipeUses = prestationsUsing(productId);
 
   const projection = projectRunout(productId, model, extraMovements);
 
@@ -135,7 +148,7 @@ export default function StockDetail({
   // niveau ou seuil, pour comparer réserve et salons d'un coup d'œil.
   const levels = [
     ...(hasReserve ? [{ key: "reserve", label: "Réserve centrale", hint: "Non affectée à un salon", onHand: reserveLevel, threshold: null as number | null, salonId: null as SalonId | null }] : []),
-    ...salonRows.map((r) => ({ key: r.salonId, label: salonName(r.salonId), hint: "En rayon", onHand: r.onHand, threshold: r.threshold, salonId: r.salonId as SalonId | null })),
+    ...salonRows.map((r) => ({ key: r.salonId, label: salonName(r.salonId), hint: poolsHint(r.salonId), onHand: r.onHand, threshold: r.threshold, salonId: r.salonId as SalonId | null })),
   ];
   const scaleMax = Math.max(1, ...levels.map((l) => Math.max(l.onHand ?? 0, l.threshold ?? 0))) * 1.15;
 
@@ -248,11 +261,11 @@ export default function StockDetail({
               {levels.map((l) => {
                 const below = l.onHand !== null && l.threshold !== null && l.onHand < l.threshold;
                 return (
-                  <li key={l.key} className="grid grid-cols-[180px_minmax(0,1fr)_64px_150px] items-center gap-5 px-5 py-3.5">
+                  <li key={l.key} className="grid grid-cols-[220px_minmax(0,1fr)_64px_150px] items-center gap-5 px-5 py-3.5">
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-base-content">{l.label}</p>
                       <p className={cn("text-xs", below ? "text-error-600" : "text-base-content/55")}>
-                        {below ? "Sous le seuil" : l.hint}
+                        {below ? `Sous le seuil · ${l.hint}` : l.hint}
                       </p>
                     </div>
                     <LevelBar value={l.onHand} threshold={l.threshold} max={scaleMax} below={below} />
@@ -277,7 +290,7 @@ export default function StockDetail({
                   </li>
                 );
               })}
-              <li className="grid grid-cols-[180px_minmax(0,1fr)_64px_150px] items-center gap-5 bg-base-200/60 px-5 py-3.5">
+              <li className="grid grid-cols-[220px_minmax(0,1fr)_64px_150px] items-center gap-5 bg-base-200/60 px-5 py-3.5">
                 <div>
                   <p className="text-sm font-semibold text-base-content">Total entreprise</p>
                   <p className={cn("text-xs", companyBelow ? "text-error-600" : "text-base-content/55")}>
@@ -333,11 +346,11 @@ export default function StockDetail({
                 </div>
                 <div>
                   <p className="mb-3 text-sm font-medium text-base-content">Utilisé dans</p>
-                  {uses.length === 0 ? (
+                  {recipeUses.length === 0 ? (
                     <p className="text-sm text-base-content/60">Aucune recette : vendu au détail uniquement.</p>
                   ) : (
                     <ul className="space-y-2">
-                      {uses.map((u) => (
+                      {recipeUses.map((u) => (
                         <li key={u.id} className="flex items-baseline justify-between gap-3 text-sm">
                           <Link
                             href="/services"
@@ -361,30 +374,43 @@ export default function StockDetail({
             <section className="rounded-box border border-base-300 p-5">
               <h2 className="text-lg font-semibold text-base-content">Mouvement</h2>
               <p className="mb-4 mt-0.5 text-xs text-base-content/55">Enregistré pour cette session.</p>
-              {hasReserve && salonLocs.length > 0 && (
-                <SegmentedToggle
-                  size="sm"
-                  className="mb-5"
-                  value={action}
-                  onChange={(v) => setAction(v as "adjust" | "transfer")}
-                  options={[
-                    { value: "adjust", label: "Ajuster" },
-                    { value: "transfer", label: "Transférer" },
-                  ]}
-                  aria-label="Type de mouvement"
+              {(() => {
+                const actions = [
+                  { value: "adjust", label: "Ajuster" },
+                  ...(hasReserve && salonLocs.length > 0 ? [{ value: "transfer", label: "Transférer" }] : []),
+                  ...(mixed && salonLocs.length > 0 ? [{ value: "split", label: "Répartir" }] : []),
+                ];
+                return actions.length > 1 ? (
+                  <SegmentedToggle
+                    size="sm"
+                    className="mb-5"
+                    value={action}
+                    onChange={(v) => setAction(v as "adjust" | "transfer" | "split")}
+                    options={actions}
+                    aria-label="Type de mouvement"
+                  />
+                ) : null;
+              })()}
+              {action === "split" && mixed && salonLocs.length > 0 ? (
+                <SplitForm
+                  productId={productId}
+                  salonLocs={salonLocs}
+                  extraMovements={extraMovements}
+                  onAddMovements={onAddMovements}
                 />
-              )}
-              {action === "transfer" && hasReserve && salonLocs.length > 0 ? (
+              ) : action === "transfer" && hasReserve && salonLocs.length > 0 ? (
                 <TransferForm
                   productId={productId}
                   salonLocs={salonLocs}
                   reserveLevel={reserveLevel}
+                  uses={uses}
                   onAddMovements={onAddMovements}
                 />
               ) : (
                 <AdjustForm
                   productId={productId}
                   locations={locs}
+                  uses={uses}
                   extraMovements={extraMovements}
                   onAddMovements={onAddMovements}
                 />
@@ -400,12 +426,15 @@ export default function StockDetail({
                   {shownMovements.map((m) => {
                     const label = movementReasonLabel(m.reason);
                     const note = m.note && m.note !== label && !m.note.startsWith("Transfert") ? m.note : null;
-                    const detail =
+                    const place =
                       m.reason === "transfer"
                         ? m.qty < 0
                           ? `${locationName(m.location)} → ${m.note?.replace("Transfert vers ", "") ?? ""}`
-                          : `Réserve → ${locationName(m.location)}`
+                          : m.note?.startsWith("Transfert depuis la réserve")
+                            ? `Réserve → ${locationName(m.location)}`
+                            : locationName(m.location)
                         : locationName(m.location);
+                    const detail = mixed && m.location !== RESERVE ? `${place} · ${STOCK_USE_LABELS[m.use ?? (m.reason === "recipe" ? "prestations" : "vente")].toLowerCase()}` : place;
                     return (
                       <li key={m.id} className="flex items-center justify-between gap-3 py-2.5">
                         <div className="min-w-0">
@@ -584,15 +613,19 @@ function ThresholdInput({
 function AdjustForm({
   productId,
   locations,
+  uses,
   extraMovements,
   onAddMovements,
 }: {
   productId: string;
   locations: StockLocation[];
+  uses: StockUse[];
   extraMovements: StockMovement[];
   onAddMovements: (movements: StockMovement[]) => void;
 }) {
   const [location, setLocation] = useState<StockLocation>(locations[0] ?? RESERVE);
+  const [use, setUse] = useState<StockUse>(uses[0]);
+  const inSalon = location !== RESERVE;
   const [kind, setKind] = useState<(typeof ADJUST_KINDS)[number]["value"]>("inventory");
   const [qty, setQty] = useState("");
 
@@ -600,7 +633,10 @@ function AdjustForm({
   const parsed = parseInt(qty.replace(/[^\d]/g, ""), 10);
   const valid = Number.isFinite(parsed) && parsed >= 0;
 
-  const current = locationOnHand(productId, location, extraMovements);
+  // Dans un salon, on compte / reçoit / retire dans un des deux stocks.
+  const current = inSalon
+    ? poolOnHand(productId, location as SalonId, use, extraMovements)
+    : locationOnHand(productId, location, extraMovements);
 
   const submit = () => {
     if (!valid) return;
@@ -616,6 +652,7 @@ function AdjustForm({
         date: todayIso(),
         qty: delta,
         reason: kind,
+        ...(inSalon ? { use } : {}),
         note:
           kind === "inventory"
             ? `Inventaire compté : ${parsed}`
@@ -639,6 +676,14 @@ function AdjustForm({
             value={location}
             onChange={setLocation}
             options={locations.map((l) => ({ value: l, label: locationName(l) }))}
+          />
+        )}
+        {inSalon && uses.length > 1 && (
+          <SelectField
+            label="Stock"
+            value={use}
+            onChange={setUse}
+            options={uses.map((u) => ({ value: u, label: `Stock ${STOCK_USE_LABELS[u].toLowerCase()}` }))}
           />
         )}
         <SelectField
@@ -673,14 +718,17 @@ function TransferForm({
   productId,
   salonLocs,
   reserveLevel,
+  uses,
   onAddMovements,
 }: {
   productId: string;
   salonLocs: SalonId[];
   reserveLevel: number | null;
+  uses: StockUse[];
   onAddMovements: (movements: StockMovement[]) => void;
 }) {
   const [toSalon, setToSalon] = useState<SalonId>(salonLocs[0]);
+  const [toUse, setToUse] = useState<StockUse>(uses[0]);
   const [qty, setQty] = useState("");
 
   const parsed = parseInt(qty.replace(/[^\d]/g, ""), 10);
@@ -710,6 +758,7 @@ function TransferForm({
         date,
         qty: parsed,
         reason: "transfer",
+        use: toUse,
         note: "Transfert depuis la réserve",
       },
     ]);
@@ -728,6 +777,14 @@ function TransferForm({
           onChange={setToSalon}
           options={salonLocs.map((id) => ({ value: id, label: salonName(id) }))}
         />
+        {uses.length > 1 && (
+          <SelectField
+            label="Vers le stock"
+            value={toUse}
+            onChange={setToUse}
+            options={uses.map((u) => ({ value: u, label: `Stock ${STOCK_USE_LABELS[u].toLowerCase()}` }))}
+          />
+        )}
         <TextInput
           label="Quantité"
           value={qty}
@@ -746,6 +803,86 @@ function TransferForm({
       <div className="mt-5">
         <button type="button" className={cn(btnPrimary, "w-full")} disabled={!valid} onClick={submit}>
           Transférer
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Formulaire « Répartir » — d'un stock à l'autre dans un salon        */
+/* ------------------------------------------------------------------ */
+
+function SplitForm({
+  productId,
+  salonLocs,
+  extraMovements,
+  onAddMovements,
+}: {
+  productId: string;
+  salonLocs: SalonId[];
+  extraMovements: StockMovement[];
+  onAddMovements: (movements: StockMovement[]) => void;
+}) {
+  const [salon, setSalon] = useState<SalonId>(salonLocs[0]);
+  const [from, setFrom] = useState<StockUse>("vente");
+  const [qty, setQty] = useState("");
+  const to: StockUse = from === "vente" ? "prestations" : "vente";
+  const available = poolOnHand(productId, salon, from, extraMovements);
+
+  const parsed = parseInt(qty.replace(/[^\d]/g, ""), 10);
+  const valid = Number.isFinite(parsed) && parsed > 0 && available !== null && parsed <= available;
+
+  const submit = () => {
+    if (!valid) return;
+    const date = todayIso();
+    const note = `${STOCK_USE_LABELS[from]} → ${STOCK_USE_LABELS[to].toLowerCase()}`;
+    onAddMovements([
+      { id: newMovementId(), productId, location: salon, date, qty: -parsed, reason: "transfer", use: from, note },
+      { id: newMovementId(), productId, location: salon, date, qty: parsed, reason: "transfer", use: to, note },
+    ]);
+    setQty("");
+  };
+
+  return (
+    <div>
+      <p className="text-xs text-base-content/60">
+        Passe des unités du stock vente au stock prestations d&apos;un salon, ou l&apos;inverse.
+      </p>
+      <div className="mt-3 flex flex-col gap-4">
+        {salonLocs.length > 1 && (
+          <SelectField
+            label="Salon"
+            value={salon}
+            onChange={setSalon}
+            options={salonLocs.map((id) => ({ value: id, label: salonName(id) }))}
+          />
+        )}
+        <SelectField
+          label="Sens"
+          value={from}
+          onChange={setFrom}
+          options={[
+            { value: "vente", label: "Du stock vente vers les prestations" },
+            { value: "prestations", label: "Du stock prestations vers la vente" },
+          ]}
+        />
+        <TextInput
+          label="Quantité"
+          value={qty}
+          onChange={setQty}
+          inputMode="numeric"
+          placeholder="0"
+          hint={
+            available === null
+              ? "Stock jamais inventorié"
+              : `Stock ${STOCK_USE_LABELS[from].toLowerCase()} : ${groupThousands(available)} disponible${available > 1 ? "s" : ""}`
+          }
+        />
+      </div>
+      <div className="mt-5">
+        <button type="button" className={cn(btnPrimary, "w-full")} disabled={!valid} onClick={submit}>
+          Répartir
         </button>
       </div>
     </div>

@@ -97,6 +97,28 @@ export const MOVEMENT_REASON_LABELS: Record<MovementReason, string> = {
 
 export const movementReasonLabel = (r: MovementReason) => MOVEMENT_REASON_LABELS[r];
 
+// Deux stocks par salon (2026-09-28) : ce qui se vend au détail et ce qui sert
+// en cabine aux prestations (recettes). Un flacon « prestations » ne se vend
+// pas, et inversement. La réserve centrale, elle, n'est pas encore affectée :
+// on choisit le stock de destination au transfert vers un salon.
+export type StockUse = "vente" | "prestations";
+
+export const STOCK_USES: StockUse[] = ["vente", "prestations"];
+
+export const STOCK_USE_LABELS: Record<StockUse, string> = {
+  vente: "Vente",
+  prestations: "Prestations",
+};
+
+// Ce à quoi sert un produit : vendu seulement, utilisé en cabine seulement, ou les deux.
+export type ProductUsage = "vente" | "prestations" | "mixte";
+
+export const PRODUCT_USAGE_OPTIONS: { value: ProductUsage; label: string; hint: string }[] = [
+  { value: "vente", label: "Vente", hint: "Vendu au détail aux clientes" },
+  { value: "prestations", label: "Prestations", hint: "Utilisé en cabine, jamais vendu" },
+  { value: "mixte", label: "Les deux", hint: "Un stock pour la vente, un autre pour les prestations" },
+];
+
 export type StockMovement = {
   id: string;
   productId: string;
@@ -105,12 +127,16 @@ export type StockMovement = {
   qty: number; // > 0 entrée, < 0 sortie
   reason: MovementReason;
   note?: string;
+  // Stock touché dans un salon ; absent = déduit du motif (prestation → prestations, sinon vente).
+  use?: StockUse;
 };
 
 export type ProductStock = {
   productId: string;
   location: StockLocation;
   onHand: number | null; // null = jamais inventorié
+  // Part de `onHand` réservée aux prestations (salons ; 0 pour la réserve).
+  prestations: number;
   min: number; // seuil propre à l'emplacement (seuil salon ; 0 pour la réserve)
   leadDays: number; // délai de réappro fournisseur (pertinent surtout pour la réserve)
 };
@@ -783,11 +809,32 @@ const seedOf = (productId: string) => STOCK_SEEDS.find((s) => s.productId === pr
 /* Niveaux courants                                                    */
 /* ------------------------------------------------------------------ */
 
+// Usage réglé à la création d'un produit (session) ; sinon déduit des recettes :
+// un produit présent dans une recette sert aux deux, les autres se vendent.
+const usageOverrides = new Map<string, ProductUsage>();
+
+export const productUsage = (productId: string): ProductUsage =>
+  usageOverrides.get(productId) ??
+  (prestationSeeds.some((p) => p.recipe.some((r) => r.productId === productId)) ? "mixte" : "vente");
+
+export const usesOf = (productId: string): StockUse[] => {
+  const u = productUsage(productId);
+  return u === "mixte" ? ["vente", "prestations"] : [u];
+};
+
+// Répartition de départ d'un salon (seeds) : un tiers en cabine pour un produit mixte.
+const seedPrestationsShare = (productId: string, onHand: number | null) => {
+  if (onHand === null) return 0;
+  const u = productUsage(productId);
+  return u === "prestations" ? onHand : u === "mixte" ? Math.round(onHand * 0.35) : 0;
+};
+
 export const productStock: ProductStock[] = STOCK_SEEDS.flatMap((seed) =>
   STOCK_LOCATIONS.filter((loc) => seed.byLocation[loc]).map((loc) => ({
     productId: seed.productId,
     location: loc,
     onHand: seed.byLocation[loc]!.onHand,
+    prestations: isReserve(loc) ? 0 : seedPrestationsShare(seed.productId, seed.byLocation[loc]!.onHand),
     min: isReserve(loc) ? 0 : seed.min,
     leadDays: seed.leadDays,
   })),
@@ -916,6 +963,40 @@ export function locationOnHand(
   const base = stockOf(productId, location);
   if (!base || base.onHand === null) return null;
   return base.onHand + sessionEffect(productId, location, extra);
+}
+
+// Stock touché par un mouvement de salon.
+export const movementUse = (m: StockMovement): StockUse => m.use ?? (m.reason === "recipe" ? "prestations" : "vente");
+
+// Niveau d'un des deux stocks d'un salon. null = jamais inventorié.
+export function poolOnHand(
+  productId: string,
+  salon: SalonId,
+  use: StockUse,
+  extra: StockMovement[] = [],
+): number | null {
+  const base = stockOf(productId, salon);
+  if (!base || base.onHand === null) return null;
+  const start = use === "prestations" ? base.prestations : base.onHand - base.prestations;
+  return (
+    start +
+    extra
+      .filter((m) => m.productId === productId && m.location === salon && movementUse(m) === use)
+      .reduce((s, m) => s + m.qty, 0)
+  );
+}
+
+// Les deux stocks additionnés sur les salons du périmètre (hors réserve).
+export function scopePoolOnHand(
+  productId: string,
+  scope: SalonScope,
+  use: StockUse,
+  extra: StockMovement[] = [],
+): number | null {
+  const salonsIn = productLocations(productId).filter((l): l is SalonId => !isReserve(l) && (scope === "all" || l === scope));
+  const vals = salonsIn.map((l) => poolOnHand(productId, l, use, extra));
+  if (vals.length === 0 || vals.every((v) => v === null)) return null;
+  return vals.reduce((sum: number, v) => sum + (v ?? 0), 0);
 }
 
 export const reserveOnHand = (productId: string, extra: StockMovement[] = []) =>
@@ -1152,6 +1233,9 @@ export type StockRow = {
   spark: number[]; // 8 niveaux de fin de semaine, ancien → récent
   status: StockStatus;
   leadDays: number;
+  uses: StockUse[]; // stocks tenus pour ce produit (vente, prestations ou les deux)
+  // Les deux stocks, sur les salons du périmètre (réserve non comprise) ; null = non suivi.
+  pools: Record<StockUse, number | null>;
 };
 
 type StockRowsOpts = {
@@ -1200,6 +1284,11 @@ export function stockRows(scope: SalonScope, opts: StockRowsOpts = {}): StockRow
           spark,
           status: rowStatus(onHand, min, coverage),
           leadDays: leadDaysFor(product.id),
+          uses: usesOf(product.id),
+          pools: {
+            vente: scopePoolOnHand(product.id, "all", "vente", extra),
+            prestations: scopePoolOnHand(product.id, "all", "prestations", extra),
+          },
         };
       }
 
@@ -1220,6 +1309,11 @@ export function stockRows(scope: SalonScope, opts: StockRowsOpts = {}): StockRow
         spark,
         status: rowStatus(onHand, min, coverage),
         leadDays: cell.leadDays,
+        uses: usesOf(product.id),
+        pools: {
+          vente: poolOnHand(product.id, scope, "vente", extra),
+          prestations: poolOnHand(product.id, scope, "prestations", extra),
+        },
       };
     })
     .filter((r): r is StockRow => r !== null);
@@ -1371,3 +1465,60 @@ export const ADJUST_KINDS: {
     help: "Retire une quantité abîmée, périmée ou perdue.",
   },
 ];
+
+/* ------------------------------------------------------------------ */
+/* Nouveau produit (session)                                           */
+/* ------------------------------------------------------------------ */
+
+// Un produit créé depuis l'écran Stock rejoint le catalogue et le stock pour
+// la session (aucune persistance, comme le reste des fixtures) : il apparaît
+// dans la liste, les recettes de Services et les mouvements. Stock de départ
+// par emplacement ; un emplacement laissé vide n'est pas suivi.
+export type NewProductInput = {
+  product: Product;
+  usage: ProductUsage;
+  salonMin: number;
+  companyMin: number;
+  leadDays: number;
+  reserve: number | null;
+  salons: Partial<Record<SalonId, { vente: number; prestations: number }>>;
+};
+
+export function registerProduct(input: NewProductInput) {
+  const { product, usage } = input;
+  if (!products.some((p) => p.id === product.id)) products.push(product);
+  usageOverrides.set(product.id, usage);
+  const byLocation: StockSeed["byLocation"] = {};
+  if (input.reserve !== null) byLocation.reserve = { onHand: input.reserve, weekly: 0 };
+  for (const [salonId, q] of Object.entries(input.salons) as [SalonId, { vente: number; prestations: number }][]) {
+    byLocation[salonId] = { onHand: q.vente + q.prestations, weekly: 0 };
+    productStock.push({
+      productId: product.id,
+      location: salonId,
+      onHand: q.vente + q.prestations,
+      prestations: q.prestations,
+      min: input.salonMin,
+      leadDays: input.leadDays,
+    });
+  }
+  if (input.reserve !== null) {
+    productStock.push({ productId: product.id, location: RESERVE, onHand: input.reserve, prestations: 0, min: 0, leadDays: input.leadDays });
+  }
+  STOCK_SEEDS.push({
+    productId: product.id,
+    min: input.salonMin,
+    companyMin: input.companyMin,
+    leadDays: input.leadDays,
+    weeksHistory: 0,
+    seasonalPct: 100,
+    byLocation,
+  });
+}
+
+export const newProductId = (name: string) =>
+  `${name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")}-${Date.now().toString(36)}`;

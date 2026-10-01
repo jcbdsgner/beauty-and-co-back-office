@@ -3,14 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { CalendarRange, ChevronRight, ListChecks, Plus, UsersRound } from "lucide-react";
+import { CalendarRange, ChevronRight, ListChecks, Plus, Search, UsersRound } from "lucide-react";
 import PageHeader from "@/components/back-office/PageHeader";
 import SegmentedControl, {
   type SegmentedOption,
 } from "@/components/ui/segmented/SegmentedControl";
 import { Avatar } from "@/components/ui/atoms/avatar";
 import { Button } from "@/components/ui/atoms/button";
-import { SearchInput } from "@/components/ui/atoms/search-input";
 import { DatePicker } from "@/components/ui/molecules/date-picker";
 import { SegmentedToggle } from "@/components/ui/molecules/segmented-toggle";
 import { cn } from "@/lib/utils";
@@ -260,6 +259,35 @@ export default function RendezVous() {
     flash("Rendez-vous créé.");
   };
 
+  const toastEl = toast && (
+    <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-box bg-neutral px-5 py-3 text-[15px] font-medium text-neutral-content shadow-[0px_12px_32px_-8px_rgba(0,0,0,0.4)]">
+      {toast}
+    </div>
+  );
+
+  // La fiche d'un rendez-vous s'ouvre en page, à la place de la liste, branchée
+  // sur l'état de session ; « Retour » ramène la liste telle qu'on l'a laissée.
+  if (selected) {
+    return (
+      <>
+        <RendezVousDetail
+          key={selected.id}
+          detail={selected}
+          onClose={() => setSelectedId(null)}
+          onAssign={(pid, staff) => assign(selected.id, pid, staff)}
+          onStatusChange={(s) => setStatus(selected.id, s)}
+          rdvs={rdvs}
+          onUpdatePrestation={(pid, patchFields) => updatePrestation(selected.id, pid, patchFields)}
+          onAddPrestation={(line) => addPrestation(selected.id, line)}
+          onRemovePrestation={(pid) => removePrestation(selected.id, pid)}
+          onCancelWithReason={(reason) => cancelWithReason(selected.id, reason)}
+          planningData={planningData}
+        />
+        {toastEl}
+      </>
+    );
+  }
+
   const viewOptions = [
     { value: "liste", label: "Liste", icon: <ListChecks className="size-4" /> },
     ...(singleDay ? [{ value: "calendrier", label: "Calendrier", icon: <CalendarRange className="size-4" /> }] : []),
@@ -305,20 +333,25 @@ export default function RendezVous() {
         />
       ) : (
         <section>
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-3 pl-1">
-            <span />
+          {/* Recherche en tête, bascule de vue à droite ; dates Du/Au dessous. La
+              recherche est la porte d'entrée de l'écran : plus haute et plus
+              contrastée que le `SearchInput` partagé, sans couleur de marque. */}
+          <div className="mb-3 flex items-center justify-between gap-4">
+            <label className="flex h-14 w-full max-w-[580px] items-center gap-3 rounded-field border border-base-content/20 bg-base-100 px-4 shadow-[0_1px_2px_rgba(0,0,0,0.06)] transition focus-within:border-primary focus-within:ring-4 focus-within:ring-[#fdcfca]/60">
+              <Search aria-hidden className="size-5 shrink-0 text-base-content/60" />
+              <input
+                type="search"
+                placeholder="Cliente ou n° de rendez-vous"
+                aria-label="Chercher une cliente ou un n° de rendez-vous"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="h-full grow bg-transparent text-[17px] text-base-content placeholder:text-base-content/55 focus:outline-none"
+              />
+            </label>
             <SegmentedToggle value={effectiveView} onChange={(v) => setView(v as RdvView)} options={viewOptions} aria-label="Vue" />
           </div>
 
-          {/* Recherche à gauche, dates Du/Au calées à droite (Figma 362:470 de point-de-vente). */}
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-2.5">
-            <SearchInput
-              placeholder="Cliente ou n° de rendez-vous"
-              aria-label="Chercher une cliente ou un n° de rendez-vous"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              className="max-w-sm flex-1"
-            />
+          <div className="mb-4 flex flex-wrap items-center gap-2.5">
             <div className="flex items-center gap-2">
               <DatePicker value={isoToDate(fromIso)} onChange={(d) => setFromIso(dateToIso(d))} placeholder="Du" className="w-44" />
               <span className="text-sm text-base-content/45">au</span>
@@ -408,22 +441,6 @@ export default function RendezVous() {
         </section>
       )}
 
-      {selected && (
-        <RendezVousDetail
-          detail={selected}
-          closeMode="list"
-          onClose={() => setSelectedId(null)}
-          onAssign={(pid, staff) => assign(selected.id, pid, staff)}
-          onStatusChange={(s) => setStatus(selected.id, s)}
-          rdvs={rdvs}
-          onUpdatePrestation={(pid, patchFields) => updatePrestation(selected.id, pid, patchFields)}
-          onAddPrestation={(line) => addPrestation(selected.id, line)}
-          onRemovePrestation={(pid) => removePrestation(selected.id, pid)}
-          onCancelWithReason={(reason) => cancelWithReason(selected.id, reason)}
-          planningData={planningData}
-        />
-      )}
-
       {newOpen && (
         <PriseRdvModal
           open
@@ -436,11 +453,7 @@ export default function RendezVous() {
         />
       )}
 
-      {toast && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-box bg-neutral px-5 py-3 text-[15px] font-medium text-neutral-content shadow-[0px_12px_32px_-8px_rgba(0,0,0,0.4)]">
-          {toast}
-        </div>
-      )}
+      {toastEl}
     </div>
   );
 }

@@ -38,6 +38,7 @@ function nextSuggestions(
   previous: Suggestion[],
   people: PersonTab[],
   selections: Selections,
+  conflictFor?: (personId: string, subServiceId: string) => string | null,
   max = 2,
 ): Suggestion[] {
   const kept = previous.filter((suggestion) =>
@@ -59,7 +60,10 @@ function nextSuggestions(
     );
     if (!hasGap) continue;
 
-    const sub = category.subServices[0];
+    // Back-office : jamais une suggestion incompatible avec ce qu'une des personnes a déjà choisi.
+    const sub = category.subServices.find(
+      (candidate) => !eligiblePeople.some((person) => conflictFor?.(person.id, candidate.id)),
+    );
     if (!sub) continue;
 
     next.push({ category, sub, targetPeople: eligiblePeople });
@@ -72,6 +76,8 @@ type ServicesStepProps = {
   people: PersonTab[];
   selections: Selections;
   onToggleSubService: (personId: string, subServiceId: string) => void;
+  /** Back-office : prestation déjà choisie par cette personne qui empêche d'ajouter `subServiceId` (incompatibilité « même visite »), sinon null. */
+  conflictFor?: (personId: string, subServiceId: string) => string | null;
   questionAnswers: QuestionAnswers;
   onAnswerQuestion: (personId: string, categoryId: string, questionId: string, value: string) => void;
   onContinue: () => void;
@@ -84,6 +90,7 @@ export function ServicesStep({
   people,
   selections,
   onToggleSubService,
+  conflictFor,
   questionAnswers,
   onAnswerQuestion,
   onContinue,
@@ -157,7 +164,7 @@ export function ServicesStep({
       // Nothing to suggest against until someone has committed to at least one prestation.
       const hasAnySelection = Object.values(selections).some((set) => set.size > 0);
       if (hasAnySelection) {
-        setSuggestions(nextSuggestions(suggestions, people, selections));
+        setSuggestions(nextSuggestions(suggestions, people, selections, conflictFor));
       }
     }
   }
@@ -277,6 +284,12 @@ export function ServicesStep({
           category={activeCategory}
           selectedSubServiceIds={activeSelection}
           onToggleSubService={(subServiceId) => onToggleSubService(activePersonId, subServiceId)}
+          blockedBy={(subServiceId) => {
+            const otherId = conflictFor?.(activePersonId, subServiceId);
+            if (!otherId) return null;
+            const other = bookingServices.flatMap((service) => service.subServices).find((sub) => sub.id === otherId);
+            return other ? toSentenceCase(other.label) : "une autre prestation choisie";
+          }}
           questionAnswers={questionAnswers[answerKey(activePersonId, activeCategoryId)] ?? {}}
           onAnswerQuestion={(questionId, value) =>
             onAnswerQuestion(activePersonId, activeCategoryId, questionId, value)

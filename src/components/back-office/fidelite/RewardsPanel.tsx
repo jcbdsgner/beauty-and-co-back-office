@@ -10,6 +10,7 @@ import {
   type RewardType,
 } from "@/lib/mock/fidelite";
 import { SelectField, TextInput } from "./ui";
+import RewardItemPicker from "./RewardItemPicker";
 import {
   EditorPanel,
   EmptyRow,
@@ -30,10 +31,15 @@ type FormState = {
   costPoints: string;
   type: RewardType;
   value: string;
+  itemId: string | null;
+  // Dernier nom proposé d'office : tant que « Nom » vaut encore ça, il suit le choix.
+  autoName: string;
   description: string;
 };
 
-const EMPTY: FormState = { name: "", costPoints: "", type: "fixed", value: "", description: "" };
+const EMPTY: FormState = { name: "", costPoints: "", type: "fixed", value: "", itemId: null, autoName: "", description: "" };
+
+const isGift = (t: RewardType): t is "service" | "product" => t === "service" || t === "product";
 
 const isInt = (raw: string) => raw.trim() !== "" && Number.isInteger(Number(raw)) && Number(raw) >= 0;
 
@@ -47,7 +53,11 @@ export default function RewardsPanel({
   const [editing, setEditing] = useState<string | null | undefined>(undefined);
   const [form, setForm] = useState<FormState>(EMPTY);
 
-  const valid = form.name.trim().length > 0 && isInt(form.costPoints) && isInt(form.value);
+  // Une prestation / un produit offert se choisit dans le catalogue, sans valeur à saisir.
+  const valid =
+    form.name.trim().length > 0 &&
+    isInt(form.costPoints) &&
+    (isGift(form.type) ? form.itemId !== null : isInt(form.value));
   const sorted = [...rewards].sort((a, b) => a.costPoints - b.costPoints);
 
   const open = (r?: LoyaltyReward) => {
@@ -58,7 +68,9 @@ export default function RewardsPanel({
             name: r.name,
             costPoints: String(r.costPoints),
             type: r.type,
-            value: String(r.value),
+            value: isGift(r.type) ? "" : String(r.value),
+            itemId: r.itemId ?? null,
+            autoName: "",
             description: r.description ?? "",
           }
         : EMPTY,
@@ -72,15 +84,15 @@ export default function RewardsPanel({
       name: form.name.trim(),
       costPoints: Number(form.costPoints),
       type: form.type,
-      value: Number(form.value),
+      value: isGift(form.type) ? 0 : Number(form.value),
+      itemId: isGift(form.type) ? (form.itemId ?? undefined) : undefined,
       description: form.description.trim() || undefined,
     };
     onChange(editing ? rewards.map((r) => (r.id === editing ? next : r)) : [...rewards, next]);
     setEditing(undefined);
   };
 
-  const valueLabel =
-    form.type === "percent" ? "Remise (%)" : form.type === "fixed" ? "Remise (FCFA)" : "Valeur (FCFA)";
+  const valueLabel = form.type === "percent" ? "Remise (%)" : "Remise (FCFA)";
 
   return (
     <SettingsGroup
@@ -136,16 +148,39 @@ export default function RewardsPanel({
         <SelectField
           label="Type"
           value={form.type}
-          onChange={(v) => setForm((f) => ({ ...f, type: v }))}
+          onChange={(v) =>
+            // Changer entre prestation et produit vide le choix : les catalogues diffèrent.
+            setForm((f) =>
+              v === f.type
+                ? f
+                : { ...f, type: v, itemId: null, name: f.name === f.autoName ? "" : f.name, autoName: "" },
+            )
+          }
           options={REWARD_TYPE_OPTIONS}
         />
-        <TextInput
-          label={valueLabel}
-          inputMode="numeric"
-          placeholder="0"
-          value={form.value}
-          onChange={(v) => setForm((f) => ({ ...f, value: v }))}
-        />
+        {isGift(form.type) ? (
+          <RewardItemPicker
+            key={form.type}
+            kind={form.type}
+            value={form.itemId}
+            // Nom proposé d'office tant qu'il n'a pas été saisi.
+            onChange={(id, name) =>
+              setForm((f) => {
+                const auto = `${name} offert${f.type === "service" ? "e" : ""}`;
+                const keep = f.name.trim() !== "" && f.name !== f.autoName;
+                return { ...f, itemId: id, name: keep ? f.name : auto, autoName: auto };
+              })
+            }
+          />
+        ) : (
+          <TextInput
+            label={valueLabel}
+            inputMode="numeric"
+            placeholder="0"
+            value={form.value}
+            onChange={(v) => setForm((f) => ({ ...f, value: v }))}
+          />
+        )}
         <TextInput
           label="Description (facultatif)"
           placeholder="Ce que la cliente reçoit, en une phrase"

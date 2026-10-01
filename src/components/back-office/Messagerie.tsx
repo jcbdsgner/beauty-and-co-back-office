@@ -16,6 +16,8 @@ import {
 import ConversationList from "./messagerie/ConversationList";
 import ConversationThread from "./messagerie/ConversationThread";
 import PageHeader from "./PageHeader";
+import { Button } from "@/components/ui/atoms/button";
+import { Mail } from "lucide-react";
 
 const digits = (s: string) => s.replace(/\D/g, "");
 
@@ -94,7 +96,14 @@ export default function Messagerie() {
 
   return (
     <div className="flex h-[calc(100vh-7.5rem)] min-h-[540px] flex-col">
-      <PageHeader title="Messagerie" />
+      <PageHeader
+        title="Messagerie"
+        actions={
+          <Button variant="brand" size="sm" href="/messagerie/envoyer" icon={<Mail className="size-4" />}>
+            Envoyer un message
+          </Button>
+        }
+      />
       <div className="flex min-h-0 flex-1 gap-6">
         <ConversationList
           items={filtered}
