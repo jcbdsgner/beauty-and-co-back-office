@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Award, CreditCard, Mail, Package, ShieldCheck, SlidersHorizontal, type LucideIcon } from "lucide-react";
+import { Award, CreditCard, Truck, Mail, Package, ShieldCheck, SlidersHorizontal, type LucideIcon } from "lucide-react";
 import PageHeader from "@/components/back-office/PageHeader";
 import { useAutorisations } from "@/context/AutorisationsContext";
 import { useFideliteConfig } from "@/context/FideliteContext";
@@ -10,6 +11,8 @@ import { cn } from "@/lib/utils";
 import PaiementPanel from "./reglages/PaiementPanel";
 import EmailsPanel from "./reglages/EmailsPanel";
 import PreferencesConfigPanel from "./reglages/PreferencesConfigPanel";
+import LivraisonPanel from "./reglages/LivraisonPanel";
+import { deliveryZoneSeeds } from "@/lib/mock/livraison";
 import AccrualSettings from "./fidelite/AccrualSettings";
 import TiersPanel from "./fidelite/TiersPanel";
 import RewardsPanel from "./fidelite/RewardsPanel";
@@ -44,7 +47,7 @@ import RolePermissions from "./equipe/RolePermissions";
 // entrée de la colonne est un lien, le bouton retour et les liens directs
 // (Journal, fiche membre, Fidélité) marchent.
 
-type Section = "paiement" | "emails" | "preferences" | "fidelite" | "offres" | "autorisations";
+type Section = "paiement" | "emails" | "preferences" | "fidelite" | "offres" | "livraison" | "autorisations";
 
 type Item = { id: Section; label: string; icon: LucideIcon; wide?: boolean };
 
@@ -59,6 +62,7 @@ const GROUPS: { label: string; items: Item[] }[] = [
       { id: "offres", label: "Forfaits & packs", icon: Package },
     ],
   },
+  { label: "Cartes cadeaux", items: [{ id: "livraison", label: "Livraison", icon: Truck }] },
   { label: "Équipe", items: [{ id: "autorisations", label: "Autorisations", icon: ShieldCheck, wide: true }] },
 ];
 
@@ -69,6 +73,9 @@ export default function Reglages() {
   const param = useSearchParams().get("section");
   const section: Section = isSection(param) ? param : "paiement";
   const current = ALL.find((i) => i.id === section)!;
+  // Gardé ici (et pas dans le panneau, remonté à chaque section) : les
+  // quartiers ajoutés survivent au passage d'une section à l'autre.
+  const [zones, setZones] = useState(deliveryZoneSeeds);
 
   return (
     <div>
@@ -123,6 +130,7 @@ export default function Reglages() {
             {section === "preferences" && <PreferencesConfigPanel />}
             {section === "fidelite" && <FideliteSection />}
             {section === "offres" && <OffresSection />}
+            {section === "livraison" && <LivraisonPanel zones={zones} onChange={setZones} />}
             {section === "autorisations" && <AutorisationsSection />}
           </div>
         </section>
