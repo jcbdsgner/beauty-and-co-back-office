@@ -179,7 +179,7 @@ export const journalEntries: JournalEntry[] = [
     action: "a programmé une fermeture exceptionnelle",
     detail: "Almadies — 6 octobre, jour férié",
     tone: "info",
-    href: "/salons",
+    href: "/reglages?section=salons",
   },
   {
     id: "jn-0261",

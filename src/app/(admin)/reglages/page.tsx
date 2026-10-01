@@ -5,12 +5,12 @@ import Reglages from "@/components/back-office/Reglages";
 export const metadata: Metadata = {
   title: "Réglages",
   description:
-    "Réglages Beauty & Co — paiement, emails, préférences clientes, programme de fidélité, forfaits & packs et autorisations par rôle. Démo front-end, données fictives.",
+    "Réglages Beauty & Co — salons, paiement, livraison des cartes cadeaux, emails, préférences clientes, programme de fidélité, forfaits & packs et autorisations par rôle. Démo front-end, données fictives.",
 };
 
 export default function ReglagesPage() {
   // <Suspense> : requis par Next pour `useSearchParams()` (lecture de
-  // ?section=<paiement|emails|preferences|fidelite|offres|autorisations> à l'arrivée depuis un lien externe).
+  // ?section=<salons|livraison|paiement|emails|preferences|fidelite|offres|autorisations> à l'arrivée depuis un lien externe).
   return (
     <Suspense fallback={null}>
       <Reglages />

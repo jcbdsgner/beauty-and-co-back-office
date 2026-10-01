@@ -1,12 +1,7 @@
-import type { Metadata } from "next";
-import Salons from "@/components/back-office/Salons";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Salons",
-  description:
-    "Configuration des salons Beauty & Co — coordonnées, postes de travail, heures d'ouverture et fermetures exceptionnelles. Démo front-end, données fictives.",
-};
-
+// Les salons se règlent dans Réglages depuis le 2026-10-01 : l'ancienne
+// adresse redirige (liens externes, journal, favoris).
 export default function SalonsPage() {
-  return <Salons />;
+  redirect("/reglages?section=salons");
 }

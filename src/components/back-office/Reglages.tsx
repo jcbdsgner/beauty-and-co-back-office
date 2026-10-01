@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Award, CreditCard, Truck, Mail, Package, ShieldCheck, SlidersHorizontal, type LucideIcon } from "lucide-react";
+import { Award, CreditCard, Store, Truck, Mail, Package, ShieldCheck, SlidersHorizontal, type LucideIcon } from "lucide-react";
 import PageHeader from "@/components/back-office/PageHeader";
 import { useAutorisations } from "@/context/AutorisationsContext";
 import { useFideliteConfig } from "@/context/FideliteContext";
@@ -12,6 +12,7 @@ import PaiementPanel from "./reglages/PaiementPanel";
 import EmailsPanel from "./reglages/EmailsPanel";
 import PreferencesConfigPanel from "./reglages/PreferencesConfigPanel";
 import LivraisonPanel from "./reglages/LivraisonPanel";
+import Salons, { useSalonsState } from "./Salons";
 import { deliveryZoneSeeds } from "@/lib/mock/livraison";
 import AccrualSettings from "./fidelite/AccrualSettings";
 import TiersPanel from "./fidelite/TiersPanel";
@@ -34,7 +35,7 @@ import RolePermissions from "./equipe/RolePermissions";
 // 2. Ce qui doit sauter aux yeux : la section demandée (colonne de gauche ou
 //    lien direct `?section=`), et la liste de toutes les autres pour s'y
 //    retrouver.
-// 3. Cas dégradés : `?section=` inconnu → Paiement. Pour le reste, ce sont des
+// 3. Cas dégradés : `?section=` inconnu → Salons. Pour le reste, ce sont des
 //    formulaires avec leurs propres états (brouillon + dirty) gérés par chaque
 //    panneau.
 //
@@ -47,11 +48,12 @@ import RolePermissions from "./equipe/RolePermissions";
 // entrée de la colonne est un lien, le bouton retour et les liens directs
 // (Journal, fiche membre, Fidélité) marchent.
 
-type Section = "paiement" | "emails" | "preferences" | "fidelite" | "offres" | "livraison" | "autorisations";
+type Section = "salons" | "paiement" | "emails" | "preferences" | "fidelite" | "offres" | "livraison" | "autorisations";
 
 type Item = { id: Section; label: string; icon: LucideIcon; wide?: boolean };
 
 const GROUPS: { label: string; items: Item[] }[] = [
+  { label: "Établissement", items: [{ id: "salons", label: "Salons", icon: Store }] },
   { label: "Encaissement", items: [{ id: "paiement", label: "Paiement", icon: CreditCard }] },
   {
     label: "Clientèle",
@@ -71,11 +73,12 @@ const isSection = (v: string | null): v is Section => ALL.some((i) => i.id === v
 
 export default function Reglages() {
   const param = useSearchParams().get("section");
-  const section: Section = isSection(param) ? param : "paiement";
+  const section: Section = isSection(param) ? param : "salons";
   const current = ALL.find((i) => i.id === section)!;
   // Gardé ici (et pas dans le panneau, remonté à chaque section) : les
   // quartiers ajoutés survivent au passage d'une section à l'autre.
   const [zones, setZones] = useState(deliveryZoneSeeds);
+  const salons = useSalonsState();
 
   return (
     <div>
@@ -125,6 +128,7 @@ export default function Reglages() {
           </h2>
           {/* `key` : changer de section repart d'un brouillon propre. */}
           <div key={section}>
+            {section === "salons" && <Salons state={salons} />}
             {section === "paiement" && <PaiementPanel />}
             {section === "emails" && <EmailsPanel />}
             {section === "preferences" && <PreferencesConfigPanel />}

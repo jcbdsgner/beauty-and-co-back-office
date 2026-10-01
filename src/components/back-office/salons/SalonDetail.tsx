@@ -74,7 +74,7 @@ export default function SalonDetail({
     <div className="space-y-6">
       <div>
         <BackButton onClick={onBack} />
-        <h1 className="text-2xl font-semibold text-base-content">{config.name || "Salon"}</h1>
+        <h3 className="text-xl font-semibold text-base-content">{config.name || "Salon"}</h3>
         <p className="mt-1 text-sm text-base-content/60">{config.address}</p>
       </div>
 

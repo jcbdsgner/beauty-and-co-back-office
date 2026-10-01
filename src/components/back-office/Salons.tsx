@@ -1,13 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import PageHeader from "@/components/back-office/PageHeader";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Plus } from "lucide-react";
 import {
   salonClosures,
   salonConfigs,
   type SalonClosure,
   type SalonConfig,
 } from "@/lib/mock/beautyandco";
+import { btnOutline } from "./reglages/kit";
 import SalonsList from "./salons/SalonsList";
 import SalonDetail from "./salons/SalonDetail";
 import SalonForm from "./salons/SalonForm";
@@ -27,13 +29,34 @@ import SalonForm from "./salons/SalonForm";
 //
 // Cet écran n'est PAS filtré par le sélecteur de salon global : on voit toujours
 // tous les salons.
+//
+// 2026-10-01 : n'est plus une page à part — section « Salons » de Réglages
+// (`/reglages?section=salons`, `/salons` y redirige). La vue vit dans l'URL
+// (`&salon=<id>` ou `&salon=nouveau`) pour que le retour navigateur marche ;
+// l'état est tenu par `Reglages` via `useSalonsState` pour survivre au
+// changement de section.
 
 type View = { kind: "list" } | { kind: "detail"; id: string } | { kind: "new" };
 
-export default function Salons() {
+export type SalonsState = ReturnType<typeof useSalonsState>;
+
+export function useSalonsState() {
   const [configs, setConfigs] = useState<SalonConfig[]>(salonConfigs);
   const [closures, setClosures] = useState<SalonClosure[]>(salonClosures);
-  const [view, setView] = useState<View>({ kind: "list" });
+  return { configs, setConfigs, closures, setClosures };
+}
+
+export default function Salons({ state }: { state: SalonsState }) {
+  const { configs, setConfigs, closures, setClosures } = state;
+  const router = useRouter();
+  const param = useSearchParams().get("salon");
+  const view: View = !param ? { kind: "list" } : param === "nouveau" ? { kind: "new" } : { kind: "detail", id: param };
+  const setView = (v: View) =>
+    router.push(
+      v.kind === "list"
+        ? "/reglages?section=salons"
+        : `/reglages?section=salons&salon=${v.kind === "new" ? "nouveau" : encodeURIComponent(v.id)}`,
+    );
 
   const activeCount = configs.filter((c) => c.active).length;
 
@@ -71,22 +94,13 @@ export default function Salons() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Salons"
-        actions={
-          <button
-            type="button"
-            onClick={() => setView({ kind: "new" })}
-            className="btn btn-primary btn-sm normal-case text-[15px] font-semibold active:scale-[0.97] disabled:!bg-base-200 disabled:!text-base-content/40 gap-2"
-          >
-            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-              <path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-            Ajouter un salon
-          </button>
-        }
-      />
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <button type="button" onClick={() => setView({ kind: "new" })} className={`${btnOutline} gap-1.5`}>
+          <Plus className="size-4" aria-hidden />
+          Ajouter un salon
+        </button>
+      </div>
       <SalonsList
         configs={configs}
         closures={closures}

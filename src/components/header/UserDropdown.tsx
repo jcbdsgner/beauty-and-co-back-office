@@ -52,7 +52,7 @@ export default function UserDropdown() {
         { type: "header", label: account.name, sublabel: account.role },
         { type: "separator" },
         { label: "Mon compte", icon: <Settings className="size-4" />, onSelect: () => router.push("/compte") },
-        { label: "Paramètres des salons", icon: <Store className="size-4" />, onSelect: () => router.push("/salons") },
+        { label: "Paramètres des salons", icon: <Store className="size-4" />, onSelect: () => router.push("/reglages?section=salons") },
         { type: "separator" },
         { label: "Se déconnecter", icon: <LogOut className="size-4" />, onSelect: () => router.push("/signin") },
       ]}

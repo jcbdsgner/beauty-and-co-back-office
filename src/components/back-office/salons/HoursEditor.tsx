@@ -30,9 +30,14 @@ export const hoursHaveError = (hours: Hours) =>
 export default function HoursEditor({
   hours,
   onChange,
+  closedLabel = "Fermé",
+  openLabel = "ouvert",
 }: {
   hours: Hours;
   onChange: (next: Hours) => void;
+  /** Libellé d'un jour coupé — « Fermé » pour un salon, « Indisponible » pour une prestation. */
+  closedLabel?: string;
+  openLabel?: string;
 }) {
   const setDay = (w: Weekday, next: DayOpening) => onChange({ ...hours, [w]: next });
 
@@ -50,10 +55,10 @@ export default function HoursEditor({
               <Toggle
                 checked={!d.closed}
                 onChange={(open) => setDay(w, open ? { ...DEFAULT_OPEN } : { closed: true })}
-                aria-label={`${WEEKDAY_LABELS[w]} — ${d.closed ? "fermé" : "ouvert"}`}
+                aria-label={`${WEEKDAY_LABELS[w]} — ${d.closed ? closedLabel.toLowerCase() : openLabel}`}
               />
               {d.closed ? (
-                <span className="text-sm text-base-content/45">Fermé</span>
+                <span className="text-sm text-base-content/45">{closedLabel}</span>
               ) : (
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-base-content/70">
                   <input
@@ -76,7 +81,7 @@ export default function HoursEditor({
             </div>
             {err && (
               <p className="mt-2 pl-28 text-xs text-error-600">
-                L&apos;heure de fermeture doit suivre l&apos;heure d&apos;ouverture.
+                L&apos;heure de fin doit suivre l&apos;heure de début.
               </p>
             )}
           </li>
