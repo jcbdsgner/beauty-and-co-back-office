@@ -39,11 +39,11 @@ type DecisionKind = "remise" | "stock" | "rendez-vous" | "equipe" | "autre";
 type FilterKind = Exclude<DecisionKind, "autre">;
 
 const GROUPS: { kind: DecisionKind; label: string }[] = [
-  { kind: "rendez-vous", label: "Rendez-vous" },
   { kind: "equipe", label: "Équipe" },
   { kind: "stock", label: "Stock" },
   { kind: "remise", label: "Remises accordées" },
   { kind: "autre", label: "Autres alertes" },
+  { kind: "rendez-vous", label: "Rendez-vous" },
 ];
 
 const FILTERS = GROUPS.filter((g): g is { kind: FilterKind; label: string } => g.kind !== "autre");
