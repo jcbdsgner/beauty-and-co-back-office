@@ -23,7 +23,11 @@ import {
 } from "@/lib/mock/journal";
 import { Select } from "@/components/ui/atoms/select";
 import { members } from "@/lib/mock/staff";
-import PointageLog, { pointageCount } from "./journal/PointageLog";
+import PointageLog, {
+  anomalyParts,
+  pointageRows,
+  tallyPointages,
+} from "./journal/PointageLog";
 import JournalPeriodPicker, {
   DEFAULT_JOURNAL_PERIOD,
   presetRange,
@@ -251,16 +255,20 @@ export default function Journal() {
 
   const groups = useMemo(() => groupJournalByDay(visible), [visible]);
 
-  const pointageTotal = useMemo(
+  const pointageTally = useMemo(
     () =>
-      pointageCount(
-        { from: period.from, to: period.to },
-        scope,
-        person === "all" ? null : person,
-        onlyAnomalies,
+      tallyPointages(
+        pointageRows(
+          { from: period.from, to: period.to },
+          scope,
+          person === "all" ? null : person,
+          onlyAnomalies,
+        ),
       ),
     [period, scope, person, onlyAnomalies],
   );
+  // Une absence est prévue, pas un écart : elle reste en ton neutre.
+  const pointageAnomalies = anomalyParts({ ...pointageTally, absent: 0 });
 
   return (
     <div>
@@ -342,9 +350,34 @@ export default function Journal() {
         {view === "pointage" ? (
           <>
             <div className="mb-6 flex items-center justify-between gap-6">
-              <JournalPeriodPicker value={period} onChange={setPeriod} />
-              <p className="shrink-0 text-sm text-base-content/60">
-                {pointageTotal} journée{pointageTotal > 1 ? "s" : ""}
+              <div className="shrink-0">
+                <JournalPeriodPicker value={period} onChange={setPeriod} />
+              </div>
+              {/* Bilan de la période : la vue d'une personne a le sien sous
+                  forme de chiffres (PointageSummaryBar) ; ici, une ligne. */}
+              <p className="min-w-0 text-right text-sm text-base-content/60">
+                <span className="whitespace-nowrap">
+                  {pointageTally.rows} journée{pointageTally.rows > 1 ? "s" : ""}
+                  {onlyAnomalies && pointageTally.rows > 0 && " avec un écart"}
+                </span>
+                {!onlyAnomalies && person === "all" && pointageTally.rows > 0 && (
+                  <>
+                    {pointageTally.absent > 0 && " "}
+                    {pointageTally.absent > 0 && (
+                      <span className="whitespace-nowrap">
+                        · {pointageTally.absent} absence{pointageTally.absent > 1 ? "s" : ""}
+                      </span>
+                    )}
+                    {pointageAnomalies.length > 0
+                      ? pointageAnomalies.map((part) => (
+                          <React.Fragment key={part}>
+                            {" "}
+                            <span className="whitespace-nowrap text-warning-700">· {part}</span>
+                          </React.Fragment>
+                        ))
+                      : " · aucun écart"}
+                  </>
+                )}
               </p>
             </div>
             <PointageLog

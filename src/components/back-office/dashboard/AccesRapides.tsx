@@ -1,17 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, FileBarChart2, History, Star } from "lucide-react";
+import { ChevronRight, FileBarChart2, Star } from "lucide-react";
 
 // « Autres écrans » : les écrans de consultation occasionnelle retirés de la
-// sidebar (Rapports, Avis clients, Journal). Stock est revenu dans la sidebar
-// (2026-09-28). Liste de liens sobre en
+// sidebar (Rapports, Avis clients). Stock (2026-09-28) et Journal (2026-10-02)
+// sont revenus dans la sidebar. Liste de liens sobre en
 // bas de page plutôt que de grandes tuiles au même poids que les décisions :
 // c'est de la navigation, pas du contenu du jour.
 const SHORTCUTS = [
   { href: "/rapports", icon: FileBarChart2, label: "Rapports d'activité", hint: "Composer un rapport par salon, praticienne ou période" },
   { href: "/satisfaction", icon: Star, label: "Avis clients", hint: "Note moyenne et derniers commentaires" },
-  { href: "/journal", icon: History, label: "Journal d'équipe", hint: "Qui a fait quoi, et quand" },
 ];
 
 export default function AccesRapides() {

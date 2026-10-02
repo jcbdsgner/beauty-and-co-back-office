@@ -5,9 +5,11 @@ import { salonName, type SalonScope } from "@/lib/mock/beautyandco";
 import { journalDayLabel } from "@/lib/mock/journal";
 import { ABSENCE_LABELS, TODAY_ISO } from "@/lib/mock/planning";
 import {
+  earlyLeaveMinutes,
   hasAnomaly,
   hoursLabel,
   lateMinutes,
+  missingPunch,
   presenceMinutes,
   summarize,
   teamPointagesByDay,
@@ -39,7 +41,46 @@ import {
 // 3. Cas dégradés : journée en cours (« En poste »), arrivée ou départ non
 //    badgé (signalé, jamais inventé), absence, rien sur la période, aucun écart.
 
-export function pointageCount(
+// Décompte d'une liste de journées : qui a travaillé, et chaque type d'écart.
+// Sert à l'en-tête de chaque jour et au bilan de la période (vue équipe).
+export type PointageTally = {
+  rows: number;
+  worked: number;
+  late: number;
+  early: number;
+  missing: number;
+  absent: number;
+};
+
+export function tallyPointages(rows: TeamPointage[]): PointageTally {
+  const t: PointageTally = { rows: rows.length, worked: 0, late: 0, early: 0, missing: 0, absent: 0 };
+  for (const { day } of rows) {
+    if (day.kind === "absent") {
+      t.absent++;
+      continue;
+    }
+    t.worked++;
+    if (lateMinutes(day) > 0) t.late++;
+    if (earlyLeaveMinutes(day) > 0) t.early++;
+    if (missingPunch(day)) t.missing++;
+  }
+  return t;
+}
+
+const plural = (n: number, one: string, many: string) => `${n} ${n > 1 ? many : one}`;
+
+// Les écarts d'un décompte, en morceaux de phrase (« 1 retard », « 6 départs
+// anticipés »…) ; vide si tout est à l'heure.
+export function anomalyParts(t: PointageTally): string[] {
+  return [
+    t.late > 0 && plural(t.late, "retard", "retards"),
+    t.early > 0 && plural(t.early, "départ anticipé", "départs anticipés"),
+    t.missing > 0 && plural(t.missing, "badge oublié", "badges oubliés"),
+    t.absent > 0 && plural(t.absent, "absence", "absences"),
+  ].filter((p): p is string => Boolean(p));
+}
+
+export function pointageRows(
   range: { from: string; to: string },
   scope: SalonScope,
   memberId: string | null,
@@ -47,7 +88,7 @@ export function pointageCount(
 ) {
   return teamPointagesByDay(range, scope, memberId)
     .flatMap((g) => g.rows)
-    .filter((r) => !onlyAnomalies || hasAnomaly(r.day)).length;
+    .filter((r) => !onlyAnomalies || hasAnomaly(r.day));
 }
 
 export default function PointageLog({
@@ -116,6 +157,14 @@ export default function PointageLog({
   );
 }
 
+// Le motif sans redire le type (« Formation pose gel » sous « Formation »
+// reste lisible ; seule une répétition mot pour mot du type est retirée).
+const absenceDetail = (type: keyof typeof ABSENCE_LABELS, reason?: string) => {
+  const r = reason?.trim();
+  if (!r || r.toLowerCase() === ABSENCE_LABELS[type].toLowerCase()) return null;
+  return r;
+};
+
 const WEEKDAYS = ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."];
 const MONTHS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
 
@@ -134,17 +183,8 @@ function DayGroup({
   showSalon: boolean;
 }) {
   const label = journalDayLabel(date);
-  const present = rows.filter((r) => r.day.kind === "worked").length;
-  const late = rows.filter((r) => r.day.kind === "worked" && lateMinutes(r.day) > 0).length;
-  const absent = rows.length - present;
-  const meta = [
-    `${present} personne${present > 1 ? "s" : ""}`,
-    late > 0 && `${late} retard${late > 1 ? "s" : ""}`,
-    absent > 0 && `${absent} absence${absent > 1 ? "s" : ""}`,
-  ]
-    .filter(Boolean)
-    .join(" · ");
-
+  const tally = tallyPointages(rows);
+  const anomalies = anomalyParts({ ...tally, absent: 0 });
   return (
     <section aria-labelledby={`pt-${date}`}>
       <h2
@@ -152,7 +192,13 @@ function DayGroup({
         className="mb-2.5 flex items-baseline gap-2 pl-1 text-[17px] font-semibold text-base-content"
       >
         {label.charAt(0).toUpperCase() + label.slice(1)}
-        <span className="text-sm font-normal text-base-content/60">{meta}</span>
+        <span className="text-sm font-normal text-base-content/60">
+          {plural(tally.worked, "personne au travail", "personnes au travail")}
+          {tally.absent > 0 && ` · ${plural(tally.absent, "absence", "absences")}`}
+          {anomalies.length > 0 && (
+            <span className="text-warning-700"> · {anomalies.join(" · ")}</span>
+          )}
+        </span>
       </h2>
       <Table lead="person" showSalon={showSalon} rows={rows} />
     </section>
@@ -247,9 +293,18 @@ function Row({
     return (
       <tr className="border-t border-base-300 first:border-t-0">
         {leadCell}
-        <td colSpan={showSalon ? 5 : 4} className="px-3 py-3 text-base-content/60">
-          {ABSENCE_LABELS[day.type]}
-          {day.reason && ` · ${day.reason}`}
+        {showSalon && (
+          <td className="px-3 py-3 text-base-content/45">
+            {day.salonId ? salonName(day.salonId) : "—"}
+          </td>
+        )}
+        <td colSpan={4} className="px-3 py-3 text-base-content/60">
+          <span className="rounded-full bg-muted px-2.5 py-0.5 text-sm font-medium text-base-content/70">
+            Absence · {ABSENCE_LABELS[day.type].toLowerCase()}
+          </span>
+          {absenceDetail(day.type, day.reason) && (
+            <span className="ml-2.5">{absenceDetail(day.type, day.reason)}</span>
+          )}
         </td>
       </tr>
     );

@@ -9,6 +9,7 @@ import {
   CalendarCheck2,
   FileUser,
   Gift,
+  History,
   LayoutDashboard,
   MessageCircle,
   Package,
@@ -25,13 +26,15 @@ type NavItem = { name: string; icon: React.ReactNode; path: string };
 // atteignables via des raccourcis sur le tableau de bord (Rapports,
 // Satisfaction, Journal) et le menu compte (Salons) — voir Dashboard.tsx.
 // Stock, retiré le 2026-09-27, y est revenu le 2026-09-28 (entre Services et
-// Fidélité).
+// Fidélité). Journal y revient le 2026-10-02 (après Équipe) : il porte le
+// pointage des arrivées / départs, consulté au quotidien.
 const menuItems: NavItem[] = [
   { icon: <LayoutDashboard />, name: "Tableau de bord", path: "/" },
   { icon: <CalendarCheck2 />, name: "Rendez-vous", path: "/rendez-vous" },
   { icon: <MessageCircle />, name: "Messagerie", path: "/messagerie" },
   { icon: <FileUser />, name: "Clients", path: "/clients" },
   { icon: <UserRoundGroup />, name: "Équipe", path: "/equipe" },
+  { icon: <History />, name: "Journal", path: "/journal" },
   { icon: <Sparkles />, name: "Services", path: "/services" },
   { icon: <Package />, name: "Stock", path: "/stock" },
   { icon: <Gift />, name: "Fidélité", path: "/fidelite" },

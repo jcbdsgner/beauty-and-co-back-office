@@ -232,6 +232,11 @@ tout design » → voir @design.md.
   - `page.tsx` — toutes les sections (couleurs, typo, boutons, composants back-office…)
   - `layout.tsx`, `Shell.tsx` — chrome dédié à cette page
 
+> **2026-10-02 : Journal revient dans la sidebar** (après Équipe, icône
+> `History` — **10 entrées**) et quitte « Autres écrans » du tableau de bord
+> (`dashboard/AccesRapides` : Rapports, Avis clients) — il porte le pointage
+> des arrivées / départs, consulté au quotidien.
+>
 > **2026-09-28 : Stock revient dans la sidebar** (entre Services et
 > Fidélité, icône `Package` — **9 entrées**) et quitte « Autres écrans » du
 > tableau de bord (`dashboard/AccesRapides` : Rapports, Avis clients, Journal).
@@ -370,8 +375,13 @@ tout design » → voir @design.md.
   `Journal` (shell client de `/journal` — **2026-10-01 : bascule Actions /
   Pointage** en tête de la barre d'outils ; salon et période communs. Vue
   **Pointage** = `journal/PointageLog` : heures badgées de toute l'équipe active
-  groupées par jour (« 9 personnes · 1 retard · 1 absence »), tableau à colonnes
-  fixes Personne (→ fiche membre) · Salon · Prévu · Arrivée · Départ · Présence ;
+  groupées par jour (« 9 personnes au travail · 1 absence · 1 retard ·
+  4 départs anticipés · 1 badge oublié » — écarts en ocre, décomptés par
+  `tallyPointages` / `anomalyParts`, 2026-10-02), bilan de la période à droite
+  de la période (vue équipe ; « N journées avec un écart » sous le filtre),
+  tableau à colonnes
+  fixes Personne (→ fiche membre) · Salon · Prévu · Arrivée · Départ · Présence
+  (une absence garde son salon attendu, pastille « Absence · <type> » + motif) ;
   menu « Toute l'équipe / <une personne> » → bilan de la période
   (`shared/PointageCells.PointageSummaryBar`) + un seul tableau avec colonne
   Jour ; « Seulement les écarts » ; états vides (rien sur la période → 30 j,
