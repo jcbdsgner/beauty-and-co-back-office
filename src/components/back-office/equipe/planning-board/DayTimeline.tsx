@@ -1,12 +1,12 @@
 "use client";
 
-import { useMemo, useState, useSyncExternalStore } from "react";
-import { ArrowLeftRight, Eye, GripVertical, MoreHorizontal, Undo2, UserX, Users } from "lucide-react";
+import { useMemo, useState, type MouseEvent } from "react";
+import { ArrowLeftRight, Eye, GripVertical, MoreHorizontal, Plus, Undo2, UserX, Users } from "lucide-react";
 import { Avatar } from "@/components/ui/atoms/avatar";
 import { IconButton } from "@/components/ui/atoms/icon-button";
 import { DropdownMenu } from "@/components/ui/molecules/dropdown-menu";
 import { cn } from "@/lib/utils";
-import type { SalonId } from "@/lib/mock/beautyandco";
+import { today, type SalonId } from "@/lib/mock/beautyandco";
 import type { PlanningData } from "@/lib/mock/planning";
 import { staffAccent } from "@/lib/mock/staff-colors";
 import { initials, type Member } from "@/lib/mock/staff";
@@ -35,6 +35,10 @@ import {
  * horaire du jour ; colonne grisée = repos. Poignée de glisser-déposer, isolement et
  * absence sur l'en-tête de colonne. Adaptations back-office : données de `./data`,
  * absence lue dans `PlanningContext` (datée, pas un simple drapeau « aujourd'hui »).
+ *
+ * Un clic sur une demi-heure libre de sa plage (ni passée, ni prise, ni hors horaire) ouvre
+ * « Nouveau rendez-vous » pré-réglé sur ce jour, cette heure, ce salon et cette praticienne
+ * (point-de-vente, commit c3bab56).
  */
 const SLOT_MIN = 30;
 const SLOT_H = 56; // px par 30 min
@@ -42,6 +46,10 @@ const TIME_COL_W = 52;
 const HEADER_H = 72;
 const SHOW_SERVICE_MIN_H = 60;
 const LANE_W = 192;
+// « Maintenant » du monde de démo (13:20) — trait « maintenant », passé grisé et borne des
+// créneaux cliquables, comme les horaires proposés à la réservation (`availableTimes` de
+// `@/lib/prise-rdv/planifier`) ; pas l'horloge réelle.
+const DEMO_NOW_MIN = timeToMinutes(today.currentTime);
 
 type Props = {
   iso: string;
@@ -58,6 +66,8 @@ type Props = {
   onShowAll: () => void;
   onMarkAbsent: (id: string) => void;
   onReorder: (draggedId: string, targetId: string) => void;
+  /** Clic sur une demi-heure libre : praticienne, heure (« 10:30 ») et salon de sa plage. */
+  onPickSlot?: (memberId: string, start: string, salonId: SalonId) => void;
 };
 
 type Placed = { row: PlanningRow; start: number; end: number; lane: number };
@@ -78,19 +88,6 @@ function pack(items: PlanningRow[]): { placed: Placed[]; lanes: number } {
     return { row, start, end, lane };
   });
   return { placed, lanes: Math.max(1, laneEnds.length) };
-}
-
-function nowMinutes() {
-  const d = new Date();
-  return d.getHours() * 60 + d.getMinutes();
-}
-
-function subscribeNever() {
-  return () => {};
-}
-
-function useMounted() {
-  return useSyncExternalStore(subscribeNever, () => true, () => false);
 }
 
 /** Plages nominales, ou — si aucune mais que des prestations existent quand même ce jour-là —
@@ -160,8 +157,10 @@ export function DayTimeline({
   onShowAll,
   onMarkAbsent,
   onReorder,
+  onPickSlot,
 }: Props) {
   const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [hoverSlot, setHoverSlot] = useState<{ staffId: string; min: number } | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
 
   const { gridStart, gridEnd } = useMemo(() => {
@@ -178,9 +177,21 @@ export function DayTimeline({
   const hourMarks: number[] = [];
   for (let m = gridStart; m <= gridEnd; m += 60) hourMarks.push(m);
 
-  const mounted = useMounted();
-  const now = nowMinutes();
-  const showNow = mounted && isToday && now > gridStart && now < gridEnd;
+  const now = DEMO_NOW_MIN;
+  const showNow = isToday && now > gridStart && now < gridEnd;
+
+  /** Le salon de la demi-heure `min` si elle est réservable pour cette colonne, sinon `null`. */
+  function slotSalon(shifts: Shift[], placed: Placed[], absent: boolean, min: number): SalonId | null {
+    if (absent || min + SLOT_MIN > closing || (isToday && min <= now)) return null;
+    const shift = shifts.find(
+      (s) => (!salonId || s.salonId === salonId) && timeToMinutes(s.start) <= min && min + SLOT_MIN <= timeToMinutes(s.end),
+    );
+    if (!shift) return null;
+    if (placed.some((pl) => min < pl.end && pl.start < min + SLOT_MIN)) return null;
+    return shift.salonId;
+  }
+  const slotAt = (e: MouseEvent<HTMLDivElement>) =>
+    gridStart + Math.floor((e.clientY - e.currentTarget.getBoundingClientRect().top) / SLOT_H) * SLOT_MIN;
 
   const columns = useMemo(
     () =>
@@ -330,7 +341,24 @@ export function DayTimeline({
                 />
               </div>
 
-              <div className="relative" style={{ height: bodyH }}>
+              <div
+                className={cn("relative", onPickSlot && hoverSlot?.staffId === p.id && "cursor-pointer")}
+                style={{ height: bodyH }}
+                onMouseMove={(e) => {
+                  if (!onPickSlot) return;
+                  if (e.target !== e.currentTarget) return setHoverSlot(null);
+                  const min = slotAt(e);
+                  const ok = slotSalon(shifts, placed, absent, min) !== null;
+                  setHoverSlot((h) => (!ok ? null : h?.staffId === p.id && h.min === min ? h : { staffId: p.id, min }));
+                }}
+                onMouseLeave={() => setHoverSlot(null)}
+                onClick={(e) => {
+                  if (!onPickSlot || e.target !== e.currentTarget) return;
+                  const min = slotAt(e);
+                  const salon = slotSalon(shifts, placed, absent, min);
+                  if (salon) onPickSlot(p.id, minutesToTime(min), salon);
+                }}
+              >
                 {shifts.length === 0 && (
                   <div
                     aria-hidden
@@ -367,6 +395,20 @@ export function DayTimeline({
                   ),
                 )}
                 {absent && <div aria-hidden className="pointer-events-none absolute inset-0 bg-warning/10" />}
+                {/* Le passé du jour : plus réservable, légèrement grisé. */}
+                {showNow && !absent && shifts.length > 0 && (
+                  <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 bg-base-content/[0.035]" style={{ height: y(now) }} />
+                )}
+                {hoverSlot?.staffId === p.id && (
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute flex items-center gap-1 rounded-field border border-dashed border-primary/60 bg-primary/5 px-2.5 text-[0.68rem] font-semibold tabular-nums text-primary"
+                    style={{ top: y(hoverSlot.min) + 3, left: 8, width: LANE_W - 14, height: SLOT_H - 6 }}
+                  >
+                    <Plus className="size-3.5" />
+                    {minutesToTime(hoverSlot.min)}
+                  </div>
+                )}
 
                 {placed.map(({ row, lane }) => {
                   const top = y(timeToMinutes(row.start));

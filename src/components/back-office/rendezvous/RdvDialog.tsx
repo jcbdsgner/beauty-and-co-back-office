@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
-import { CalendarDays, Check, ChevronDown, MapPin, X } from "lucide-react";
+import { CalendarDays, Check, ChevronDown, MapPin, Plus, UserRound, X } from "lucide-react";
 import { Dialog } from "@/components/ui/molecules/dialog";
 import { DatePicker } from "@/components/ui/molecules/date-picker";
 import { CloseButton } from "@/components/ui/atoms/icon-button";
@@ -10,7 +10,19 @@ import { Button } from "@/components/ui/atoms/button";
 import { SearchInput } from "@/components/ui/atoms/search-input";
 import { cn } from "@/lib/utils";
 import { useServicesData } from "@/components/back-office/services/ServicesData";
-import { isClosed, salonConfig, salonConfigs, type SalonId, type Weekday } from "@/lib/mock/beautyandco";
+import { NewClientDialog, type NewClientPrefill } from "@/components/back-office/ClientEditDialogs";
+import { useClientsData } from "@/context/ClientsContext";
+import {
+  clientMatchesQuery,
+  clientNumberLabel,
+  isClosed,
+  salonConfig,
+  salonConfigs,
+  today,
+  type ClientRow,
+  type SalonId,
+  type Weekday,
+} from "@/lib/mock/beautyandco";
 import { TODAY_ISO, type PlanningData } from "@/lib/mock/planning";
 import {
   conflictWith,
@@ -22,18 +34,21 @@ import {
   beneficiaryKey,
   fcfa,
   frFullDate,
+  newRdvId,
   posteTypeForCategory,
   type RdvDetail,
   type RdvPrestation,
 } from "@/lib/mock/rendezvous";
 import { alternativesFor, availableTimes, planAt, type PlanContext, type PlanItem } from "@/lib/prise-rdv/planifier";
 
-// « Reprogrammer le rendez-vous » — ce que fait « Modifier » sur une fiche
-// rendez-vous : nouvelle date, nouveau salon, nouvel horaire et, replié en
-// dessous, les prestations à ajouter ou retirer. Les praticiennes suivent
-// (affectation automatique) : l'actuelle est gardée si elle reste libre.
-// 1. Elle arrive avec un imprévu en tête (« la cliente décale à samedi »),
-//    souvent au téléphone : trois choix, dans l'ordre où on les dicte.
+// Le bloc unique de rendez-vous : « Nouveau rendez-vous » (sans `detail`) et
+// « Reprogrammer le rendez-vous » (« Modifier » sur une fiche, avec `detail`)
+// sont la même fenêtre — date, salon, horaire et les prestations par personne.
+// La création ajoute seulement le choix de la cliente, en tête. Les
+// praticiennes suivent (affectation automatique) : à la reprogrammation,
+// l'actuelle est gardée si elle reste libre.
+// 1. Elle arrive souvent au téléphone (« la cliente veut samedi ») : les
+//    choix dans l'ordre où on les dicte.
 // 2. Ce qui compte : les horaires réellement libres ce jour-là, dans ce salon,
 //    pour toutes les prestations — on ne propose jamais un horaire impossible.
 // 3. Quand ça coince : salon fermé, aucun horaire libre, prestation non
@@ -64,10 +79,15 @@ const fold = (s: string) =>
 // ajoutée pour une personne.
 type Line = { key: string; personKey: string; prestationId: string; existing?: RdvPrestation };
 
-type Person = { key: string; label: string; source: RdvPrestation };
+// `source` : une prestation existante de la personne (reprogrammation) ;
+// absente pour la payeuse d'un nouveau rendez-vous ou une personne ajoutée.
+type Person = { key: string; label: string; source?: RdvPrestation; added?: boolean };
+
+const PAYER = "__payer__";
 
 let seq = 1;
-const newLineId = () => `p-resched-${Date.now().toString(36)}-${seq++}`;
+const newLineId = () => `p-rdv-${Date.now().toString(36)}-${seq++}`;
+let refSeq = 6000;
 
 function openingLabel(salonId: SalonId, iso: string): string | null {
   if (isClosed(salonId, iso)) return null;
@@ -77,55 +97,88 @@ function openingLabel(salonId: SalonId, iso: string): string | null {
 
 export type Reschedule = { date: string; salon: SalonId; prestations: RdvPrestation[] };
 
-export default function RescheduleRdvDialog({
-  open,
-  detail,
-  rdvs,
-  planningData,
-  onClose,
-  onConfirm,
-}: {
+/** Créneau cliqué au Planning : jour, heure et praticienne (nom complet) posée d'office si libre. */
+export type PickedSlot = { iso: string; time: string; staffName?: string };
+
+type Props = {
   open: boolean;
-  detail: RdvDetail;
   rdvs: RdvDetail[];
   planningData?: PlanningData;
   onClose: () => void;
-  onConfirm: (next: Reschedule) => void;
-}) {
+} & (
+  | {
+      /** Reprogrammation du rendez-vous existant. */
+      detail: RdvDetail;
+      onConfirm: (next: Reschedule) => void;
+    }
+  | {
+      detail?: undefined;
+      /** Création : payeuse, salon et créneau pré-remplis (tous modifiables). */
+      initialClientId?: string;
+      defaultSalonId?: SalonId | null;
+      pickedSlot?: PickedSlot;
+      onCreate: (rdv: RdvDetail) => void;
+    }
+);
+
+export default function RdvDialog(props: Props) {
+  const { open, rdvs, planningData, onClose } = props;
+  const detail = props.detail ?? null;
+  const create = props.detail ? null : props;
+  const isCreate = !detail;
+
   const { services, prestations: catalog } = useServicesData();
-  const currentDay = detail.date.slice(0, 10);
-  const currentTime = detail.date.slice(11, 16);
+  const { rows: clientRows, createClient } = useClientsData();
+  const activeSalons = salonConfigs.filter((s) => s.active);
+  const currentDay = detail ? detail.date.slice(0, 10) : null;
+  const currentTime = detail ? detail.date.slice(11, 16) : null;
+
+  /* ---- cliente (création) ---- */
+
+  const allClients = clientRows("all");
+  const [clientId, setClientId] = useState<string | null>(create?.initialClientId ?? null);
+  const client: ClientRow | null = clientId ? (allClients.find((c) => c.id === clientId) ?? null) : null;
+  const payerName = detail ? detail.client.name : (client?.name ?? "Cliente");
 
   // Personnes servies, dans l'ordre du rendez-vous (la payeuse d'abord).
-  const people = useMemo<Person[]>(() => {
+  const initialPeople = useMemo<Person[]>(() => {
+    if (!detail) return [{ key: PAYER, label: "Cliente" }];
     const map = new Map<string, Person>();
     for (const p of [...detail.prestations].sort((a, b) => a.start.localeCompare(b.start))) {
       const key = beneficiaryKey(p, detail.client.name);
       if (!map.has(key)) map.set(key, { key, label: p.beneficiaryName || detail.client.name, source: p });
     }
-    return [...map.values()].sort((a, b) => Number(b.key === "__payer__") - Number(a.key === "__payer__"));
+    return [...map.values()].sort((a, b) => Number(b.key === PAYER) - Number(a.key === PAYER));
   }, [detail]);
 
   const initialLines = useMemo<Line[]>(
     () =>
-      [...detail.prestations]
-        .sort((a, b) => a.start.localeCompare(b.start))
-        .map((p) => ({
-          key: p.id,
-          personKey: beneficiaryKey(p, detail.client.name),
-          prestationId: p.prestationId,
-          existing: p,
-        })),
+      detail
+        ? [...detail.prestations]
+            .sort((a, b) => a.start.localeCompare(b.start))
+            .map((p) => ({
+              key: p.id,
+              personKey: beneficiaryKey(p, detail.client.name),
+              prestationId: p.prestationId,
+              existing: p,
+            }))
+        : [],
     [detail],
   );
 
-  const [day, setDay] = useState(currentDay);
-  const [salon, setSalon] = useState<SalonId>(detail.salon);
-  const [time, setTime] = useState<string | null>(currentTime);
+  const [day, setDay] = useState(currentDay ?? create?.pickedSlot?.iso ?? TODAY_ISO);
+  const [salon, setSalon] = useState<SalonId>(
+    detail?.salon ?? create?.defaultSalonId ?? activeSalons[0]?.id ?? "almadies",
+  );
+  const [time, setTime] = useState<string | null>(currentTime ?? create?.pickedSlot?.time ?? null);
   const [lines, setLines] = useState<Line[]>(initialLines);
-  const [editingOpen, setEditingOpen] = useState(false);
-  const [person, setPerson] = useState(people[0]?.key ?? "__payer__");
+  const [people, setPeople] = useState<Person[]>(initialPeople);
+  // Un nouveau rendez-vous n'a rien à résumer : les prestations sont ouvertes d'emblée.
+  const [editingOpen, setEditingOpen] = useState(isCreate);
+  const [person, setPerson] = useState(initialPeople[0]?.key ?? PAYER);
   const [query, setQuery] = useState("");
+  const [newClient, setNewClient] = useState<NewClientPrefill | null>(null);
+  const personLabel = (p: Person) => (p.key === PAYER ? payerName : p.label);
 
   const byId = useMemo(() => new Map(catalog.map((p) => [p.id, p])), [catalog]);
   const categoryName = (serviceId: string | null) =>
@@ -143,10 +196,10 @@ export default function RescheduleRdvDialog({
       salonId: salon,
       rdvs,
       planningData,
-      excludeRdvId: detail.id,
+      excludeRdvId: detail?.id,
       availabilityOf: (id) => byId.get(id),
     }),
-    [day, salon, rdvs, planningData, detail.id, byId],
+    [day, salon, rdvs, planningData, detail?.id, byId],
   );
 
   const items: PlanItem[] = lines.map((l) => ({
@@ -184,20 +237,41 @@ export default function RescheduleRdvDialog({
 
   const sameLines =
     lines.length === initialLines.length && lines.every((l, i) => l.key === initialLines[i].key);
-  const dirty = day !== currentDay || salon !== detail.salon || chosenTime !== currentTime || !sameLines;
-  const canConfirm = Boolean(chosenTime) && lines.length > 0 && notOffered.length === 0 && dirty;
+  const dirty = isCreate || day !== currentDay || salon !== detail?.salon || chosenTime !== currentTime || !sameLines;
+  const canConfirm =
+    (!isCreate || Boolean(client)) && Boolean(chosenTime) && lines.length > 0 && notOffered.length === 0 && dirty;
 
-  const blocker = !chosenTime
-    ? "Choisissez un horaire."
-    : lines.length === 0
-      ? "Gardez au moins une prestation."
-      : !dirty
-        ? "Rien n'a changé."
-        : null;
+  const blocker =
+    isCreate && !client
+      ? "Choisissez la cliente."
+      : lines.length === 0
+        ? isCreate
+          ? "Choisissez au moins une prestation."
+          : "Gardez au moins une prestation."
+        : !chosenTime
+          ? "Choisissez un horaire."
+          : !dirty
+            ? "Rien n'a changé."
+            : null;
 
   /* ---- prestations ---- */
 
   const personLines = lines.filter((l) => l.personKey === person);
+  const activePerson = people.find((p) => p.key === person);
+
+  const addPerson = () => {
+    const key = `new-${Date.now().toString(36)}-${seq++}`;
+    setPeople((list) => [...list, { key, label: "", added: true }]);
+    setPerson(key);
+  };
+  const removePerson = (key: string) => {
+    setPeople((list) => list.filter((p) => p.key !== key));
+    setLines((list) => list.filter((l) => l.personKey !== key));
+    setPerson(PAYER);
+  };
+  const renamePerson = (key: string, label: string) =>
+    setPeople((list) => list.map((p) => (p.key === key ? { ...p, label } : p)));
+  const addedName = (p: Person, i: number) => p.label.trim() || `Personne ${i + 1}`;
   const selectedIds = new Set(personLines.map((l) => l.prestationId));
 
   const toggle = (p: Prestation) => {
@@ -229,9 +303,9 @@ export default function RescheduleRdvDialog({
 
   const confirm = () => {
     if (!chosenTime) return;
-    const plan = planAt(ctx, items, chosenTime, false, overrides);
+    const plan = planAt(ctx, items, chosenTime, false, overrides, create?.pickedSlot?.staffName);
     if (!plan) return;
-    const payer = people.find((p) => p.key === "__payer__")?.source;
+    const payer = people.find((p) => p.key === PAYER)?.source;
     const next: RdvPrestation[] = plan.map((pl) => {
       const line = lines.find((l) => l.key === pl.key)!;
       const staff = pl.staffIds[0] ?? null;
@@ -243,7 +317,9 @@ export default function RescheduleRdvDialog({
         return { ...line.existing, start: pl.start, staff, secondStaff: keepSecond };
       }
       const p = byId.get(line.prestationId)!;
-      const who = people.find((x) => x.key === line.personKey)?.source ?? payer;
+      const personIndex = people.findIndex((x) => x.key === line.personKey);
+      const target = people[personIndex];
+      const who = target?.source ?? (target?.added ? undefined : payer);
       const category = categoryName(p.serviceId);
       return {
         id: line.key,
@@ -255,12 +331,40 @@ export default function RescheduleRdvDialog({
         posteType: posteTypeForCategory(category),
         staff,
         start: pl.start,
-        beneficiaryName: who?.beneficiaryName ?? detail.client.name,
+        beneficiaryName: target?.added ? addedName(target, personIndex) : (who?.beneficiaryName ?? payerName),
         beneficiaryClientId: who?.beneficiaryClientId ?? null,
         beneficiaryKind: who?.beneficiaryKind,
       };
     });
-    onConfirm({ date: `${day}T${chosenTime}:00`, salon, prestations: next });
+    const date = `${day}T${chosenTime}:00`;
+    if (!create) {
+      if (props.detail) props.onConfirm({ date, salon, prestations: next });
+      return;
+    }
+    if (!client) return;
+    const staffSet = new Set(next.map((p) => p.staff));
+    create.onCreate({
+      id: newRdvId(),
+      ref: `#bo-${refSeq++}`,
+      status: "à venir",
+      date: `${day}T${[...next].map((p) => p.start).sort()[0] ?? chosenTime}:00`,
+      salon,
+      salonLabel: salonConfig(salon).name,
+      client: {
+        id: client.id,
+        name: client.name,
+        email: client.email,
+        phone: client.phone,
+        whatsapp: client.whatsapp,
+        loyaltyPoints: client.loyaltyPoints,
+      },
+      staffGlobal: staffSet.size === 1 ? next[0].staff : null,
+      prestations: next,
+      extras: [],
+      questions: [],
+      advantages: [],
+      events: [{ at: `${TODAY_ISO}T${today.currentTime}:00`, label: "Rendez-vous créé", detail: "Saisi au salon" }],
+    });
   };
 
   const morning = times.filter((t) => t < "12:00");
@@ -268,23 +372,38 @@ export default function RescheduleRdvDialog({
   const evening = times.filter((t) => t >= "17:00");
 
   return (
+    <>
     <Dialog open={open} onClose={onClose} labelledBy="resched-title" className="relative flex max-h-[90vh] max-w-3xl flex-col">
       <CloseButton onClick={onClose} className="top-4 right-4" />
 
       <header className="shrink-0 px-8 pt-7 pb-5">
         <h2 id="resched-title" className="text-[24px] font-semibold tracking-[-0.01em] text-base-content">
-          Reprogrammer le rendez-vous
+          {isCreate ? "Nouveau rendez-vous" : "Reprogrammer le rendez-vous"}
         </h2>
         <p className="mt-1 text-[15px] text-base-content/60">
-          {detail.client.name} · actuellement {frFullDate(currentDay)} à {currentTime}, {salonConfig(detail.salon).name}
+          {detail
+            ? `${detail.client.name} · actuellement ${frFullDate(currentDay!)} à ${currentTime}, ${salonConfig(detail.salon).name}`
+            : client
+              ? `Pour ${client.name} · ${clientNumberLabel(client.number)}`
+              : "Choisissez la cliente, la date, le salon, l'horaire et les prestations."}
         </p>
       </header>
 
       <div className="min-h-0 flex-1 space-y-8 overflow-y-auto px-8 pb-8">
+        {/* Cliente (création seulement) */}
+        {isCreate && (
+          <ClientPicker
+            clients={allClients}
+            value={client}
+            onChange={setClientId}
+            onCreateNew={(prefill) => setNewClient(prefill)}
+          />
+        )}
+
         {/* Date */}
         <section aria-labelledby="resched-date">
           <h3 id="resched-date" className="mb-3 text-[17px] font-semibold text-base-content">
-            Nouvelle date
+            {isCreate ? "Date" : "Nouvelle date"}
           </h3>
           <DatePicker
             value={isoToDate(day)}
@@ -381,7 +500,7 @@ export default function RescheduleRdvDialog({
                     <div className="flex flex-wrap gap-2">
                       {(list as string[]).map((t) => {
                         const selected = t === chosenTime;
-                        const isCurrent = t === currentTime && day === currentDay && salon === detail.salon;
+                        const isCurrent = t === currentTime && day === currentDay && salon === detail?.salon;
                         return (
                           <button
                             key={t}
@@ -425,7 +544,7 @@ export default function RescheduleRdvDialog({
                 {lines.length === 0
                   ? "Aucune prestation"
                   : `${lines.length} prestation${lines.length > 1 ? "s" : ""} · ${durationLabel(totalMin)} · ${fcfa(totalPrice)}`}
-                {!sameLines && " · modifiées"}
+                {!isCreate && !sameLines && " · modifiées"}
               </span>
             </span>
             <span className="text-[15px] font-medium text-secondary">{editingOpen ? "Replier" : "Modifier les prestations"}</span>
@@ -434,9 +553,9 @@ export default function RescheduleRdvDialog({
 
           {editingOpen && (
             <div className="border-t border-base-300 px-5 pt-4 pb-5">
-              {people.length > 1 && (
-                <div role="tablist" aria-label="Prestations de" className="-mt-1 mb-4 flex gap-6 border-b border-base-300">
-                  {people.map((p) => {
+              <div className="-mt-1 mb-4 flex items-end gap-6 border-b border-base-300">
+                <div role="tablist" aria-label="Prestations de" className="flex min-w-0 gap-6">
+                  {people.map((p, i) => {
                     const count = lines.filter((l) => l.personKey === p.key).length;
                     const active = p.key === person;
                     return (
@@ -447,16 +566,40 @@ export default function RescheduleRdvDialog({
                         aria-selected={active}
                         onClick={() => setPerson(p.key)}
                         className={cn(
-                          "-mb-px border-b-2 pb-2.5 text-[15px] font-medium transition",
+                          "-mb-px truncate border-b-2 pb-2.5 text-[15px] font-medium transition",
                           active
                             ? "border-primary text-base-content"
                             : "border-transparent text-base-content/60 hover:text-base-content",
                         )}
                       >
-                        {p.label} <span className="tabular-nums text-base-content/45">{count}</span>
+                        {p.added ? addedName(p, i) : personLabel(p)}{" "}
+                        <span className="tabular-nums text-base-content/45">{count}</span>
                       </button>
                     );
                   })}
+                </div>
+                <button
+                  type="button"
+                  onClick={addPerson}
+                  className="mb-2 ml-auto inline-flex shrink-0 items-center gap-1.5 text-[15px] font-medium text-secondary hover:underline"
+                >
+                  <Plus aria-hidden className="size-4" />
+                  Ajouter une personne
+                </button>
+              </div>
+
+              {activePerson?.added && (
+                <div className="mb-4 flex items-center gap-3">
+                  <input
+                    value={activePerson.label}
+                    onChange={(e) => renamePerson(activePerson.key, e.target.value)}
+                    placeholder="Prénom de la personne (facultatif)"
+                    aria-label="Prénom de la personne"
+                    className="input h-11 flex-1 bg-base-100 text-[15px]"
+                  />
+                  <Button variant="outline" onClick={() => removePerson(activePerson.key)}>
+                    Retirer cette personne
+                  </Button>
                 </div>
               )}
 
@@ -557,7 +700,9 @@ export default function RescheduleRdvDialog({
               <span className="font-medium text-base-content">
                 {shortDay(day)} à {chosenTime} · {salonConfig(salon).name}
               </span>
-              <span className="block">La cliente sera prévenue par email.</span>
+              <span className="block">
+                {isCreate ? "La cliente recevra une confirmation par email." : "La cliente sera prévenue par email."}
+              </span>
             </>
           ) : (
             blocker
@@ -567,9 +712,117 @@ export default function RescheduleRdvDialog({
           Annuler
         </Button>
         <Button disabled={!canConfirm} onClick={confirm}>
-          Confirmer la reprogrammation
+          {isCreate ? "Créer le rendez-vous" : "Confirmer la reprogrammation"}
         </Button>
       </footer>
     </Dialog>
+
+    {isCreate && (
+      <NewClientDialog
+        open={newClient !== null}
+        defaultSalon={salon}
+        initialValues={newClient ?? undefined}
+        existing={allClients}
+        onClose={() => setNewClient(null)}
+        onCreate={(draft) => {
+          setClientId(createClient(draft));
+          setNewClient(null);
+        }}
+      />
+    )}
+    </>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Choix de la cliente (création)                                      */
+/* ------------------------------------------------------------------ */
+
+const PHONE_LIKE = /^[+\d\s().-]+$/;
+
+function prefillFrom(query: string): NewClientPrefill {
+  const q = query.trim();
+  if (q && /\d/.test(q) && PHONE_LIKE.test(q)) return { phone: q };
+  const [firstName, ...rest] = q.split(/\s+/);
+  return { firstName: firstName ?? "", lastName: rest.join(" ") };
+}
+
+function ClientPicker({
+  clients,
+  value,
+  onChange,
+  onCreateNew,
+}: {
+  clients: ClientRow[];
+  value: ClientRow | null;
+  onChange: (id: string | null) => void;
+  onCreateNew: (prefill: NewClientPrefill) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const q = query.trim();
+  const results = q ? clients.filter((c) => clientMatchesQuery(c, q)).slice(0, 6) : [];
+
+  return (
+    <section aria-labelledby="rdv-client">
+      <h3 id="rdv-client" className="mb-3 text-[17px] font-semibold text-base-content">
+        Cliente
+      </h3>
+      {value ? (
+        <div className="flex items-center gap-4 rounded-box border border-primary bg-accent px-4 py-3 ring-1 ring-primary">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-base-100 text-secondary">
+            <UserRound aria-hidden className="size-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[16px] font-semibold text-base-content">{value.name}</span>
+            <span className="block truncate text-sm text-base-content/60">
+              {clientNumberLabel(value.number)} · {value.phone}
+            </span>
+          </span>
+          <Button variant="outline" size="sm" onClick={() => onChange(null)}>
+            Changer
+          </Button>
+        </div>
+      ) : (
+        <>
+          <SearchInput
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Nom, téléphone ou n° client"
+            aria-label="Rechercher une cliente"
+            autoFocus
+          />
+          {q && (
+            <ul className="mt-2 overflow-hidden rounded-field border border-base-300">
+              {results.map((c) => (
+                <li key={c.id}>
+                  <button
+                    type="button"
+                    onClick={() => onChange(c.id)}
+                    className="flex min-h-12 w-full items-center gap-3 border-b border-base-300 px-4 py-2 text-left hover:bg-base-200/60"
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[15px] font-medium text-base-content">{c.name}</span>
+                      <span className="block truncate text-sm text-base-content/60">
+                        {clientNumberLabel(c.number)} · {c.phone}
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              ))}
+              <li>
+                <button
+                  type="button"
+                  onClick={() => onCreateNew(prefillFrom(q))}
+                  className="flex min-h-12 w-full items-center gap-2 px-4 py-2 text-left text-[15px] font-medium text-secondary hover:bg-base-200/60"
+                >
+                  <Plus aria-hidden className="size-4" />
+                  {results.length === 0 ? `Aucune cliente trouvée — créer la fiche « ${q} »` : `Créer une fiche « ${q} »`}
+                </button>
+              </li>
+            </ul>
+          )}
+        </>
+      )}
+    </section>
   );
 }

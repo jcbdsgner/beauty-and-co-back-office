@@ -42,9 +42,8 @@ import DayList from "@/components/back-office/rendezvous/DayList";
 import ReservationCalendar from "@/components/back-office/rendezvous/ReservationCalendar";
 import { initialsOf } from "@/components/back-office/shared/PersonCard";
 import { Legend } from "@/components/back-office/shared/board";
-import { PriseRdvModal } from "@/components/prise-rdv/prise-rdv-modal";
 import RendezVousDetail from "@/components/back-office/RendezVousDetail";
-import { type Reschedule } from "@/components/back-office/rendezvous/RescheduleRdvDialog";
+import RdvDialog, { type Reschedule } from "@/components/back-office/rendezvous/RdvDialog";
 
 // Écran « Rendez-vous » — une destination, trois vues (Liste, Calendrier, Par praticienne).
 // 1. Où en est la propriétaire ? Coup d'œil courant (« qui vient aujourd'hui,
@@ -336,6 +335,7 @@ export default function RendezVous() {
         <PlanningBoard
           rdvs={rdvs}
           onOpenRdv={setSelectedId}
+          onCreateRdv={create}
           showSalonFilter={false}
           toolbarEnd={
             <SegmentedToggle value={view} onChange={(v) => setView(v as RdvView)} options={viewOptions} aria-label="Vue" />
@@ -452,7 +452,7 @@ export default function RendezVous() {
       )}
 
       {newOpen && (
-        <PriseRdvModal
+        <RdvDialog
           open
           defaultSalonId={singleSalon(scope)}
           rdvs={rdvs}

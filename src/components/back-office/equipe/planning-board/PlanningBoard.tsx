@@ -12,7 +12,8 @@ import { inScope, salons, singleSalon, type SalonId, type SalonScope } from "@/l
 import SalonFilter from "@/components/back-office/shared/SalonFilter";
 import { TODAY_ISO, addDays, mondayOf, newAbsenceId } from "@/lib/mock/planning";
 import { allRendezvous, autoAssign, type RdvDetail } from "@/lib/mock/rendezvous";
-import { initials, type Member } from "@/lib/mock/staff";
+import { fullName, initials, memberById, type Member } from "@/lib/mock/staff";
+import RdvDialog, { type PickedSlot } from "@/components/back-office/rendezvous/RdvDialog";
 import { DayTimeline } from "./DayTimeline";
 import { WeekTimeline } from "./WeekTimeline";
 import { PeriodNav, type PlanningPeriod } from "./PeriodNav";
@@ -39,7 +40,8 @@ import {
  * aujourd'hui » pose une vraie absence datée, visible des deux côtés) ; rendez-vous = les
  * fixtures `@/lib/mock/rendezvous` ; clic sur un rendez-vous → sa fiche en panneau latéral
  * (`/rendez-vous/[id]`, route interceptée) au lieu de la feuille d'encaissement de
- * point-de-vente (pas de caisse dans le back-office).
+ * point-de-vente (pas de caisse dans le back-office). Clic sur une demi-heure libre de la
+ * vue Jour → « Nouveau rendez-vous » pré-réglé (jour, heure, salon, praticienne).
  */
 
 type MetierFilter = "tous" | "coiffure" | "esthetique";
@@ -60,9 +62,18 @@ type Props = {
   toolbarEnd?: ReactNode;
   /** Contenu posé à gauche de la barre d'outils (ex. la bascule Horaires / Rendez-vous d'Équipe). */
   toolbarStart?: ReactNode;
+  /** Rendez-vous créé depuis un créneau cliqué — sinon gardé dans l'état local du planning. */
+  onCreateRdv?: (rdv: RdvDetail) => void;
 };
 
-export default function PlanningBoard({ rdvs, onOpenRdv, showSalonFilter = true, toolbarEnd, toolbarStart }: Props = {}) {
+export default function PlanningBoard({
+  rdvs,
+  onOpenRdv,
+  showSalonFilter = true,
+  toolbarEnd,
+  toolbarStart,
+  onCreateRdv,
+}: Props = {}) {
   const router = useRouter();
   const { scope, setScope } = useLocation();
   const { data, addAbsence } = usePlanningData();
@@ -73,6 +84,10 @@ export default function PlanningBoard({ rdvs, onOpenRdv, showSalonFilter = true,
   const [metierFilter, setMetierFilter] = useState<MetierFilter>("tous");
   const [visibleIds, setVisibleIds] = useState<Set<string> | null>(null);
   const [order, setOrder] = useState<string[]>(() => schedulableMembers().map((m) => m.id));
+  // Créneau cliqué dans la vue Jour → « Nouveau rendez-vous » pré-réglé dessus.
+  const [picked, setPicked] = useState<(PickedSlot & { salonId: SalonId }) | null>(null);
+  // Sans écran hôte (Équipe › Planning), les rendez-vous créés ici restent dans la session du planning.
+  const [created, setCreated] = useState<RdvDetail[]>([]);
 
   const isToday = iso === todayIso;
   // Un seul salon regardé → hachures « autre salon » dans les frises ; plusieurs
@@ -95,7 +110,8 @@ export default function PlanningBoard({ rdvs, onOpenRdv, showSalonFilter = true,
   }, [iso]);
 
   // Praticiennes réaffectées d'office si une absence vient d'être posée.
-  const rowsAll = useMemo(() => planningRows(rdvs ?? autoAssign(allRendezvous(), data)), [rdvs, data]);
+  const sessionRdvs = useMemo(() => rdvs ?? autoAssign([...allRendezvous(), ...created], data), [rdvs, created, data]);
+  const rowsAll = useMemo(() => planningRows(sessionRdvs), [sessionRdvs]);
   const dayRows = useMemo(
     () => rowsAll.filter((r) => r.dateIso === iso && inScope(scope, r.salonId)),
     [rowsAll, iso, scope],
@@ -165,6 +181,15 @@ export default function PlanningBoard({ rdvs, onOpenRdv, showSalonFilter = true,
       return next;
     });
   const openRdv = (id: string) => (onOpenRdv ? onOpenRdv(id) : router.push(`/rendez-vous/${id}`));
+  const pickSlot = (memberId: string, time: string, slotSalonId: SalonId) => {
+    const member = memberById(memberId);
+    setPicked({ iso, time, salonId: slotSalonId, staffName: member ? fullName(member) : undefined });
+  };
+  const createRdv = (r: RdvDetail) => {
+    if (onCreateRdv) onCreateRdv(r);
+    else setCreated((list) => [...list, r]);
+    setPicked(null);
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -251,9 +276,22 @@ export default function PlanningBoard({ rdvs, onOpenRdv, showSalonFilter = true,
             onShowAll={showAll}
             onMarkAbsent={markAbsent}
             onReorder={reorder}
+            onPickSlot={pickSlot}
           />
         )}
       </div>
+
+      {picked && (
+        <RdvDialog
+          open
+          defaultSalonId={picked.salonId}
+          pickedSlot={picked}
+          rdvs={sessionRdvs}
+          planningData={data}
+          onClose={() => setPicked(null)}
+          onCreate={createRdv}
+        />
+      )}
     </div>
   );
 }

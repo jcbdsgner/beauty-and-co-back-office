@@ -787,7 +787,7 @@ export const prestationSlots = (r: Pick<RdvDetail, "date" | "prestations">): Pre
 
 // Fenêtres occupées d'une praticienne (comme principale OU 2ᵉ praticienne) sur
 // un jour donné, tous rendez-vous non annulés confondus — sert à valider un
-// créneau à la création (`BookingDialog`) ou à la reprogrammation (`RescheduleRdvDialog`).
+// créneau à la création ou à la reprogrammation (`rendezvous/RdvDialog`).
 // `excludeRdvId` exclut le rendez-vous en cours d'édition de son propre calcul.
 export function staffBusyWindows(
   list: RdvDetail[],

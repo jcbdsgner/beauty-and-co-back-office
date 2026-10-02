@@ -61,7 +61,7 @@ import {
   type RdvPrestation,
   type RdvStatus,
 } from "@/lib/mock/rendezvous";
-import RescheduleRdvDialog, { type Reschedule } from "./rendezvous/RescheduleRdvDialog";
+import RdvDialog, { type Reschedule } from "./rendezvous/RdvDialog";
 import { initialsOf } from "./shared/PersonCard";
 import { Legend } from "./shared/board";
 import {
@@ -766,7 +766,7 @@ export default function RendezVousDetail({
       </Dialog>
 
       {editOpen && (
-        <RescheduleRdvDialog
+        <RdvDialog
           open={editOpen}
           detail={detail}
           rdvs={sessionList}

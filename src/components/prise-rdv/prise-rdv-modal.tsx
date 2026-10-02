@@ -155,9 +155,14 @@ type PriseRdvModalProps = {
   planningData?: PlanningData;
   /** Payeuse pré-remplie (ouverture depuis une fiche cliente, `?client=`). */
   initialClientId?: string;
+  /** Créneau cliqué au Planning : jour (ISO) et heure pré-choisis à l'étape Créneau, la
+   *  praticienne (nom complet) posée d'office si elle est libre — tous modifiables. */
+  pickedSlot?: PickedSlot;
   onCreate: (rdv: RdvDetail) => void;
   onClose: () => void;
 };
+
+export type PickedSlot = { iso: string; time: string; staffName?: string };
 
 export function PriseRdvModal({
   open,
@@ -165,6 +170,7 @@ export function PriseRdvModal({
   rdvs,
   planningData,
   initialClientId,
+  pickedSlot,
   onCreate,
   onClose,
 }: PriseRdvModalProps) {
@@ -177,6 +183,7 @@ export function PriseRdvModal({
           rdvs={rdvs}
           planningData={planningData}
           initialClientId={initialClientId}
+          pickedSlot={pickedSlot}
           scroller={scroller}
           onCreate={onCreate}
           onClose={onClose}
@@ -268,6 +275,7 @@ function PriseRdvFlow({
   rdvs,
   planningData,
   initialClientId,
+  pickedSlot,
   scroller,
   onCreate,
   onClose,
@@ -276,6 +284,7 @@ function PriseRdvFlow({
   rdvs: RdvDetail[];
   planningData?: PlanningData;
   initialClientId?: string;
+  pickedSlot?: PickedSlot;
   scroller: React.RefObject<HTMLDivElement | null>;
   onCreate: (rdv: RdvDetail) => void;
   onClose: () => void;
@@ -298,11 +307,15 @@ function PriseRdvFlow({
   });
   const [selections, setSelections] = useState<Selections>({});
   const [questionAnswers, setQuestionAnswers] = useState<QuestionAnswers>({});
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(() => {
+    if (!pickedSlot) return null;
+    const [y, m, d] = pickedSlot.iso.split("-").map(Number);
+    return new Date(y, m - 1, d);
+  });
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(
     defaultSalonId ? (LOCATION_ID_BY_SALON[defaultSalonId] ?? null) : null,
   );
-  const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [selectedTime, setSelectedTime] = useState<string | null>(pickedSlot?.time ?? null);
   const [twoPractitioners, setTwoPractitioners] = useState(false);
   const [staffOverrides, setStaffOverrides] = useState<
     Record<string, string[]>
@@ -522,6 +535,7 @@ function PriseRdvFlow({
           effectiveTime,
           twoPractitioners,
           staffOverrides,
+          pickedSlot?.staffName,
         )
       : null;
   const staffRows: StaffRow[] =

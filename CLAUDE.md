@@ -1007,12 +1007,19 @@ tout design » → voir @design.md.
   colonnes (état local) ; « Marquer absente aujourd'hui » → `addAbsence` du
   `PlanningContext` (type `repos`, visible aussi dans l'agenda `/rendez-vous`) ;
   clic sur un rendez-vous → `/rendez-vous/[id]` en panneau latéral (route
-  interceptée) au lieu de la feuille d'encaissement de point-de-vente),
+  interceptée) au lieu de la feuille d'encaissement de point-de-vente ;
+  **2026-10-02** : clic sur une demi-heure libre de la vue Jour → `PriseRdvModal`
+  monté par le planning, pré-réglé (prop `pickedSlot` : jour, heure, salon de la
+  plage, praticienne posée d'office si libre) — RDV créé remis à `onCreateRdv`
+  (`RendezVous.create`), sinon gardé en état local (Équipe › Planning)),
   `PeriodNav` (libellé de période = bouton qui ouvre `ui/molecules/date-picker`,
   « Aujourd'hui », bascule Jour / Semaine), `DayTimeline` (une colonne par
   praticienne, temps vertical 10h→21h, fermé après 20h, hors horaire
   grisés, autre salon hachuré, blocs de prestation empilés en sous-colonnes si
-  chevauchement, trait « maintenant »), `WeekTimeline` (une ligne par
+  chevauchement, trait « maintenant » à l'heure de démo `today.currentTime`
+  (13:20, plus l'horloge réelle) et passé du jour légèrement grisé ; survol
+  d'une demi-heure libre = cadre pointillé « + 13:30 », `onPickSlot` — ni
+  passée, ni prise, ni hors plage ni absente), `WeekTimeline` (une ligne par
   praticienne × 7 jours : amplitude + « N rdv », Repos / Absente / Fermé /
   « Aux Almadies » ; clic → vue Jour isolée), `data` (adaptateur : présence
   `presenceFor` → une plage `Shift[]` d'un seul tenant (plus de coupure depuis le 2026-09-28), prestations de
@@ -1297,7 +1304,8 @@ questions…), sauf : `planifier.ts` **réécrit** sur le back-office (même
 algorithme — personnes en parallèle, moins chargée d'abord, choix manuel parmi
 les libres ; compétences `canPerform`, présence `coversWindow` + planning live,
 heures `salonConfig`, occupation = `RdvDetail` de session ; une praticienne =
-son nom complet ; `DEMO_TODAY_ISO`), `clientes.ts` (nouveau — adaptateur
+son nom complet ; `DEMO_TODAY_ISO` ; `planAt(…, preferredStaffId?)` pose d'abord
+la praticienne du créneau cliqué au Planning si elle est libre), `clientes.ts` (nouveau — adaptateur
 `ClientRow` → `Cliente` du parcours), `data/forfaits.ts` non repris (inutilisé).
 
 ### `src/lib/mock/` — couche de données fictives (front-end only)
@@ -3340,3 +3348,27 @@ qu'il y a 2 salons.**
   (menu, raccourci Dakar → accueil, rendez-vous, stock, clients, services,
   planning) puis inactive (bascule inchangée).
 
+
+## Un seul bloc pour créer et modifier un rendez-vous (2026-10-02)
+
+Demande de l'utilisatrice : « pour créer un rdv, ça doit être exactement le
+même bloc que pour modifier un rdv ». **Prime sur toute description antérieure
+de `prise-rdv/` (« Nouveau rendez-vous ») et de `RescheduleRdvDialog`.**
+
+- `rendezvous/RescheduleRdvDialog.tsx` → **`rendezvous/RdvDialog.tsx`** : avec
+  `detail` = « Reprogrammer le rendez-vous » (inchangé) ; sans `detail` =
+  « Nouveau rendez-vous » (`initialClientId`, `defaultSalonId`, `pickedSlot`,
+  `onCreate`). Mêmes sections Date / Salon / Horaire / Prestations ; la
+  création ajoute seulement **Cliente** en tête (recherche nom / téléphone /
+  n° client sur `useClientsData().rows`, « Créer la fiche » →
+  `NewClientDialog`), ouvre les prestations d'emblée, bouton « Créer le
+  rendez-vous ». Dans les deux modes : « + Ajouter une personne » (prénom
+  facultatif, « Personne N » sinon). Créneau cliqué au Planning : jour, heure
+  et praticienne préférée (`planAt(…, preferredStaffId)`).
+- Branché dans `RendezVous.tsx` (bouton, `?nouveau=1`, `?client=`) et
+  `equipe/planning-board/PlanningBoard` (clic sur une demi-heure libre).
+- **Perdu par rapport au parcours b&co** : boissons / produits, questions de
+  réservation, prestations couvertes par un abonnement / pack, acompte,
+  « à deux praticiennes » choisi à la main. `components/prise-rdv/` et
+  `lib/prise-rdv/` (hors `planifier.ts`, utilisé par `RdvDialog`) ne sont plus
+  montés nulle part — conservés, à supprimer si le choix est confirmé.
