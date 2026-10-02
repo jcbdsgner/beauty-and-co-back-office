@@ -8,7 +8,7 @@
 // planning) : la plupart des jours à l'heure, quelques retards, un départ
 // anticipé de temps en temps, et de rares oublis de pointage au départ.
 
-import { today, type SalonId, type SalonScope } from "./beautyandco";
+import { inScope, today, type SalonId, type SalonScope } from "./beautyandco";
 import {
   TODAY_ISO,
   addDays,
@@ -289,7 +289,7 @@ export function teamPointagesByDay(
   for (const member of members) {
     if (!member.active || (memberId && member.id !== memberId)) continue;
     for (const day of inRange(pointagesFor(member.id), range)) {
-      if (scope !== "all" && day.salonId !== scope) continue;
+      if (scope !== "all" && (!day.salonId || !inScope(scope, day.salonId))) continue;
       const list = byDate.get(day.date) ?? [];
       list.push({ member, day });
       byDate.set(day.date, list);

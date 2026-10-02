@@ -23,6 +23,7 @@ import {
   type ClientPreferences,
   type ClientRow,
   type ClientVisit,
+  inScope,
   type SalonId,
   type SalonScope,
 } from "@/lib/mock/beautyandco";
@@ -233,7 +234,7 @@ export function ClientsProvider({ children }: { children: ReactNode }) {
     (scope: SalonScope) => {
       const base = seedClients(scope).map((r) => getDetail(r.id)!.row);
       const extra = created
-        .filter((c) => scope === "all" || c.salon === scope)
+        .filter((c) => inScope(scope, c.salon))
         .map((c) => applyCoordonnees(createdToRow(c), overrides[c.id]?.coordonnees));
       return [...extra, ...base];
     },

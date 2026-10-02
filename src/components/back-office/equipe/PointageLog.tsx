@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { salonName, type SalonScope } from "@/lib/mock/beautyandco";
+import { salonName, singleSalon, type SalonScope } from "@/lib/mock/beautyandco";
 import { journalDayLabel } from "@/lib/mock/journal";
 import { ABSENCE_LABELS, TODAY_ISO } from "@/lib/mock/planning";
 import {
@@ -112,7 +112,7 @@ export default function PointageLog({
     .map((g) => ({ ...g, rows: onlyAnomalies ? g.rows.filter((r) => hasAnomaly(r.day)) : g.rows }))
     .filter((g) => g.rows.length > 0);
   const member = memberId ? memberById(memberId) : null;
-  const showSalon = scope === "all";
+  const showSalon = singleSalon(scope) === null;
 
   return (
     <div className="space-y-6">

@@ -37,24 +37,77 @@ export const today = {
 };
 
 /* ------------------------------------------------------------------ */
-/* Salons — le nombre est figé (pas de pagination / repli à prévoir)   */
+/* Salons                                                              */
 /* ------------------------------------------------------------------ */
 
-export const salons = [
+// Simulation d'un 3ᵉ salon (Abidjan). À `true`, le salon de Cocody rejoint la
+// liste : le filtre salon des écrans passe de la bascule à deux pastilles au
+// menu à cases (`shared/SalonFilter`), avec les raccourcis par ville. Le salon
+// n'a ni rendez-vous, ni équipe, ni stock — il sert à voir le comportement.
+export const SIMULER_SALON_ABIDJAN = false;
+
+const ALL_SALONS = [
   { id: "almadies", name: "Almadies", area: "Route de Ngor" },
   { id: "seaplaza", name: "Sea Plaza", area: "Corniche Ouest" },
+  { id: "cocody", name: "Cocody", area: "Riviera Golf" },
 ] as const;
 
-export type SalonId = (typeof salons)[number]["id"];
-export type SalonScope = SalonId | "all";
+export type SalonId = (typeof ALL_SALONS)[number]["id"];
 
-export const salonName = (scope: SalonScope) =>
-  scope === "all" ? "Tous les salons" : (salons.find((s) => s.id === scope)?.name ?? scope);
+export const salons: readonly (typeof ALL_SALONS)[number][] = SIMULER_SALON_ABIDJAN
+  ? ALL_SALONS
+  : ALL_SALONS.filter((s) => s.id !== "cocody");
+
+// Périmètre regardé : tous les salons, un seul, ou une sélection de plusieurs
+// (possible à partir de 3 salons — ex. « Dakar » = Almadies + Sea Plaza). Une
+// liste n'est jamais vide ni complète : `scopeFromIds` la ramène à « all » ou à
+// l'id seul. Toujours tester l'appartenance avec `inScope`, jamais `=== scope`.
+export type SalonScope = SalonId | "all" | readonly SalonId[];
+
+export const scopeIds = (scope: SalonScope): SalonId[] =>
+  scope === "all" ? salons.map((s) => s.id) : typeof scope === "string" ? [scope] : [...scope];
+
+export const inScope = (scope: SalonScope, id: SalonId): boolean =>
+  scope === "all" || (typeof scope === "string" ? scope === id : scope.includes(id));
+
+// Le salon unique regardé, ou `null` si le périmètre en couvre plusieurs.
+export const singleSalon = (scope: SalonScope): SalonId | null =>
+  scope === "all" ? (salons.length === 1 ? salons[0].id : null) : typeof scope === "string" ? scope : scope.length === 1 ? scope[0] : null;
+
+// Normalise une sélection : tout coché → « all », un seul → son id.
+export function scopeFromIds(ids: readonly SalonId[]): SalonScope {
+  const known = salons.map((s) => s.id).filter((id) => ids.includes(id));
+  if (known.length === 0 || known.length === salons.length) return "all";
+  return known.length === 1 ? known[0] : known;
+}
+
+export const sameScope = (a: SalonScope, b: SalonScope): boolean => {
+  const x = scopeIds(a);
+  const y = scopeIds(b);
+  return x.length === y.length && x.every((id) => y.includes(id));
+};
+
+export const salonName = (scope: SalonScope): string => {
+  if (scope === "all") return "Tous les salons";
+  const ids = scopeIds(scope);
+  if (ids.length === 1) return salons.find((s) => s.id === ids[0])?.name ?? ids[0];
+  // Une ville entière cochée se nomme par la ville.
+  const city = SALON_CITIES.find((c) => {
+    const inCity = salonIdsOfCity(c);
+    return inCity.length === ids.length && inCity.every((id) => ids.includes(id));
+  });
+  if (city) return city;
+  return ids.map((id) => salons.find((s) => s.id === id)?.name ?? id).join(", ");
+};
 
 // Répartition indicative du volume entre salons — sert à ventiler les agrégats
-// quand un seul salon est sélectionné (données fictives, pas de vraie compta).
-const SHARE: Record<SalonId, number> = { almadies: 0.62, seaplaza: 0.38 };
-const factor = (scope: SalonScope) => (scope === "all" ? 1 : SHARE[scope]);
+// quand une partie des salons est sélectionnée (données fictives, pas de vraie compta).
+const SHARE: Record<SalonId, number> = { almadies: 0.62, seaplaza: 0.38, cocody: 0.3 };
+const factor = (scope: SalonScope) => {
+  if (scope === "all") return 1;
+  const total = salons.reduce((n, s) => n + SHARE[s.id], 0);
+  return scopeIds(scope).reduce((n, id) => n + SHARE[id], 0) / total;
+};
 
 /* ------------------------------------------------------------------ */
 /* Périodes du tableau de bord                                         */
@@ -129,7 +182,7 @@ const ALL_SALONS_TODAY: SalonToday[] = [
 ];
 
 export function salonsToday(scope: SalonScope): SalonToday[] {
-  return scope === "all" ? ALL_SALONS_TODAY : ALL_SALONS_TODAY.filter((s) => s.id === scope);
+  return ALL_SALONS_TODAY.filter((s) => inScope(scope, s.id));
 }
 
 /* ------------------------------------------------------------------ */
@@ -229,7 +282,25 @@ export const salonConfigs: SalonConfig[] = [
     postes: { coiffure: 3, esthetique: 1, onglerie: 2 },
     hours: standardHours(),
   },
-];
+  {
+    id: "cocody",
+    name: "Cocody",
+    city: "Abidjan",
+    address: "Riviera Golf, Cocody, Abidjan",
+    phone: "+225 27 22 48 55 66",
+    active: true,
+    postes: { coiffure: 3, esthetique: 2, onglerie: 1 },
+    hours: standardHours(),
+  },
+].filter((c) => salons.some((s) => s.id === c.id)) as SalonConfig[];
+
+// Salons d'une ville, dans l'ordre de `salons` — alimente les raccourcis
+// « Dakar » / « Abidjan » du filtre salon.
+export function salonIdsOfCity(city: SalonCity): SalonId[] {
+  return salons
+    .map((s) => s.id)
+    .filter((id) => salonConfigs.find((c) => c.id === id)?.city === city);
+}
 
 export const salonConfig = (id: SalonId): SalonConfig =>
   salonConfigs.find((s) => s.id === id)!;
@@ -269,7 +340,7 @@ export const closuresFor = (scope: SalonScope, iso: string): SalonClosure[] =>
     (c) =>
       iso >= c.from &&
       iso <= c.to &&
-      (scope === "all" || c.scope === "all" || c.scope === scope),
+      (c.scope === "all" || scopeIds(c.scope).some((id) => inScope(scope, id))),
   );
 
 // Salon fermé ce jour-là : soit l'horaire hebdomadaire est fermé, soit une
@@ -393,6 +464,7 @@ const REVENUE: Record<"today" | "week" | "month", RevenueBucket> = {
     bySalon: {
       almadies: k([52, 58, 49, 62, 66, 71, 60]),
       seaplaza: k([32, 35, 30, 38, 40, 43, 37]),
+      cocody: k([24, 27, 22, 30, 31, 34, 28]),
     },
   },
   week: {
@@ -401,6 +473,7 @@ const REVENUE: Record<"today" | "week" | "month", RevenueBucket> = {
     bySalon: {
       almadies: k([372, 355, 391, 352]),
       seaplaza: k([228, 218, 240, 216]),
+      cocody: k([170, 162, 181, 168]),
     },
   },
   month: {
@@ -409,6 +482,7 @@ const REVENUE: Record<"today" | "week" | "month", RevenueBucket> = {
     bySalon: {
       almadies: k([1150, 1060, 1240, 1330, 1190, 1390, 1480, 1140, 1470, 1360, 1560, 1250]),
       seaplaza: k([700, 660, 800, 880, 790, 930, 1000, 760, 980, 900, 1050, 840]),
+      cocody: k([520, 500, 600, 650, 590, 690, 740, 560, 720, 680, 780, 630]),
     },
   },
 };
@@ -422,6 +496,7 @@ const APPOINTMENTS: Record<"today" | "week" | "month", RevenueBucket> = {
     bySalon: {
       almadies: [14, 16, 13, 18, 19, 21, 17],
       seaplaza: [9, 10, 8, 11, 12, 13, 10],
+      cocody: [7, 8, 6, 9, 9, 10, 8],
     },
   },
   week: {
@@ -430,6 +505,7 @@ const APPOINTMENTS: Record<"today" | "week" | "month", RevenueBucket> = {
     bySalon: {
       almadies: [92, 88, 97, 87],
       seaplaza: [57, 54, 60, 54],
+      cocody: [43, 41, 46, 42],
     },
   },
   month: {
@@ -438,6 +514,7 @@ const APPOINTMENTS: Record<"today" | "week" | "month", RevenueBucket> = {
     bySalon: {
       almadies: [290, 265, 310, 335, 300, 350, 375, 285, 370, 340, 395, 315],
       seaplaza: [175, 165, 200, 220, 195, 230, 250, 190, 245, 225, 260, 210],
+      cocody: [130, 125, 150, 165, 145, 170, 185, 140, 180, 170, 195, 155],
     },
   },
 };
@@ -450,10 +527,10 @@ export function trendChart(
   metric: TrendMetric,
 ) {
   const bucket = (metric === "revenue" ? REVENUE : APPOINTMENTS)[dataPeriod(period)];
-  const ids: SalonId[] = scope === "all" ? salons.map((s) => s.id) : [scope];
+  const ids = scopeIds(scope);
   return {
     subtitle:
-      scope === "all"
+      ids.length > 1
         ? bucket.subtitle
         : bucket.subtitle.replace(" par salon", ""),
     categories: bucket.categories,
@@ -461,7 +538,7 @@ export function trendChart(
       name: salons.find((s) => s.id === id)!.name,
       data: bucket.bySalon[id],
     })),
-    stacked: scope === "all",
+    stacked: ids.length > 1,
   };
 }
 
@@ -582,11 +659,11 @@ export function satisfaction(scope: SalonScope, windowDays: SatisfactionWindow) 
   const prevStart = start - days * DAY_MS;
 
   const ts = (r: Review) => new Date(r.date).getTime();
-  const inScope = REVIEWS.filter((r) => scope === "all" || r.salon === scope);
-  const current = inScope
+  const reviews = REVIEWS.filter((r) => inScope(scope, r.salon));
+  const current = reviews
     .filter((r) => ts(r) >= start && ts(r) <= end)
     .sort((a, b) => b.date.localeCompare(a.date));
-  const previous = inScope.filter((r) => ts(r) >= prevStart && ts(r) < start);
+  const previous = reviews.filter((r) => ts(r) >= prevStart && ts(r) < start);
 
   const avg = mean(current);
   const prevAvg = previous.length >= 3 ? mean(previous) : null;
@@ -822,7 +899,7 @@ function periodRows(
   dp: "today" | "week" | "month",
   periodSatisfaction: number,
 ): { key: string; label: string; revenue: number; visits: number; weight: number; satisfaction: number }[] {
-  const ids: SalonId[] = scope === "all" ? salons.map((s) => s.id) : [scope as SalonId];
+  const ids = scopeIds(scope);
   const rev = REVENUE[dp];
   const app = APPOINTMENTS[dp];
   const perBucketRevenue = rev.categories.map((_, i) =>
@@ -1528,7 +1605,7 @@ function toClientRow(c: ClientSeed): ClientRow {
 }
 
 export function clients(scope: SalonScope): ClientRow[] {
-  return CLIENT_SEEDS.filter((c) => scope === "all" || c.salon === scope).map(toClientRow);
+  return CLIENT_SEEDS.filter((c) => inScope(scope, c.salon)).map(toClientRow);
 }
 
 // Cliente créée il y a ≤ 30 jours — filtre « Nouvelles » du répertoire,

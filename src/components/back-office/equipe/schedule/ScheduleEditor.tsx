@@ -6,12 +6,12 @@ import { ChevronLeft, ChevronRight, Copy, Plus, RotateCcw } from "lucide-react";
 import { Avatar } from "@/components/ui/atoms/avatar";
 import { Button } from "@/components/ui/atoms/button";
 import { IconButton } from "@/components/ui/atoms/icon-button";
-import { SegmentedToggle } from "@/components/ui/molecules/segmented-toggle";
 import { Toast } from "@/components/ui/molecules/toast";
 import { useLocation } from "@/context/LocationContext";
 import { usePlanningData } from "@/context/PlanningContext";
 import { cn } from "@/lib/utils";
-import { isClosed, salons, type SalonId, type SalonScope } from "@/lib/mock/beautyandco";
+import { inScope, isClosed, salons, scopeIds as idsOf, singleSalon, type SalonId } from "@/lib/mock/beautyandco";
+import SalonFilter from "@/components/back-office/shared/SalonFilter";
 import {
   ABSENCE_LABELS,
   PLANNING_DEFAULT_MONDAY,
@@ -65,11 +65,6 @@ const GROUPS: { key: StaffCategory; label: string }[] = [
   { key: "staff", label: "Accueil, gestion & entretien" },
 ];
 
-const SALON_OPTIONS = [
-  { value: "all", label: "Tous les salons" },
-  ...salons.map((s) => ({ value: s.id as string, label: s.name })),
-];
-
 const HATCH =
   "repeating-linear-gradient(135deg, transparent 0 7px, color-mix(in oklab, var(--color-base-content) 6%, transparent) 7px 8px)";
 
@@ -97,8 +92,9 @@ export default function ScheduleEditor({ modeSwitch }: Props) {
   const [toast, setToast] = useState<{ message: string; undo: ScheduleState } | null>(null);
 
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(monday, i)), [monday]);
-  const salonId: SalonId | null = scope === "all" ? null : scope;
-  const scopeIds: SalonId[] = salonId ? [salonId] : salons.map((s) => s.id);
+  // Un seul salon → cases « autre salon » hachurées ; plusieurs → salon écrit dans la case.
+  const salonId = singleSalon(scope);
+  const scopeIds = idsOf(scope);
 
   // Rendez-vous tels qu'affectés d'office avec les horaires en vigueur.
   const rows: PlanningRow[] = useMemo(() => planningRows(autoAssign(allRendezvous(), data)), [data]);
@@ -123,14 +119,14 @@ export default function ScheduleEditor({ modeSwitch }: Props) {
   const visible = useMemo(
     () =>
       team.filter((m) => {
-        if (!salonId) return true;
-        if (Object.values(baseHoursOf(m, data)).some((d) => !d.off && d.salonId === salonId)) return true;
+        if (scope === "all") return true;
+        if (Object.values(baseHoursOf(m, data)).some((d) => !d.off && inScope(scope, d.salonId))) return true;
         return days.some((iso) => {
           const p = dayPlan(m.id, iso, data).presence;
-          return p.state === "present" && p.salonId === salonId;
+          return p.state === "present" && inScope(scope, p.salonId);
         });
       }),
-    [team, salonId, data, days],
+    [team, scope, data, days],
   );
 
   const plans = useMemo(() => {
@@ -171,13 +167,7 @@ export default function ScheduleEditor({ modeSwitch }: Props) {
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         {modeSwitch ?? <span />}
-        <SegmentedToggle
-          size="sm"
-          value={scope}
-          onChange={(v) => setScope(v as SalonScope)}
-          options={SALON_OPTIONS}
-          aria-label="Filtrer par salon"
-        />
+        <SalonFilter value={scope} onChange={setScope} />
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
@@ -400,7 +390,7 @@ export default function ScheduleEditor({ modeSwitch }: Props) {
           {salonId && (
             <li className="flex items-center gap-2">
               <span aria-hidden className="h-3.5 w-5 rounded-[4px] border border-base-300" style={{ backgroundImage: HATCH }} />
-              Dans l&apos;autre salon
+              {salons.length > 2 ? "Dans un autre salon" : <>Dans l&apos;autre salon</>}
             </li>
           )}
         </ul>

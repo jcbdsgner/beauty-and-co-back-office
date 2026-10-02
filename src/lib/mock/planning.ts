@@ -17,9 +17,10 @@ import {
   type Weekday,
   WEEKDAYS,
   closuresFor,
+  inScope,
+  scopeIds,
   isClosed,
   salonName,
-  salons,
 } from "./beautyandco";
 import { type DayShift, type Member, members } from "./staff";
 
@@ -163,7 +164,6 @@ export const mondayOf = (iso: string): string => {
 
 export const PLANNING_DEFAULT_MONDAY = mondayOf(TODAY_ISO);
 
-const SALON_IDS: SalonId[] = salons.map((s) => s.id);
 
 // Absences / ajustements pris en compte. Les écrans qui éditent ces listes en
 // mémoire de session passent leur propre état ; par défaut, les seeds.
@@ -251,11 +251,11 @@ export function weekPresence(
   mondayIso: string,
   data: PlanningData = SEED_DATA,
 ): { days: WeekDayHead[]; rows: WeekRow[] } {
-  const scopeIds: SalonId[] = scope === "all" ? SALON_IDS : [scope];
+  const ids = scopeIds(scope);
 
   const days: WeekDayHead[] = WEEKDAYS.map((weekday, i) => {
     const iso = addDays(mondayIso, i);
-    const closed = scopeIds.every((id) => isClosed(id, iso));
+    const closed = ids.every((id) => isClosed(id, iso));
     const closure = closuresFor(scope, iso)[0]?.reason;
     return { iso, weekday, closed, closure };
   });
@@ -272,7 +272,7 @@ export function weekPresence(
     }))
     .filter(
       (row) =>
-        scope === "all" || row.cells.some((c) => c.state === "present" && c.salonId === scope),
+        scope === "all" || row.cells.some((c) => c.state === "present" && inScope(scope, c.salonId)),
     );
 
   return { days, rows };
@@ -286,12 +286,12 @@ export function coverageGaps(
   mondayIso: string,
   data: PlanningData = SEED_DATA,
 ): { iso: string; salonId: SalonId }[] {
-  const scopeIds: SalonId[] = scope === "all" ? SALON_IDS : [scope];
+  const ids = scopeIds(scope);
   const gaps: { iso: string; salonId: SalonId }[] = [];
 
   for (let i = 0; i < WEEKDAYS.length; i++) {
     const iso = addDays(mondayIso, i);
-    for (const salonId of scopeIds) {
+    for (const salonId of ids) {
       if (isClosed(salonId, iso)) continue;
       const covered = members.some(
         (m) =>

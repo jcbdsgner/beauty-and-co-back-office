@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/atoms/button";
 import { SegmentedToggle } from "@/components/ui/molecules/segmented-toggle";
 import { useLocation } from "@/context/LocationContext";
 import { usePlanningData } from "@/context/PlanningContext";
-import { salons, type SalonId, type SalonScope } from "@/lib/mock/beautyandco";
+import { inScope, salons, singleSalon, type SalonId, type SalonScope } from "@/lib/mock/beautyandco";
+import SalonFilter from "@/components/back-office/shared/SalonFilter";
 import { TODAY_ISO, addDays, mondayOf, newAbsenceId } from "@/lib/mock/planning";
 import { allRendezvous, autoAssign, type RdvDetail } from "@/lib/mock/rendezvous";
 import { initials, type Member } from "@/lib/mock/staff";
@@ -48,11 +49,6 @@ const METIER_OPTIONS: { value: MetierFilter; label: string }[] = [
   { value: "esthetique", label: "Esthéticiens" },
 ];
 
-const SALON_OPTIONS = [
-  { value: "all", label: "Tous les salons" },
-  ...salons.map((s) => ({ value: s.id as string, label: s.name })),
-];
-
 type Props = {
   /** Rendez-vous de session (écran `/rendez-vous`, déjà affectés) — sinon les fixtures. */
   rdvs?: RdvDetail[];
@@ -79,7 +75,9 @@ export default function PlanningBoard({ rdvs, onOpenRdv, showSalonFilter = true,
   const [order, setOrder] = useState<string[]>(() => schedulableMembers().map((m) => m.id));
 
   const isToday = iso === todayIso;
-  const salonId: SalonId | null = scope === "all" ? null : scope;
+  // Un seul salon regardé → hachures « autre salon » dans les frises ; plusieurs
+  // (ex. une ville sur trois salons) → lecture « tous », restreinte aux salons cochés.
+  const salonId = singleSalon(scope);
   const isWeek = period === "semaine";
 
   const base = useMemo(() => schedulableMembers(), []);
@@ -99,8 +97,8 @@ export default function PlanningBoard({ rdvs, onOpenRdv, showSalonFilter = true,
   // Praticiennes réaffectées d'office si une absence vient d'être posée.
   const rowsAll = useMemo(() => planningRows(rdvs ?? autoAssign(allRendezvous(), data)), [rdvs, data]);
   const dayRows = useMemo(
-    () => rowsAll.filter((r) => r.dateIso === iso && (!salonId || r.salonId === salonId)),
-    [rowsAll, iso, salonId],
+    () => rowsAll.filter((r) => r.dateIso === iso && inScope(scope, r.salonId)),
+    [rowsAll, iso, scope],
   );
 
   // Pas de salon fixe : un salon regardé retient, pour le jour affiché, celles qui y ont une
@@ -108,30 +106,35 @@ export default function PlanningBoard({ rdvs, onOpenRdv, showSalonFilter = true,
   // semaine. En semaine : celles qui y travaillent au fil de la semaine.
   const bySalon = useMemo(() => {
     const byMetier = schedulable.filter((p) => metierFilter === "tous" || p.category === metierFilter);
-    if (!salonId) return byMetier;
+    if (scope === "all") return byMetier;
+    const here = (id: SalonId) => inScope(scope, id);
     const hasRowsHere = (p: Member, rows: PlanningRow[]) =>
-      rows.some((r) => r.salonId === salonId && (r.staffId === p.id || r.secondStaffId === p.id));
+      rows.some((r) => here(r.salonId) && (r.staffId === p.id || r.secondStaffId === p.id));
     const monday = weekDays[0];
     if (isWeek) {
       const weekSet = new Set(weekDays);
       const weekRows = rowsAll.filter((r) => weekSet.has(r.dateIso));
-      return byMetier.filter((p) => salonsOfWeek(p.id, monday, data).includes(salonId) || hasRowsHere(p, weekRows));
+      return byMetier.filter((p) => salonsOfWeek(p.id, monday, data).some(here) || hasRowsHere(p, weekRows));
     }
     return byMetier.filter((p) => {
       const shifts = shiftsFor(p.id, iso, data);
       return (
-        shifts.some((s) => s.salonId === salonId) ||
+        shifts.some((s) => here(s.salonId)) ||
         hasRowsHere(p, dayRows) ||
-        (shifts.length === 0 && salonsOfWeek(p.id, monday, data).includes(salonId))
+        (shifts.length === 0 && salonsOfWeek(p.id, monday, data).some(here))
       );
     });
-  }, [schedulable, metierFilter, salonId, isWeek, weekDays, rowsAll, dayRows, iso, data]);
+  }, [schedulable, metierFilter, scope, isWeek, weekDays, rowsAll, dayRows, iso, data]);
 
   const closedSalon = !isWeek && salonId && isClosed(salonId, iso) ? salonId : null;
-  const otherSalon = salons.find((s) => s.id !== salonId);
   const elsewhereToday = closedSalon
     ? schedulable.filter((p) => shiftsFor(p.id, iso, data).some((s) => s.salonId !== closedSalon))
     : [];
+  // Le salon où travaillent ces personnes ce jour-là (le premier autre salon à défaut).
+  const otherSalon =
+    salons.find(
+      (s) => s.id !== closedSalon && elsewhereToday.some((p) => shiftsFor(p.id, iso, data).some((sh) => sh.salonId === s.id)),
+    ) ?? salons.find((s) => s.id !== salonId);
 
   const allIds = useMemo(() => new Set(bySalon.map((p) => p.id)), [bySalon]);
   const activeVisible = visibleIds ?? allIds;
@@ -140,8 +143,8 @@ export default function PlanningBoard({ rdvs, onOpenRdv, showSalonFilter = true,
 
   const isolate = (id: string) => setVisibleIds(new Set([id]));
   const showAll = () => setVisibleIds(null);
-  const changeSalonFilter = (value: string) => {
-    setScope(value as SalonScope);
+  const changeSalonFilter = (value: SalonScope) => {
+    setScope(value);
     setVisibleIds(null);
   };
   const changeMetierFilter = (value: string) => {
@@ -175,13 +178,7 @@ export default function PlanningBoard({ rdvs, onOpenRdv, showSalonFilter = true,
           aria-label="Filtrer par métier"
         />
         {showSalonFilter && (
-          <SegmentedToggle
-            size="sm"
-            value={scope}
-            onChange={changeSalonFilter}
-            options={SALON_OPTIONS}
-            aria-label="Filtrer par salon"
-          />
+          <SalonFilter value={scope} onChange={changeSalonFilter} variant="tinted" />
         )}
         {toolbarEnd}
       </div>

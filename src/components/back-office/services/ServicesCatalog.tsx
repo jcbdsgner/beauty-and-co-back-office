@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import { SearchInput } from "@/components/ui/atoms/search-input";
-import { salonName, type SalonScope } from "@/lib/mock/beautyandco";
+import { salonName, singleSalon, type SalonScope } from "@/lib/mock/beautyandco";
 import {
   groupPrestationsBySubcategory,
   isUnbookable,
@@ -244,7 +244,7 @@ export default function ServicesCatalog({
           {hiddenBySalon > 0 && (
             <p className="text-sm text-base-content/60">
               {hiddenBySalon} prestation{hiddenBySalon > 1 ? "s" : ""} non proposée
-              {hiddenBySalon > 1 ? "s" : ""} à {salonName(scope as Exclude<SalonScope, "all">)}{" "}
+              {hiddenBySalon > 1 ? "s" : ""} à {salonName(scope)}{" "}
               {hiddenBySalon > 1 ? "sont masquées" : "est masquée"}.
             </p>
           )}
@@ -283,7 +283,7 @@ export default function ServicesCatalog({
         {rows.length === 0 && !filtering && (
           <div className="rounded-box border border-dashed border-base-300 px-6 py-10 text-center">
             <p className="text-[15px] font-medium text-base-content">
-              Aucune catégorie {scope === "all" ? "pour l'instant" : "proposée dans ce salon"}.
+              Aucune catégorie {scope === "all" ? "pour l'instant" : singleSalon(scope) ? "proposée dans ce salon" : "proposée dans ces salons"}.
             </p>
             <button
               type="button"

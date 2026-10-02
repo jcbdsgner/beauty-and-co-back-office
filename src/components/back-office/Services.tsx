@@ -1,14 +1,12 @@
 "use client";
 
+import SalonFilter from "@/components/back-office/shared/SalonFilter";
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import PageHeader from "@/components/back-office/PageHeader";
 import PageTabs from "@/components/back-office/PageTabs";
-import SegmentedControl, {
-  type SegmentedOption,
-} from "@/components/ui/segmented/SegmentedControl";
 import { useLocation } from "@/context/LocationContext";
-import { salons, type SalonScope } from "@/lib/mock/beautyandco";
+
 import {
   newId,
   setIncompatibilities,
@@ -27,11 +25,6 @@ import { useServicesData } from "./services/ServicesData";
 // continues avec sommaire (`services/ServicesCatalog`, 2026-09-27 — remplace
 // le tableau Kanban : voir ce fichier pour les 3 questions de design) ;
 // fiches catégorie et prestation en panneau latéral par-dessus.
-
-const SALON_OPTIONS: SegmentedOption<SalonScope>[] = [
-  { value: "all", label: "Tous les salons" },
-  ...salons.map((s) => ({ value: s.id as SalonScope, label: s.name })),
-];
 
 // Deux onglets, deux routes (2026-09-27) : Prestations = `/services`,
 // Boissons = `/services/boissons`. L'état du catalogue vit dans
@@ -166,13 +159,7 @@ export default function Services({ section }: { section: ServicesSection }) {
         actions={
           section === "prestations" ? (
             <>
-              <SegmentedControl
-                options={SALON_OPTIONS}
-                value={scope}
-                onChange={setScope}
-                aria-label="Filtrer par salon"
-                variant="tinted"
-              />
+              <SalonFilter value={scope} onChange={setScope} />
               <button
                 type="button"
                 disabled={services.length === 0}

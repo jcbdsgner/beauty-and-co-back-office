@@ -22,6 +22,9 @@
 import {
   salons,
   salonName,
+  inScope,
+  scopeIds,
+  singleSalon,
   frShortDate,
   groupThousands,
   type SalonId,
@@ -993,7 +996,7 @@ export function scopePoolOnHand(
   use: StockUse,
   extra: StockMovement[] = [],
 ): number | null {
-  const salonsIn = productLocations(productId).filter((l): l is SalonId => !isReserve(l) && (scope === "all" || l === scope));
+  const salonsIn = productLocations(productId).filter((l): l is SalonId => !isReserve(l) && inScope(scope, l));
   const vals = salonsIn.map((l) => poolOnHand(productId, l, use, extra));
   if (vals.length === 0 || vals.every((v) => v === null)) return null;
   return vals.reduce((sum: number, v) => sum + (v ?? 0), 0);
@@ -1016,8 +1019,7 @@ export function companyOnHand(
 /* Consommation                                                        */
 /* ------------------------------------------------------------------ */
 
-const scopeLocations = (scope: SalonScope): StockLocation[] =>
-  scope === "all" ? [...SALON_IDS] : [scope];
+const scopeLocations = (scope: SalonScope): StockLocation[] => scopeIds(scope);
 
 // Moyenne des sorties hebdomadaires (ventes + prestations, hors transferts) sur
 // `weeks` dernières semaines, pour le périmètre demandé (les salons du scope).
@@ -1292,13 +1294,46 @@ export function stockRows(scope: SalonScope, opts: StockRowsOpts = {}): StockRow
         };
       }
 
-      const cell = stockOf(product.id, scope);
+      const single = singleSalon(scope);
+      if (!single) {
+        // Plusieurs salons sans être tous (ex. une ville) : on additionne les
+        // salons cochés, sans la réserve centrale (elle n'appartient à aucun).
+        const inSalons = scopeIds(scope).filter((id) => stockOf(product.id, id));
+        if (inSalons.length === 0) return null;
+        const levels = inSalons.map((id) => locationOnHand(product.id, id, extra));
+        const onHand = levels.every((v) => v === null)
+          ? null
+          : levels.reduce((sum: number, v) => sum + (v ?? 0), 0);
+        const min = inSalons.reduce((sum, id) => sum + effectiveSalonMin(product.id, id, ov), 0);
+        const weekly = weeklyConsumption(product.id, scope);
+        const coverage = onHand === null ? null : coverageDays(onHand, weekly);
+        const series = inSalons.map((id, i) => levelSeries(product.id, id, levels[i] ?? 0, 8, extra));
+        const spark = series[0].map((_, w) => series.reduce((sum, s) => sum + s[w], 0));
+        return {
+          product,
+          onHand,
+          reserve: null,
+          min,
+          weekly,
+          coverage,
+          spark,
+          status: rowStatus(onHand, min, coverage),
+          leadDays: leadDaysFor(product.id),
+          uses: usesOf(product.id),
+          pools: {
+            vente: scopePoolOnHand(product.id, scope, "vente", extra),
+            prestations: scopePoolOnHand(product.id, scope, "prestations", extra),
+          },
+        };
+      }
+
+      const cell = stockOf(product.id, single);
       if (!cell) return null;
-      const onHand = locationOnHand(product.id, scope, extra);
-      const min = effectiveSalonMin(product.id, scope, ov);
+      const onHand = locationOnHand(product.id, single, extra);
+      const min = effectiveSalonMin(product.id, single, ov);
       const weekly = weeklyConsumption(product.id, scope);
       const coverage = onHand === null ? null : coverageDays(onHand, weekly);
-      const spark = levelSeries(product.id, scope, onHand ?? 0, 8, extra);
+      const spark = levelSeries(product.id, single, onHand ?? 0, 8, extra);
       return {
         product,
         onHand,
@@ -1311,8 +1346,8 @@ export function stockRows(scope: SalonScope, opts: StockRowsOpts = {}): StockRow
         leadDays: cell.leadDays,
         uses: usesOf(product.id),
         pools: {
-          vente: poolOnHand(product.id, scope, "vente", extra),
-          prestations: poolOnHand(product.id, scope, "prestations", extra),
+          vente: poolOnHand(product.id, single, "vente", extra),
+          prestations: poolOnHand(product.id, single, "prestations", extra),
         },
       };
     })

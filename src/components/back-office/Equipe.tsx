@@ -1,5 +1,6 @@
 "use client";
 
+import SalonFilter from "@/components/back-office/shared/SalonFilter";
 import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import PageHeader from "@/components/back-office/PageHeader";
@@ -15,10 +16,7 @@ import AddMemberFlow from "./equipe/AddMemberFlow";
 import PlanningBoard from "./equipe/planning-board/PlanningBoard";
 import ScheduleEditor from "./equipe/schedule/ScheduleEditor";
 import PointageView from "./equipe/PointageView";
-import SegmentedControl, {
-  type SegmentedOption,
-} from "@/components/ui/segmented/SegmentedControl";
-import { salons, type SalonScope } from "@/lib/mock/beautyandco";
+
 import { SegmentedToggle } from "@/components/ui/molecules/segmented-toggle";
 import { useEquipeData } from "./equipe/EquipeData";
 import { BackButton } from "./equipe/ui";
@@ -45,10 +43,6 @@ import { BackButton } from "./equipe/ui";
 
 export type EquipeTab = "membres" | "planning" | "pointage";
 
-const SALON_OPTIONS: SegmentedOption<SalonScope>[] = [
-  { value: "all", label: "Tous les salons" },
-  ...salons.map((s) => ({ value: s.id as SalonScope, label: s.name })),
-];
 
 type View = { kind: "list" } | { kind: "detail"; id: string } | { kind: "new" };
 
@@ -171,13 +165,7 @@ export default function Equipe({ tab }: { tab: EquipeTab }) {
               Ajouter un membre
             </button>
           ) : tab === "pointage" ? (
-            <SegmentedControl
-              options={SALON_OPTIONS}
-              value={scope}
-              onChange={setScope}
-              aria-label="Filtrer par salon"
-              variant="tinted"
-            />
+            <SalonFilter value={scope} onChange={setScope} />
           ) : undefined
         }
       />

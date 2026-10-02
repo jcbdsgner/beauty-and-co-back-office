@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useLocation } from "@/context/LocationContext";
-import { salonName } from "@/lib/mock/beautyandco";
+import { inScope as salonInScope, salonName } from "@/lib/mock/beautyandco";
 import {
   conversationByClientId,
   conversations as baseConversations,
@@ -34,7 +34,7 @@ export default function Messagerie() {
     setConsumedClientParam(clientParam);
     const target = conversationByClientId(clientParam);
     if (target) {
-      if (scope !== "all" && target.salon !== scope) setScope("all");
+      if (!salonInScope(scope, target.salon)) setScope("all");
     }
   }
 
@@ -56,7 +56,7 @@ export default function Messagerie() {
 
   // Filtre salon global (comme le tableau de bord).
   const inScope = useMemo(
-    () => withDrafts.filter((c) => scope === "all" || c.salon === scope),
+    () => withDrafts.filter((c) => salonInScope(scope, c.salon)),
     [withDrafts, scope],
   );
 

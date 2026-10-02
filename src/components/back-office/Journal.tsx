@@ -1,5 +1,6 @@
 "use client";
 
+import SalonFilter from "@/components/back-office/shared/SalonFilter";
 import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import PageHeader from "@/components/back-office/PageHeader";
@@ -7,7 +8,7 @@ import SegmentedControl, {
   type SegmentedOption,
 } from "@/components/ui/segmented/SegmentedControl";
 import { useLocation } from "@/context/LocationContext";
-import { salons, type SalonScope } from "@/lib/mock/beautyandco";
+import { inScope, salonName } from "@/lib/mock/beautyandco";
 import {
   ACTOR_ROLES,
   ACTOR_ROLE_FILTER_LABELS,
@@ -55,11 +56,6 @@ import {
 //    neutre (ce n'est pas une alerte) ; période ou recherche trop étroite →
 //    message + retour à 30 jours ; une collaboratrice partie reste nommée dans
 //    l'historique (nom dénormalisé, aucune jointure).
-
-const SALON_OPTIONS: SegmentedOption<SalonScope>[] = [
-  { value: "all", label: "Tous les salons" },
-  ...salons.map((s) => ({ value: s.id as SalonScope, label: s.name })),
-];
 
 const ROLE_OPTIONS: SegmentedOption<ActorRole>[] = ACTOR_ROLES.map((r) => ({
   value: r,
@@ -200,17 +196,14 @@ export default function Journal() {
   const [period, setPeriod] = useState<JournalPeriod>(DEFAULT_JOURNAL_PERIOD);
   const [query, setQuery] = useState("");
 
-  const salonLabel =
-    scope === "all"
-      ? "Tous les salons"
-      : (salons.find((s) => s.id === scope)?.name ?? scope);
+  const salonLabel = salonName(scope);
 
   // Total pour ce salon + ce rôle, toutes périodes confondues — sert à
   // distinguer « ce rôle n'a jamais rien fait ici » de « rien sur la période ».
   const roleTotal = useMemo(
     () =>
       journalEntries.filter(
-        (e) => (scope === "all" || e.salonId === scope) && e.actorRole === role,
+        (e) => inScope(scope, e.salonId) && e.actorRole === role,
       ).length,
     [scope, role],
   );
@@ -233,13 +226,7 @@ export default function Journal() {
       <PageHeader
         title="Journal d'activité"
         actions={
-          <SegmentedControl
-            options={SALON_OPTIONS}
-            value={scope}
-            onChange={setScope}
-            aria-label="Filtrer par salon"
-            variant="tinted"
-          />
+          <SalonFilter value={scope} onChange={setScope} />
         }
       />
 

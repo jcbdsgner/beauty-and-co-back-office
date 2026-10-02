@@ -31,6 +31,7 @@
 import {
   WEEKDAYS,
   fcfa,
+  inScope,
   salonConfig,
   salonName,
   salons,
@@ -906,7 +907,7 @@ export function serviceRows(
   scope: SalonScope,
 ): ServiceRow[] {
   return services
-    .filter((s) => scope === "all" || s.salonIds.includes(scope))
+    .filter((s) => scope === "all" || s.salonIds.some((id) => inScope(scope, id)))
     .map((service) => {
       const pres = prestations.filter((p) => p.serviceId === service.id);
       const ques = questions.filter((q) => q.serviceId === service.id);
@@ -927,7 +928,7 @@ export function serviceRows(
 export const prestationsForSalon = (prestations: Prestation[], scope: SalonScope) =>
   scope === "all"
     ? prestations
-    : prestations.filter((p) => (p.salonIds.length ? p.salonIds.includes(scope) : true));
+    : prestations.filter((p) => (p.salonIds.length ? p.salonIds.some((id) => inScope(scope, id)) : true));
 
 export const orphanPrestations = (prestations: Prestation[]) =>
   prestations.filter((p) => p.serviceId === null);

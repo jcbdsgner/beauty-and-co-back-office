@@ -13,7 +13,7 @@
 // dans chaque entrée (une collaboratrice qui a quitté l'équipe reste lisible
 // dans l'historique).
 
-import { type SalonId } from "./beautyandco";
+import { inScope, type SalonId, type SalonScope } from "./beautyandco";
 
 /* ------------------------------------------------------------------ */
 /* Types                                                              */
@@ -462,11 +462,11 @@ const fold = (s: string) =>
 // antéchronologique.
 export function filterJournal(
   entries: JournalEntry[],
-  opts: { salon: SalonId | "all"; role: ActorRole; range: Range; query?: string },
+  opts: { salon: SalonScope; role: ActorRole; range: Range; query?: string },
 ): JournalEntry[] {
   const q = fold((opts.query ?? "").trim());
   return entries
-    .filter((e) => opts.salon === "all" || e.salonId === opts.salon)
+    .filter((e) => inScope(opts.salon, e.salonId))
     .filter((e) => e.actorRole === opts.role)
     .filter((e) => {
       const day = e.at.slice(0, 10);

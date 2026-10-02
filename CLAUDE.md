@@ -1101,6 +1101,14 @@ tout design » → voir @design.md.
   `rendezvous/RescheduleRdvDialog` (2026-10-02) remplace `EditRdvDialog`
   (supprimé), voir « Reprogrammer un rendez-vous » en bas de fichier ;
   `ClientRowActions` et `shared/ClientPreferencesView` supprimés.
+- `back-office/shared/SalonFilter.tsx` (2026-10-02) — **le** filtre salon global
+  de tous les écrans (bandeaux d'Accueil, Rendez-vous, Clients, Services, Stock,
+  Journal, Rapports, Satisfaction, Équipe › Pointage, Planning, Horaires). Jusqu'à
+  2 salons : la bascule `SegmentedControl` habituelle ; à partir de 3 : bouton +
+  menu à cases (Radix) — « Tous les salons », raccourcis **par ville**
+  (`salonIdsOfCity`), puis les salons un par un ; menu ouvert pendant qu'on
+  coche, le dernier salon coché ne se décoche pas. Voir « Filtre salon
+  multi-sélection » en bas de fichier.
 - `back-office/shared/` (compléments 2026-09-27) — `CategoryThumb` (image d'une
   catégorie, chemin `public/` ou dataURL, sinon pastille à l'initiale — plus de
   pictogramme prédéfini ; consommé par `services/CategoryColumn`,
@@ -1198,7 +1206,8 @@ tout design » → voir @design.md.
   et des pages `(auth)`. L'UI produit est light, sans provider de thème.
 - `SidebarContext.tsx` — état sidebar : `isExpanded`, `isHovered`, `isMobileOpen` (`useSidebar`)
 - `LocationContext.tsx` — filtre salon global (`useLocation` → `scope` / `setScope`),
-  persisté en `localStorage`, fourni par `(admin)/layout.tsx`
+  persisté en `localStorage` (« all » ou ids séparés par des virgules,
+  normalisés par `scopeFromIds`), fourni par `(admin)/layout.tsx`
 - `NotificationsContext.tsx` — notifications + état lu/non-lu (`useNotifications` →
   `notifications` / `markRead` / `markAllRead` / `unreadCount`), état de session
   (PAS de persistance), fourni par `(admin)/layout.tsx`. Fusionne les seeds
@@ -3304,3 +3313,30 @@ ligne de la fiche).
 - Les durées des lignes gardées sont celles du rendez-vous (« à deux » déjà
   divisées) ; une ligne ajoutée prend la durée et le prix du catalogue de
   session (`useServicesData`).
+
+## Filtre salon multi-sélection (2026-10-02)
+
+Demande de la propriétaire : prévoir un 3ᵉ salon (Abidjan). La bascule à
+pastilles ne tient plus et ne sait pas dire « Almadies + Sea Plaza » → menu à
+cases avec raccourcis par ville (`shared/SalonFilter`). **Rien ne change tant
+qu'il y a 2 salons.**
+
+- `beautyandco.ts` — `SalonScope` = `"all" | SalonId | readonly SalonId[]`
+  (une liste a toujours 2+ salons sans les avoir tous). Helpers : `scopeIds`,
+  `inScope(scope, id)` (**toujours** tester l'appartenance avec, jamais
+  `=== scope`), `singleSalon` (le salon unique ou `null`), `scopeFromIds`
+  (normalise), `sameScope`, `salonIdsOfCity` ; `salonName` nomme une ville
+  entière par la ville (« Dakar »). `factor` additionne les parts des salons
+  cochés.
+- **Simulation** : `SIMULER_SALON_ABIDJAN` (faux par défaut) ajoute le salon
+  **Cocody** (Abidjan, sans RDV / équipe / stock) à `salons` et
+  `salonConfigs`. `SalonId` inclut toujours `"cocody"` : les
+  `Record<SalonId, …>` (`SHARE`, `REVENUE`, `APPOINTMENTS`, `staffBySalon`)
+  ont une entrée pour lui.
+- Plusieurs salons cochés : `stockRows` additionne les salons cochés (sans
+  la réserve) ; Planning / Horaires lisent comme « tous » restreint aux salons
+  cochés (pas de hachures « autre salon », salon écrit dans les cases).
+- Vérifié : `npx tsc --noEmit` vert ; captures avec la simulation active
+  (menu, raccourci Dakar → accueil, rendez-vous, stock, clients, services,
+  planning) puis inactive (bascule inchangée).
+

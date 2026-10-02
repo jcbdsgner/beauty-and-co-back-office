@@ -6,6 +6,7 @@ import {
   clients,
   fcfa,
   groupThousands,
+  inScope,
   isClosed,
   salonConfig,
   salonName,
@@ -192,6 +193,7 @@ export type RdvDetail = {
 export const staffBySalon: Record<SalonId, string[]> = {
   almadies: ["Gnagna", "Henry", "Adja", "Michelle"],
   seaplaza: ["Bineta", "Fatou", "Marie Dominique", "Adja"],
+  cocody: [], // salon simulé (`SIMULER_SALON_ABIDJAN`), sans équipe
 };
 
 /* ------------------------------------------------------------------ */
@@ -1117,12 +1119,12 @@ export function cancellationNotifications(list: RdvDetail[] = SEEDS): AppNotific
 }
 
 export function rendezvousList(scope: SalonScope): RdvRow[] {
-  return sortRows(SEEDS.filter((r) => scope === "all" || r.salon === scope).map(toRow));
+  return sortRows(SEEDS.filter((r) => inScope(scope, r.salon)).map(toRow));
 }
 
 // Variante pilotée par un état externe (liste tenue par l'écran Rendez-vous).
 export function rendezvousRows(list: RdvDetail[], scope: SalonScope): RdvRow[] {
-  return sortRows(list.filter((r) => scope === "all" || r.salon === scope).map(toRow));
+  return sortRows(list.filter((r) => inScope(scope, r.salon)).map(toRow));
 }
 
 export function rendezvousDetail(id: string): RdvDetail | null {
@@ -1147,7 +1149,7 @@ export function rdvCountByStaffDay(
 ): { date: string; staffFirstName: string; count: number }[] {
   const acc = new Map<string, { date: string; staffFirstName: string; count: number }>();
   for (const r of SEEDS) {
-    if (scope !== "all" && r.salon !== scope) continue;
+    if (!inScope(scope, r.salon)) continue;
     if (r.status === "annulé") continue;
     const date = r.date.slice(0, 10);
     const firsts = new Set(

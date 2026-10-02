@@ -1,10 +1,10 @@
 "use client";
 
+import SalonFilter from "@/components/back-office/shared/SalonFilter";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import PageHeader from "@/components/back-office/PageHeader";
-import SegmentedControl, { type SegmentedOption } from "@/components/ui/segmented/SegmentedControl";
 import { SearchInput } from "@/components/ui/atoms/search-input";
 import { Button } from "@/components/ui/atoms/button";
 import { useLocation } from "@/context/LocationContext";
@@ -14,9 +14,8 @@ import {
   HISTORIQUE_MIN_VISITS,
   clientMatchesQuery,
   isNewClient,
-  salons,
+  scopeIds,
   type ClientRow,
-  type SalonScope,
 } from "@/lib/mock/beautyandco";
 import ClientCards, { ClientCard } from "./ClientCards";
 import { NewClientDialog, type NewClientPrefill } from "./ClientEditDialogs";
@@ -34,11 +33,6 @@ import { ChipFilter, Legend } from "./shared/board";
 // 2. Ce qui saute aux yeux : la recherche, puis les clientes du moment.
 // 3. Recherche sans résultat → proposition de créer la fiche, préremplie ;
 //    filtre vide → réinitialiser.
-
-const SALON_OPTIONS: SegmentedOption<SalonScope>[] = [
-  { value: "all", label: "Tous les salons" },
-  ...salons.map((s) => ({ value: s.id as SalonScope, label: s.name })),
-];
 
 const FILTERS = [
   { value: "toutes", label: "Toutes" },
@@ -119,13 +113,7 @@ export default function Clients() {
       <PageHeader
         title="Clients"
         actions={
-          <SegmentedControl
-            options={SALON_OPTIONS}
-            value={scope}
-            onChange={setScope}
-            aria-label="Filtrer par salon"
-            variant="tinted"
-          />
+          <SalonFilter value={scope} onChange={setScope} />
         }
       />
 
@@ -203,7 +191,7 @@ export default function Clients() {
 
       <NewClientDialog
         open={creating}
-        defaultSalon={scope === "all" ? salons[0].id : scope}
+        defaultSalon={scopeIds(scope)[0]}
         initialValues={prefill}
         existing={everyone}
         onClose={() => setCreating(false)}

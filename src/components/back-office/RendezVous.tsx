@@ -1,13 +1,11 @@
 "use client";
 
+import SalonFilter from "@/components/back-office/shared/SalonFilter";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { CalendarRange, ChevronRight, ListChecks, Plus, Search, UsersRound } from "lucide-react";
 import PageHeader from "@/components/back-office/PageHeader";
-import SegmentedControl, {
-  type SegmentedOption,
-} from "@/components/ui/segmented/SegmentedControl";
 import { Avatar } from "@/components/ui/atoms/avatar";
 import { Button } from "@/components/ui/atoms/button";
 import { DatePicker } from "@/components/ui/molecules/date-picker";
@@ -20,12 +18,13 @@ import { useNotifications } from "@/context/NotificationsContext";
 import { addDays } from "@/lib/mock/planning";
 import {
   clientMatchesQuery,
+  inScope,
   isClosed,
+  scopeIds,
+  singleSalon,
   salonConfig,
   salonName,
-  salons,
   type SalonId,
-  type SalonScope,
   type Weekday,
 } from "@/lib/mock/beautyandco";
 import {
@@ -66,11 +65,6 @@ import { type Reschedule } from "@/components/back-office/rendezvous/RescheduleR
 
 const TODAY_ISO = "2026-09-03";
 const NOW_TIME = "13:20";
-
-const SALON_OPTIONS: SegmentedOption<SalonScope>[] = [
-  { value: "all", label: "Tous les salons" },
-  ...salons.map((s) => ({ value: s.id as SalonScope, label: s.name })),
-];
 
 const WEEKDAY_BY_JS_DAY: Weekday[] = ["dim", "lun", "mar", "mer", "jeu", "ven", "sam"];
 const weekdayOf = (iso: string): Weekday =>
@@ -170,7 +164,7 @@ export default function RendezVous() {
       if (qq && reservationNumberMatches(r, qq)) return true;
       const day = r.date.slice(0, 10);
       if (day < rangeStart || day > rangeEnd) return false;
-      if (scope !== "all" && r.salon !== scope) return false;
+      if (!inScope(scope, r.salon)) return false;
       if (r.status === "annulé") return false;
       if (conflictOnly && !(r.status === "à venir" && r.prestations.some((p) => !p.staff))) return false;
       if (!qq) return true;
@@ -191,7 +185,7 @@ export default function RendezVous() {
     (r) =>
       r.status === "à venir" &&
       r.date.slice(0, 10) >= TODAY_ISO &&
-      (scope === "all" || r.salon === scope) &&
+      inScope(scope, r.salon) &&
       r.prestations.some((p) => !p.staff),
   ).length;
 
@@ -202,10 +196,11 @@ export default function RendezVous() {
       ? "aujourd'hui"
       : `le ${shortDate(rangeStart)}`
     : "sur cette période";
-  const scopeIds: SalonId[] = scope === "all" ? salons.map((s) => s.id) : [scope];
-  const closedSalon = scope !== "all" && singleDay && isClosed(scope, rangeStart) ? salonName(scope) : null;
+  const shownSalons = scopeIds(scope);
+  const closedSalon =
+    scope !== "all" && singleDay && shownSalons.every((id) => isClosed(id, rangeStart)) ? salonName(scope) : null;
   const closedWeekday = new Intl.DateTimeFormat("fr-FR", { weekday: "long" }).format(isoToDate(rangeStart));
-  const win = dayWindow(scopeIds, rangeStart);
+  const win = dayWindow(shownSalons, rangeStart);
 
   const selected = selectedId ? rdvs.find((r) => r.id === selectedId) ?? null : null;
 
@@ -321,13 +316,7 @@ export default function RendezVous() {
         title="Rendez-vous"
         actions={
           <>
-            <SegmentedControl
-              options={SALON_OPTIONS}
-              value={scope}
-              onChange={setScope}
-              aria-label="Filtrer par salon"
-              variant="tinted"
-            />
+            <SalonFilter value={scope} onChange={setScope} />
             <button
               type="button"
               onClick={() => setNewOpen(true)}
@@ -465,7 +454,7 @@ export default function RendezVous() {
       {newOpen && (
         <PriseRdvModal
           open
-          defaultSalonId={scope === "all" ? null : scope}
+          defaultSalonId={singleSalon(scope)}
           rdvs={rdvs}
           planningData={planningData}
           initialClientId={initialClientId}

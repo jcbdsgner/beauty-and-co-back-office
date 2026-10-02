@@ -6,7 +6,7 @@ import { ArrowRight, CalendarX2, ChevronDown, ChevronRight } from "lucide-react"
 import { buttonVariants } from "@/components/ui/atoms/button";
 import { accentForStaffName } from "@/lib/mock/staff-colors";
 import { RDV_STATUS_META } from "@/lib/mock/rendezvous";
-import { isClosed, type SalonScope } from "@/lib/mock/beautyandco";
+import { isClosed, scopeIds, singleSalon, type SalonScope } from "@/lib/mock/beautyandco";
 import { TODAY_ISO } from "@/lib/mock/planning";
 import { NOW, visitSalon, type TodayVisit } from "@/components/back-office/dashboard/today";
 
@@ -106,11 +106,11 @@ function NowLine() {
 
 export default function DayFeed({ visits, scope }: { visits: TodayVisit[]; scope: SalonScope }) {
   const [showPast, setShowPast] = useState(false);
-  const showSalon = scope === "all";
+  const showSalon = singleSalon(scope) === null;
   const past = visits.filter((v) => v.phase === "past");
   const current = visits.filter((v) => v.phase !== "past");
   const nextId = current.find((v) => v.phase === "upcoming" && !v.closed)?.rdv.id;
-  const closedToday = scope !== "all" && isClosed(scope, TODAY_ISO);
+  const closedToday = scope !== "all" && scopeIds(scope).every((id) => isClosed(id, TODAY_ISO));
 
   return (
     <section

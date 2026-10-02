@@ -1,14 +1,12 @@
 "use client";
 
+import SalonFilter from "@/components/back-office/shared/SalonFilter";
 import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import PageHeader from "@/components/back-office/PageHeader";
-import SegmentedControl, {
-  type SegmentedOption,
-} from "@/components/ui/segmented/SegmentedControl";
 import Alert from "@/components/ui/alert/Alert";
 import { useLocation } from "@/context/LocationContext";
-import { salonName, salons, type SalonId, type SalonScope } from "@/lib/mock/beautyandco";
+import { salonName, singleSalon, type SalonId } from "@/lib/mock/beautyandco";
 import { Plus } from "lucide-react";
 import {
   emptyThresholds,
@@ -37,11 +35,6 @@ import NewProductPanel from "./stock/NewProductPanel";
 //    de fausse projection ; produit encore dans une recette mais sans sortie →
 //    alerte « recette à jour ? » ; moins de 4 semaines de données → la
 //    projection est signalée comme indicative.
-
-const SALON_OPTIONS: SegmentedOption<SalonScope>[] = [
-  { value: "all", label: "Tous les salons" },
-  ...salons.map((s) => ({ value: s.id as SalonScope, label: s.name })),
-];
 
 type View = { kind: "list" } | { kind: "detail"; productId: string };
 
@@ -122,13 +115,7 @@ export default function Stock() {
         title="Stock"
         actions={
           <>
-            <SegmentedControl
-              options={SALON_OPTIONS}
-              value={scope}
-              onChange={setScope}
-              aria-label="Filtrer par salon"
-              variant="tinted"
-            />
+            <SalonFilter value={scope} onChange={setScope} />
             <button
               type="button"
               onClick={() => setNewOpen(true)}
@@ -152,7 +139,9 @@ export default function Stock() {
           message={
             scope === "all"
               ? "Le stock entreprise (réserve + salons) est passé sous le seuil. Ouvrez la fiche pour la quantité conseillée."
-              : "Ce salon est sous son seuil. Transférez depuis la réserve centrale, ou passez commande si la réserve est vide."
+              : singleSalon(scope)
+                ? "Ce salon est sous son seuil. Transférez depuis la réserve centrale, ou passez commande si la réserve est vide."
+                : "Ces salons sont sous leur seuil. Transférez depuis la réserve centrale, ou passez commande si la réserve est vide."
           }
         />
       )}

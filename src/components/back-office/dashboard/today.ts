@@ -1,4 +1,4 @@
-import { salonName, today, type SalonScope } from "@/lib/mock/beautyandco";
+import { inScope, salonName, today, type SalonScope } from "@/lib/mock/beautyandco";
 import { TODAY_ISO, type PlanningData } from "@/lib/mock/planning";
 import {
   allRendezvous,
@@ -40,7 +40,7 @@ export const todayTitle = (() => {
 // posées pendant la session (`PlanningContext`).
 export function todayVisits(scope: SalonScope, planning?: PlanningData): TodayVisit[] {
   return autoAssign(allRendezvous(), planning)
-    .filter((r) => r.date.startsWith(TODAY_ISO) && (scope === "all" || r.salon === scope))
+    .filter((r) => r.date.startsWith(TODAY_ISO) && inScope(scope, r.salon))
     .map((rdv) => {
       const starts = rdv.prestations.map((p) => p.start).sort();
       const start = starts[0] ?? rdv.date.slice(11, 16);

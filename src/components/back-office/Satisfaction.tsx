@@ -1,5 +1,6 @@
 "use client";
 
+import SalonFilter from "@/components/back-office/shared/SalonFilter";
 import { useState } from "react";
 import Alert from "@/components/ui/alert/Alert";
 import PageHeader from "@/components/back-office/PageHeader";
@@ -11,16 +12,9 @@ import { ArrowDownIcon, ArrowUpIcon } from "@/icons";
 import { useLocation } from "@/context/LocationContext";
 import {
   frShortDate,
-  salons,
   satisfaction,
-  type SalonScope,
   type SatisfactionWindow,
 } from "@/lib/mock/beautyandco";
-
-const SALON_OPTIONS: SegmentedOption<SalonScope>[] = [
-  { value: "all", label: "Tous les salons" },
-  ...salons.map((s) => ({ value: s.id as SalonScope, label: s.name })),
-];
 
 const WINDOW_OPTIONS: SegmentedOption<SatisfactionWindow>[] = [
   { value: "30", label: "30 jours" },
@@ -281,13 +275,7 @@ export default function Satisfaction() {
               <span className="text-xs font-medium uppercase tracking-wide text-base-content/45">
                 Salon
               </span>
-              <SegmentedControl
-                options={SALON_OPTIONS}
-                value={scope}
-                onChange={setScope}
-                aria-label="Filtrer par salon"
-                variant="tinted"
-              />
+              <SalonFilter value={scope} onChange={setScope} />
             </div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-medium uppercase tracking-wide text-base-content/45">

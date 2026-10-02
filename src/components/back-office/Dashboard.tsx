@@ -10,6 +10,7 @@ import AccesRapides from "@/components/back-office/dashboard/AccesRapides";
 import { todayVisits } from "@/components/back-office/dashboard/today";
 import { usePlanningData } from "@/context/PlanningContext";
 import { useLocation } from "@/context/LocationContext";
+import { singleSalon } from "@/lib/mock/beautyandco";
 
 // Accueil « Décider d'abord » (refonte du 2026-09-27, voir CLAUDE.md
 // « Refonte de l'accueil ») : côte à côte ce qu'il
@@ -19,7 +20,7 @@ export default function Dashboard() {
   const { scope, setScope } = useLocation();
   const { data: planningData } = usePlanningData();
   const visits = useMemo(() => todayVisits(scope, planningData), [scope, planningData]);
-  const { decisions, markRead } = useDayDecisions(visits, scope === "all");
+  const { decisions, markRead } = useDayDecisions(visits, singleSalon(scope) === null);
 
   return (
     <div className="space-y-8">

@@ -31,7 +31,7 @@ export default function TodayKpiCards({
       label: "Rendez-vous",
       value: String(booked.length),
       foot:
-        scope === "all" && bySalon.length > 1
+        bySalon.length > 1
           ? bySalon.map((s) => `${s.n} ${s.name}`).join(" · ")
           : "réservés aujourd'hui",
     },
