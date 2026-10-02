@@ -33,6 +33,7 @@ import {
   autoAssign,
   cancellationNotification,
   cancellationNotificationId,
+  frFullDate,
   type RdvDetail,
   type RdvPrestation,
   type RdvStatus,
@@ -44,6 +45,7 @@ import { initialsOf } from "@/components/back-office/shared/PersonCard";
 import { Legend } from "@/components/back-office/shared/board";
 import { PriseRdvModal } from "@/components/prise-rdv/prise-rdv-modal";
 import RendezVousDetail from "@/components/back-office/RendezVousDetail";
+import { type Reschedule } from "@/components/back-office/rendezvous/RescheduleRdvDialog";
 
 // Écran « Rendez-vous » — une destination, trois vues (Liste, Calendrier, Par praticienne).
 // 1. Où en est la propriétaire ? Coup d'œil courant (« qui vient aujourd'hui,
@@ -224,11 +226,31 @@ export default function RendezVous() {
       prestations: r.prestations.map((p) => (p.id === prestationId ? { ...p, ...fields } : p)),
     }));
 
-  const addPrestation = (id: string, line: RdvPrestation) =>
-    patch(id, (r) => ({ ...r, prestations: [...r.prestations, line] }));
-
-  const removePrestation = (id: string, prestationId: string) =>
-    patch(id, (r) => ({ ...r, prestations: r.prestations.filter((p) => p.id !== prestationId) }));
+  // Reprogrammer : date, salon, horaires et prestations d'un coup (fenêtre
+  // « Reprogrammer le rendez-vous »), tracé dans l'historique du rendez-vous.
+  const reschedule = (id: string, next: Reschedule) => {
+    patch(id, (r) => {
+      const moved = r.date !== next.date || r.salon !== next.salon;
+      const before = `${frFullDate(r.date)} à ${r.date.slice(11, 16)}, ${salonName(r.salon)}`;
+      const after = `${frFullDate(next.date)} à ${next.date.slice(11, 16)}, ${salonName(next.salon)}`;
+      return {
+        ...r,
+        date: next.date,
+        salon: next.salon,
+        salonLabel: salonName(next.salon),
+        prestations: next.prestations,
+        events: [
+          {
+            at: `${TODAY_ISO}T${NOW_TIME}:00`,
+            label: moved ? "Rendez-vous reprogrammé" : "Prestations modifiées",
+            detail: moved ? `${before} → ${after}` : undefined,
+          },
+          ...r.events,
+        ],
+      };
+    });
+    flash("Rendez-vous reprogrammé — cliente prévenue par email.");
+  };
 
   // Annuler un rendez-vous encore à venir remonte une alerte sur l'accueil ;
   // le rétablir la retire.
@@ -278,8 +300,7 @@ export default function RendezVous() {
           onStatusChange={(s) => setStatus(selected.id, s)}
           rdvs={rdvs}
           onUpdatePrestation={(pid, patchFields) => updatePrestation(selected.id, pid, patchFields)}
-          onAddPrestation={(line) => addPrestation(selected.id, line)}
-          onRemovePrestation={(pid) => removePrestation(selected.id, pid)}
+          onReschedule={(next) => reschedule(selected.id, next)}
           onCancelWithReason={(reason) => cancelWithReason(selected.id, reason)}
           planningData={planningData}
         />

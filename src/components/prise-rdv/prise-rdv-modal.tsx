@@ -104,7 +104,7 @@ import "@/components/prise-rdv/prise-rdv.css";
  * clientèle lue dans `ClientsContext`, horaires et praticiennes calculés sur l'agenda et le
  * planning du back-office (`lib/prise-rdv/planifier.ts`), abonnements et packs lus dans
  * `@/lib/mock/abonnements`, le rendez-vous rendu en `RdvDetail` via `onCreate`. Pas
- * d'« Encaisser maintenant » (pas de caisse ici) ni de mode « Modifier » (voir `EditRdvDialog`).
+ * d'« Encaisser maintenant » (pas de caisse ici) ni de mode « Modifier » (voir `rendezvous/RescheduleRdvDialog`).
  */
 
 /** Largeur de référence du site : tout le contenu est rendu à cette largeur puis réduit proportionnellement pour tenir. */

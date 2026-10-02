@@ -1098,6 +1098,8 @@ tout design » → voir @design.md.
   `equipe/PointageLog`).
   `rendezvous/DayList` et `rendezvous/ReservationCalendar` (vues Liste /
   Calendrier de `/rendez-vous`) remplacent `rendezvous/ListView` (supprimé) ;
+  `rendezvous/RescheduleRdvDialog` (2026-10-02) remplace `EditRdvDialog`
+  (supprimé), voir « Reprogrammer un rendez-vous » en bas de fichier ;
   `ClientRowActions` et `shared/ClientPreferencesView` supprimés.
 - `back-office/shared/` (compléments 2026-09-27) — `CategoryThumb` (image d'une
   catégorie, chemin `public/` ou dataURL, sinon pastille à l'initiale — plus de
@@ -3160,7 +3162,7 @@ toute description antérieure de `RendezVousDetail`** (panneau `Dialog
 variant="side"`, prop `closeMode`, route interceptée).
 
 - `RendezVousDetail.tsx` — barre du haut « ← Retour » / **« Modifier »**
-  (`EditRdvDialog`, RDV à venir) ou « Rétablir le rendez-vous » (annulé) ; plus
+  (`RescheduleRdvDialog` depuis le 2026-10-02, RDV à venir) ou « Rétablir le rendez-vous » (annulé) ; plus
   de « Reprogrammer ». En-tête : nom de la payeuse + palier + statut, n° de
   rendez-vous, Date / Horaire (+ durée) / Salon / Réservé pour, total à droite.
   Colonne principale : tableau **Prestations** (colonnes Prestation · Horaire
@@ -3266,3 +3268,39 @@ entre deux visites) ; l'effet est sur la **prise de rendez-vous**.
   Services (`useServicesData`).
 - **Non couvert** : `rendezvous/EditRdvDialog` (édition d'un RDV existant) ne
   contrôle pas ; un pack dont le contenu serait incompatible n'est pas signalé.
+
+## Reprogrammer un rendez-vous (2026-10-02)
+
+Demande de l'utilisatrice, sur une capture de référence (fenêtre
+« Reprogrammer le rendez-vous » du site b&co), puis passe `impeccable polish`.
+**Prime sur toute description antérieure d'`EditRdvDialog`** (supprimé :
+édition ligne par ligne, praticienne / bénéficiaire / horaire par prestation,
+annulation — l'annulation reste sur la fiche, l'intervenante se change sur la
+ligne de la fiche).
+
+- `rendezvous/RescheduleRdvDialog.tsx` — ouvert par « Modifier » sur la fiche
+  rendez-vous. Rappel de l'existant sous le titre (« actuellement jeudi 3
+  septembre 2026 à 15:00, Almadies ») ; **Nouvelle date** (`DatePicker`, pas de
+  jour passé) ; **Salon** (une carte par salon actif : nom, adresse, « Ouvert
+  de 10:00 à 20:00 » ou « Fermé ce jour-là » ce jour-là — à la place du
+  « Prix rendez-vous » de la référence, l'acompte étant le même partout) ;
+  **Horaire** (créneaux par demi-heure groupés Matin / Après-midi / Soir,
+  calculés par `availableTimes` de `@/lib/prise-rdv/planifier` sur toute la
+  visite, rendez-vous en cours exclu de l'occupation ; horaire actuel en
+  pointillé) ; **Prestations** repliées (résumé « N prestations · durée ·
+  total », « Modifier les prestations » → onglets par personne si plusieurs,
+  pastilles des prestations choisies, recherche pliée sans accent, liste à
+  cocher par catégorie avec durée et prix, incompatibilités grisées). États :
+  salon fermé, prestation non proposée dans le salon choisi, aucun horaire
+  libre, aucune prestation. Pied : nouveau rendez-vous en une ligne + « La
+  cliente sera prévenue par email », « Confirmer la reprogrammation » actif
+  seulement si un horaire est choisi et que quelque chose a changé.
+- Confirmation : `planAt` repose chaque prestation (une personne enchaîne les
+  siennes, les personnes en parallèle) en gardant l'intervenante actuelle si
+  elle reste libre (2ᵉ praticienne d'une prestation « à deux » idem), sinon la
+  moins chargée. `RendezVous.tsx` (`reschedule`) écrit date, salon,
+  prestations et une entrée d'historique « Rendez-vous reprogrammé » (ancien →
+  nouveau) ; route `/rendez-vous/[id]` autonome : changement local à la fiche.
+- Les durées des lignes gardées sont celles du rendez-vous (« à deux » déjà
+  divisées) ; une ligne ajoutée prend la durée et le prix du catalogue de
+  session (`useServicesData`).

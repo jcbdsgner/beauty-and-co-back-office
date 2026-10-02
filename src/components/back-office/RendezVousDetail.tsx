@@ -36,7 +36,7 @@ import { fullName, members } from "@/lib/mock/staff";
 import { accentForMemberId } from "@/lib/mock/staff-colors";
 import { presentPractitioners, type PlanningData } from "@/lib/mock/planning";
 import { preferenceLines } from "@/lib/mock/preference-targets";
-import { TIER_LABEL, type ClientDetail } from "@/lib/mock/beautyandco";
+import { TIER_LABEL, salonName, type ClientDetail } from "@/lib/mock/beautyandco";
 import { useClientsData } from "@/context/ClientsContext";
 import { usePreferenceConfig } from "@/context/PreferencesContext";
 import { prestationSeeds, productKind, productName } from "@/lib/mock/services";
@@ -61,7 +61,7 @@ import {
   type RdvPrestation,
   type RdvStatus,
 } from "@/lib/mock/rendezvous";
-import EditRdvDialog from "./rendezvous/EditRdvDialog";
+import RescheduleRdvDialog, { type Reschedule } from "./rendezvous/RescheduleRdvDialog";
 import { initialsOf } from "./shared/PersonCard";
 import { Legend } from "./shared/board";
 import {
@@ -234,14 +234,13 @@ function StaffPick({
 const COLS = "grid grid-cols-[minmax(0,1fr)_116px_212px_108px] items-center gap-x-4";
 
 export default function RendezVousDetail({
-  detail,
+  detail: detailProp,
   onClose,
   onAssign,
   onStatusChange,
   rdvs,
   onUpdatePrestation,
-  onAddPrestation,
-  onRemovePrestation,
+  onReschedule,
   onCancelWithReason,
   planningData,
 }: {
@@ -254,12 +253,15 @@ export default function RendezVousDetail({
   onStatusChange?: (status: RdvStatus) => void;
   rdvs?: RdvDetail[];
   onUpdatePrestation?: (prestationId: string, patch: Partial<RdvPrestation>) => void;
-  onAddPrestation?: (line: RdvPrestation) => void;
-  onRemovePrestation?: (prestationId: string) => void;
+  onReschedule?: (next: Reschedule) => void;
   onCancelWithReason?: (reason: string) => void;
   planningData?: PlanningData;
 }) {
   const router = useRouter();
+  // Sans écran Rendez-vous derrière (route dédiée), une reprogrammation reste
+  // locale à cette fiche.
+  const [localDetail, setLocalDetail] = useState(detailProp);
+  const detail = onReschedule ? detailProp : localDetail;
   // Id fixe : `useId` divergeait entre rendu serveur et client sur cette route.
   const titleId = "rdv-detail-title";
   const close = () => {
@@ -764,20 +766,22 @@ export default function RendezVousDetail({
       </Dialog>
 
       {editOpen && (
-        <EditRdvDialog
+        <RescheduleRdvDialog
           open={editOpen}
           detail={detail}
-          rdvs={rdvs ?? [detail]}
+          rdvs={sessionList}
           planningData={planningData}
           onClose={() => setEditOpen(false)}
-          onUpdateLine={(pid, patch) => onUpdatePrestation?.(pid, patch)}
-          onAddLine={(line) => onAddPrestation?.(line)}
-          onRemoveLine={(pid) => onRemovePrestation?.(pid)}
-          onCancelRdv={(reason) => {
-            setStatusState("annulé");
-            setCancelReason(reason);
-            if (onCancelWithReason) onCancelWithReason(reason);
-            else onStatusChange?.("annulé");
+          onConfirm={(next) => {
+            if (onReschedule) onReschedule(next);
+            else
+              setLocalDetail((d) => ({
+                ...d,
+                date: next.date,
+                salon: next.salon,
+                salonLabel: salonName(next.salon),
+                prestations: next.prestations,
+              }));
             setEditOpen(false);
           }}
         />
