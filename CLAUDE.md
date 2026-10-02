@@ -676,10 +676,13 @@ tout design » → voir @design.md.
   résumé),
   `Fidelite` (shell client de « Fidélité & abonnements », **suivi seul**
   depuis le 2026-09-27 : `AbonnementsPanel` + `PackSalesPanel` côte à côte
-  (grille 2 colonnes, plus aucun onglet), bouton « Régler les offres et le
-  programme » → `/reglages?section=offres` ; `abonnements` / `packPurchases`
-  en état local, forfaits / packs lus via `useFideliteConfig()`
-  (`@/context/FideliteContext`), toast `notice` partagé — fixtures
+  (grille 2 colonnes, plus aucun onglet), bouton « Régler les offres » →
+  `/reglages?section=offres` ; **2026-10-02** : champ de recherche commun aux
+  deux suivis sous le bandeau (nom de la souscriptrice / bénéficiaire /
+  acheteuse, n° client, téléphone, nom du forfait ou du pack — `query` passé
+  aux deux panneaux), confirmations en `ui/molecules/toast` ;
+  `abonnements` / `packPurchases` en état local, forfaits / packs lus via
+  `useFideliteConfig()` (`@/context/FideliteContext`) — fixtures
   `@/lib/mock/abonnements`) ;
   sous-dossier `fidelite/` (les panneaux de configuration ci-dessous sont
   montés par `Reglages` depuis le 2026-09-27, sections « Programme de
@@ -702,21 +705,34 @@ tout design » → voir @design.md.
   `PrestationPicker` (multi-sélection du catalogue `@/lib/mock/services` groupé
   par service + recherche pliée sans accent ; `showPricing` masque prix/durée
   pour les forfaits ; partagé Forfaits/Packs),
-  `AbonnementsPanel` (suivi : liste des abonnements actifs — souscripteur (+
-  bénéficiaire ; nom + n° client, lien vers `/clients/[id]` en panneau latéral,
-  « Hors fichier » si coordonnées libres — 2026-09-28), forfait, `Badge` statut `ABONNEMENT_STATUS_META`, prochaine
-  échéance, prestations disponibles ce cycle — actions **Marquer payé**
-  (`PayControl` : stepper cycles 1–12 + montant `amountDueForCycles` + aperçu
-  `estimatePrepaidDueDate` → `markAbonnementPaid`) et **Révoquer** (confirm
-  inline → `revokeAbonnement`) ; section « Abonnements révoqués » grisée ;
-  formulaire **Souscrire un forfait** (`ContactField` souscripteur + forfait +
-  `Toggle` bénéficiaire distinct → `ContactField`)),
-  `PackSalesPanel` (suivi : liste des packs vendus — acheteur, pack, acheté le,
-  N/total consommées, `Badge` « Entièrement utilisé » ; action **Consommer une
-  prestation** (cases des prestations restantes → `redeemPrestations`,
-  définitif) ; formulaire **Enregistrer une vente** (`ContactField` + pack)),
-  `ContactField` (choix souscripteur/acheteur : une cliente du fichier
-  (`clients("all")`) ou coordonnées libres → `{ clientId, contact }`),
+  `AbonnementsPanel` (suivi, **refonte 2026-10-02** : carte titrée
+  « Abonnements » + compteur « N en cours · N à régler » (rouge) + bouton
+  « Souscrire un forfait » ; une ligne par abonnement, **« À régler » en tête**
+  puis par échéance — `HolderName` (nom + n° client → fiche) + badge statut +
+  « Voir la fiche » ; forfait · prix / cycle, « Pour <bénéficiaire> » ; pied
+  échéance (« En retard depuis le … » en rouge) + prestations restantes du
+  cycle, bouton **Encaisser** (plein si à régler, bordé sinon → `PayControl` :
+  stepper cycles 1–12 + montant + prochaine échéance → `markAbonnementPaid`) et
+  menu `⋯` « Révoquer l'abonnement » (confirmation inline →
+  `revokeAbonnement`) ; « Révoqués (N) » repliés ; formulaire **Souscrire un
+  forfait** en panneau latéral `reglages/kit.EditorPanel`),
+  `PackSalesPanel` (suivi, même grammaire : « Packs » + « N en cours · N
+  prestations à honorer » + « Vendre un pack » ; lignes en cours (les plus
+  récentes d'abord) — `HolderName` + « Voir la fiche », pack · date d'achat,
+  barre à cases (une par prestation) + « N sur M utilisées », « Reste : … »,
+  bouton **Utiliser** (cases des prestations restantes → `redeemPrestations`,
+  définitif) ; « Entièrement utilisés (N) » repliés ; vente en `EditorPanel`),
+  `HolderRef` (2026-10-02 — `HolderName` (nom + n° client en lien vers
+  `/clients/[id]`, panneau latéral par la route interceptée ; « Hors fichier »
+  sans lien), `HolderFicheLink` (« Voir la fiche ↗ ») et `holderMatches`
+  (recherche pliée sans accent sur noms / libellés, chiffres sur n° client et
+  téléphones)), `FollowUpSection` (2026-10-02 — liste repliable des éléments
+  clos, dépliée d'office quand une recherche y trouve quelque chose ; `NoMatch`
+  « Aucun … pour « x » » + « Effacer la recherche »),
+  `ContactField` (choix souscriptrice / acheteuse : « Cliente du fichier »
+  (recherche `shared/ClientSearchField` par nom ou téléphone, depuis le
+  2026-10-02) ou « Hors fichier » (coordonnées libres) ; « Ajouter … » dans la
+  recherche bascule sur Hors fichier prérempli → `{ clientId, contact }`),
   `ui` (primitives de
   formulaire / liste éditable, **partagées avec le parcours Services** :
   `SectionCard`, `Divider`, `Toggle` (role=switch), `SettingRow`, `TextInput`,
@@ -1150,8 +1166,7 @@ tout design » → voir @design.md.
   menu Radix une fois hydraté (l'id `useId` du déclencheur ne coïncidait pas
   SSR/client) ; nom + photo lus depuis
   `useAccount()` (photo repliée sur les initiales si `avatarUrl` vide, 2026-09-22
-  — `avatarUrl` n'a plus de valeur par défaut factice) ; « Mon compte » → `/compte`, « Paramètres des salons » →
-  `/salons`, « Se déconnecter » → `/signin`). Plus de cloche de notifications
+  — `avatarUrl` n'a plus de valeur par défaut factice) ; « Mon compte » → `/compte`, « Se déconnecter » → `/signin`). Plus de cloche de notifications
   (`NotificationDropdown`, supprimé 2026-09-14) : le bloc notifications vit sur
   le tableau de bord, voir `back-office/dashboard/NotificationsPanel`.
   **Pas** de `SalonSwitcher` : le filtre salon global est le `SegmentedControl`
@@ -1853,7 +1868,7 @@ cf. « Utilisateurs de la plateforme »). Retrait de 4 entrées de
 catégorie ni de sous-menus (déjà tenté et défait le 2026-09-14) :
 
 - `Salons` — retiré car redondant : déjà accessible via le menu compte du
-  header (`header/UserDropdown`, lien « Paramètres des salons »).
+  header (`header/UserDropdown`, lien « Paramètres des salons », retiré le 2026-10-02 : les salons sont dans Réglages).
 - `Rapports`, `Satisfaction`, `Journal` — retirés car ce sont des écrans de
   consultation occasionnelle (générateur utilisé au besoin, indicateur, audit),
   pas des outils de travail quotidien contrairement au reste de la sidebar.
@@ -2846,10 +2861,15 @@ Nouvelle page (`back-office/Dashboard.tsx`) :
   « Voir plus » ouvre `dashboard/RemiseDialog.tsx` sur place (montant, total avant /
   après, motif, et trois lignes cliquables : cliente → `/clients/[id]`, rendez-vous →
   `/rendez-vous/[id]`, auteur → `/equipe?membre=`) ; marquée lue à la fermeture.
-  **2026-09-28** : titre = « N demandes à traiter » (nombre de lignes affichées,
-  + « N masquées ») ; interrupteurs Remises / Stock / Rendez-vous / Équipe (état
-  local, tous actifs par défaut) — les autres alertes (paiement, avis) restent
-  toujours visibles.
+  **2026-10-02** (remplace les interrupteurs du 2026-09-28) : titre « À régler
+  aujourd'hui · N » (N = lignes affichées) ; liste **regroupée par famille**
+  sous intertitres (Rendez-vous, Équipe, Stock, Remises accordées, Autres
+  alertes) ; menu **« Affichage »** (Radix, cases à cocher + compteurs, « Tout
+  afficher ») pour écarter durablement une famille — préférence mémorisée en
+  `localStorage` (`bo.accueil.alertes-masquees`, `useSyncExternalStore`), le
+  bouton devient une pastille « N masquées » tant qu'un réglage est en cours,
+  et une ligne de pied « Masqué : … (N éléments) · Tout afficher » signale ce
+  qui est caché. Les autres alertes (paiement, avis) restent toujours visibles.
 - `dashboard/DayFeed.tsx` (nouveau, remplace `TodayAppointments`) — « La
   journée » : fil unique tous salons, passé replié derrière une ligne
   dépliable, trait « Maintenant · 13:20 », « En cours » / « Prochain », pastille

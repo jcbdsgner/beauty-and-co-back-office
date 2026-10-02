@@ -1,17 +1,20 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { clients } from "@/lib/mock/beautyandco";
 import { BLANK_CONTACT, type Contact } from "@/lib/mock/abonnements";
+import ClientSearchField, { type ClientPick } from "@/components/back-office/shared/ClientSearchField";
 import { TextInput } from "./ui";
 
-// Choix du souscripteur / acheteur : une cliente du fichier, ou des coordonnées
-// libres (le Compte n'est jamais un prérequis — spec §5).
+// Choix du souscripteur / acheteur : une cliente du fichier (recherche par nom
+// ou téléphone), ou des coordonnées libres (le Compte n'est jamais un
+// prérequis — spec §5). Choisir « Ajouter … » dans la recherche bascule sur les
+// coordonnées libres, préremplies avec ce qui a été tapé.
 
 export type ContactChoice = { clientId: string | null; contact: Contact };
 
 const splitName = (name: string): Pick<Contact, "firstName" | "lastName"> => {
-  const [firstName, ...rest] = name.split(" ");
+  const [firstName, ...rest] = name.trim().split(/\s+/);
   return { firstName: firstName ?? "", lastName: rest.join(" ") };
 };
 
@@ -25,25 +28,38 @@ export default function ContactField({
   label?: string;
 }) {
   const roster = useMemo(() => clients("all"), []);
-  const mode: "client" | "free" = value.clientId ? "client" : "free";
+  const [mode, setMode] = useState<"client" | "free">(
+    value.clientId || !value.contact.firstName ? "client" : "free",
+  );
 
-  const pickClient = (id: string) => {
-    if (!id) {
-      onChange({ clientId: null, contact: BLANK_CONTACT });
+  const picked = value.clientId ? roster.find((c) => c.id === value.clientId) : undefined;
+  const pick: ClientPick | null = picked ? { kind: "existing", client: picked } : null;
+
+  const onPick = (next: ClientPick) => {
+    if (next.kind === "existing") {
+      const c = next.client;
+      onChange({
+        clientId: c.id,
+        contact: {
+          ...splitName(c.name),
+          sex: c.gender,
+          email: c.email,
+          phone: c.phone,
+          whatsapp: c.whatsapp || c.phone,
+        },
+      });
       return;
     }
-    const c = roster.find((x) => x.id === id);
-    if (!c) return;
+    setMode("free");
     onChange({
-      clientId: c.id,
-      contact: {
-        ...splitName(c.name),
-        sex: c.gender,
-        email: c.email,
-        phone: c.phone,
-        whatsapp: c.phone,
-      },
+      clientId: null,
+      contact: { ...BLANK_CONTACT, ...splitName(next.name), phone: next.phone, whatsapp: next.phone },
     });
+  };
+
+  const switchMode = (next: "client" | "free") => {
+    setMode(next);
+    onChange({ clientId: null, contact: BLANK_CONTACT });
   };
 
   const patchFree = (patch: Partial<Contact>) =>
@@ -51,15 +67,15 @@ export default function ContactField({
 
   return (
     <fieldset className="space-y-3">
-      <legend className="mb-1.5 text-sm font-medium text-base-content">{label}</legend>
+      <legend className="mb-1.5 text-[15px] font-semibold text-base-content">{label}</legend>
 
-      <div className="flex gap-2">
+      <div className="flex gap-5">
         <label className="flex items-center gap-2 text-sm text-base-content/80">
           <input
             type="radio"
             checked={mode === "client"}
-            onChange={() => pickClient(roster[0]?.id ?? "")}
-            className="text-brand-500 focus:ring-brand-500/20"
+            onChange={() => switchMode("client")}
+            className="radio radio-primary radio-sm"
           />
           Cliente du fichier
         </label>
@@ -67,25 +83,20 @@ export default function ContactField({
           <input
             type="radio"
             checked={mode === "free"}
-            onChange={() => onChange({ clientId: null, contact: BLANK_CONTACT })}
-            className="text-brand-500 focus:ring-brand-500/20"
+            onChange={() => switchMode("free")}
+            className="radio radio-primary radio-sm"
           />
-          Autre personne
+          Hors fichier
         </label>
       </div>
 
       {mode === "client" ? (
-        <select
-          value={value.clientId ?? ""}
-          onChange={(e) => pickClient(e.target.value)}
-          className="h-11 w-full rounded-field border border-base-300 bg-white px-4 text-sm text-base-content focus:outline-2 focus:outline-offset-2 focus:outline-[#fdcfca]"
-        >
-          {roster.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name} — {c.salonLabel}
-            </option>
-          ))}
-        </select>
+        <ClientSearchField
+          scope="all"
+          value={pick}
+          onChange={onPick}
+          placeholder="Nom ou téléphone de la cliente…"
+        />
       ) : (
         <div className="grid grid-cols-2 gap-3">
           <TextInput

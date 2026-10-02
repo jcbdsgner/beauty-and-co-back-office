@@ -1,10 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type ComponentType, type ReactNode } from "react";
-import { Bell, CalendarClock, CalendarX2, Check, Package, Palmtree, TicketPercent, Wallet } from "lucide-react";
+import { useState, useSyncExternalStore, type ComponentType, type ReactNode } from "react";
+import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
+import {
+  Bell,
+  CalendarClock,
+  CalendarX2,
+  Check,
+  Package,
+  Palmtree,
+  SlidersHorizontal,
+  TicketPercent,
+  Wallet,
+} from "lucide-react";
 import { buttonVariants } from "@/components/ui/atoms/button";
-import { Switch } from "@/components/ui/atoms/switch";
 import { useNotifications } from "@/context/NotificationsContext";
 import { fcfa } from "@/lib/mock/beautyandco";
 import { leaveDays, leaveRange, staffRequests } from "@/lib/mock/rh";
@@ -22,17 +32,62 @@ import { visitSalon, type TodayVisit } from "@/components/back-office/dashboard/
 
 type Tone = "urgent" | "team" | "neutral";
 
-// Familles d'alertes que la propriétaire peut masquer d'un interrupteur. Les
-// alertes hors famille (paiement, avis…) restent toujours visibles.
+// Familles d'alertes : la liste est regroupée par famille (dans cet ordre), et
+// la propriétaire peut en écarter durablement depuis le menu « Affichage ».
+// Les alertes hors famille (paiement, avis…) restent toujours visibles.
 type DecisionKind = "remise" | "stock" | "rendez-vous" | "equipe" | "autre";
 type FilterKind = Exclude<DecisionKind, "autre">;
 
-const FILTERS: { kind: FilterKind; label: string }[] = [
-  { kind: "remise", label: "Remises" },
-  { kind: "stock", label: "Stock" },
+const GROUPS: { kind: DecisionKind; label: string }[] = [
   { kind: "rendez-vous", label: "Rendez-vous" },
   { kind: "equipe", label: "Équipe" },
+  { kind: "stock", label: "Stock" },
+  { kind: "remise", label: "Remises accordées" },
+  { kind: "autre", label: "Autres alertes" },
 ];
+
+const FILTERS = GROUPS.filter((g): g is { kind: FilterKind; label: string } => g.kind !== "autre");
+
+// Familles masquées, mémorisées dans le navigateur (préférence d'affichage,
+// pas un filtre de passage). Lu via useSyncExternalStore : rendu serveur =
+// tout affiché, puis la préférence s'applique à l'hydratation.
+const HIDDEN_KEY = "bo.accueil.alertes-masquees";
+const HIDDEN_EVENT = "bo:alertes-masquees";
+
+function readHidden(): string {
+  try {
+    return window.localStorage.getItem(HIDDEN_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function subscribeHidden(cb: () => void) {
+  window.addEventListener(HIDDEN_EVENT, cb);
+  window.addEventListener("storage", cb);
+  return () => {
+    window.removeEventListener(HIDDEN_EVENT, cb);
+    window.removeEventListener("storage", cb);
+  };
+}
+
+function writeHidden(kinds: FilterKind[]) {
+  try {
+    window.localStorage.setItem(HIDDEN_KEY, kinds.join(","));
+  } catch {
+    /* pas de persistance possible, sans gravité */
+  }
+  window.dispatchEvent(new Event(HIDDEN_EVENT));
+}
+
+function useHiddenKinds() {
+  const raw = useSyncExternalStore(subscribeHidden, readHidden, () => "");
+  const hidden = FILTERS.map((f) => f.kind).filter((k) => raw.split(",").includes(k));
+  const toggle = (kind: FilterKind) =>
+    writeHidden(hidden.includes(kind) ? hidden.filter((k) => k !== kind) : [...hidden, kind]);
+  const showAll = () => writeHidden([]);
+  return { hidden, toggle, showAll };
+}
 
 export type Decision = {
   key: string;
@@ -212,53 +267,30 @@ export default function DayDecisions({
   // La remise ouverte reste affichée même une fois sa ligne retirée de la file
   // (marquée lue à la fermeture).
   const [openRemise, setOpenRemise] = useState<{ remise: Remise; notificationId?: string } | null>(null);
-  const [shown, setShown] = useState<Record<FilterKind, boolean>>({
-    remise: true,
-    stock: true,
-    "rendez-vous": true,
-    equipe: true,
-  });
-  const visible = decisions.filter((d) => d.kind === "autre" || shown[d.kind]);
-  const hidden = decisions.length - visible.length;
-  const countOf = (kind: FilterKind) => decisions.filter((d) => d.kind === kind).length;
+  const { hidden, toggle, showAll } = useHiddenKinds();
+  const isShown = (kind: DecisionKind) => kind === "autre" || !hidden.includes(kind as FilterKind);
+  const visible = decisions.filter((d) => isShown(d.kind));
+  const countOf = (kind: DecisionKind) => decisions.filter((d) => d.kind === kind).length;
+  const groups = GROUPS.filter((g) => isShown(g.kind))
+    .map((g) => ({ ...g, items: visible.filter((d) => d.kind === g.kind) }))
+    .filter((g) => g.items.length > 0);
+  // Ce qui est masqué reste signalé : familles écartées qui ont quelque chose en cours.
+  const hiddenWithItems = FILTERS.filter((f) => hidden.includes(f.kind) && countOf(f.kind) > 0);
+  const hiddenCount = decisions.length - visible.length;
 
   return (
     <section
       aria-labelledby="decisions-title"
       className="overflow-hidden rounded-box border border-base-300 bg-base-100"
     >
-      <header className="px-6 pt-5 pb-4">
-        <div className="flex items-baseline justify-between gap-3">
-          <h2 id="decisions-title" className="text-[20px] font-semibold text-base-content">
-            {visible.length === 0 ? (
-              "Aucune demande à traiter"
-            ) : (
-              <>
-                <span className="tabular-nums">{visible.length}</span> demande
-                {visible.length > 1 ? "s" : ""} à traiter
-              </>
-            )}
-          </h2>
-          {hidden > 0 && (
-            <span className="text-sm tabular-nums text-base-content/60">
-              {hidden} masquée{hidden > 1 ? "s" : ""}
-            </span>
+      <header className="flex items-center justify-between gap-3 px-6 pt-5 pb-4">
+        <h2 id="decisions-title" className="text-[20px] font-semibold whitespace-nowrap text-base-content">
+          À régler aujourd&apos;hui
+          {visible.length > 0 && (
+            <span className="font-normal tabular-nums text-base-content/55"> · {visible.length}</span>
           )}
-        </div>
-        <div role="group" aria-label="Alertes affichées" className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
-          {FILTERS.map(({ kind, label }) => (
-            <div key={kind} className="flex items-center gap-2 text-sm text-base-content/70">
-              <Switch
-                checked={shown[kind]}
-                onChange={(v) => setShown((prev) => ({ ...prev, [kind]: v }))}
-                label={`Afficher les alertes ${label.toLowerCase()}`}
-                className="size-auto"
-              />
-              <span aria-hidden>{label}</span>
-              <span aria-hidden className="tabular-nums text-base-content/45">{countOf(kind)}</span>
-            </div>
-          ))}
-        </div>
+        </h2>
+        <DisplayMenu hidden={hidden} countOf={countOf} onToggle={toggle} onShowAll={showAll} />
       </header>
 
       {decisions.length === 0 ? (
@@ -277,48 +309,76 @@ export default function DayDecisions({
         </div>
       ) : visible.length === 0 ? (
         <p className="border-t border-base-300 px-6 py-6 text-sm text-base-content/60">
-          {decisions.length > 1
-            ? `Les ${decisions.length} demandes en cours sont masquées : réactivez une famille d'alertes ci-dessus pour les voir.`
-            : "La demande en cours est masquée : réactivez sa famille d'alertes ci-dessus pour la voir."}
+          Rien à régler parmi les alertes affichées.
         </p>
       ) : (
-        <ul className="divide-y divide-base-300 border-t border-base-300">
-          {visible.map((d) => {
-            const Icon = d.icon;
-            return (
-              <li key={d.key} className="flex items-center gap-4 px-6 py-4">
-                <span
-                  className={`flex size-10 shrink-0 items-center justify-center rounded-full ${TONE_ICON[d.tone]}`}
-                >
-                  <Icon className="size-[18px]" aria-hidden />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[15px] leading-snug text-base-content/80">{d.sentence}</p>
-                  {d.context && (
-                    <p className="mt-0.5 truncate text-sm text-base-content/60">{d.context}</p>
-                  )}
-                </div>
-                {d.remise ? (
-                  <button
-                    type="button"
-                    onClick={() => setOpenRemise({ remise: d.remise!, notificationId: d.notificationId })}
-                    className={`${buttonVariants({ variant: "outline", size: "sm" })} shrink-0`}
-                  >
-                    {d.cta}
-                  </button>
-                ) : (
-                  <Link
-                    href={d.href}
-                    onClick={() => d.notificationId && onOpen(d.notificationId)}
-                    className={`${buttonVariants({ variant: "outline", size: "sm" })} shrink-0`}
-                  >
-                    {d.cta}
-                  </Link>
-                )}
-              </li>
-            );
-          })}
-        </ul>
+        <div className="border-t border-base-300">
+          {groups.map((g) => (
+            <section key={g.kind} aria-labelledby={`decisions-${g.kind}`}>
+              <h3
+                id={`decisions-${g.kind}`}
+                className="bg-base-200 px-6 py-2 text-xs font-semibold tracking-wide text-base-content/60 uppercase"
+              >
+                {g.label} <span className="tabular-nums text-base-content/45">· {g.items.length}</span>
+              </h3>
+              <ul className="divide-y divide-base-300">
+                {g.items.map((d) => {
+                  const Icon = d.icon;
+                  return (
+                    <li key={d.key} className="flex items-center gap-4 px-6 py-4">
+                      <span
+                        className={`flex size-10 shrink-0 items-center justify-center rounded-full ${TONE_ICON[d.tone]}`}
+                      >
+                        <Icon className="size-[18px]" aria-hidden />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[15px] leading-snug text-base-content/80">{d.sentence}</p>
+                        {d.context && (
+                          <p className="mt-0.5 truncate text-sm text-base-content/60">{d.context}</p>
+                        )}
+                      </div>
+                      {d.remise ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setOpenRemise({ remise: d.remise!, notificationId: d.notificationId })
+                          }
+                          className={`${buttonVariants({ variant: "outline", size: "sm" })} shrink-0`}
+                        >
+                          {d.cta}
+                        </button>
+                      ) : (
+                        <Link
+                          href={d.href}
+                          onClick={() => d.notificationId && onOpen(d.notificationId)}
+                          className={`${buttonVariants({ variant: "outline", size: "sm" })} shrink-0`}
+                        >
+                          {d.cta}
+                        </Link>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ))}
+        </div>
+      )}
+
+      {hiddenWithItems.length > 0 && (
+        <p className="flex flex-wrap items-baseline gap-x-2 border-t border-base-300 px-6 py-3 text-sm text-base-content/60">
+          <span>
+            Masqué : {hiddenWithItems.map((f) => f.label.toLowerCase()).join(", ")} (
+            <span className="tabular-nums">{hiddenCount}</span> élément{hiddenCount > 1 ? "s" : ""})
+          </span>
+          <button
+            type="button"
+            onClick={showAll}
+            className="font-medium text-primary underline-offset-4 hover:underline"
+          >
+            Tout afficher
+          </button>
+        </p>
       )}
 
       <RemiseDialog
@@ -329,5 +389,84 @@ export default function DayDecisions({
         }}
       />
     </section>
+  );
+}
+
+// Menu « Affichage » : cases à cocher des familles affichées sur l'accueil.
+// Le menu reste ouvert pendant qu'on coche ; le bouton signale un réglage en
+// cours (« 2 masquées ») pour qu'on n'oublie pas le lendemain.
+function DisplayMenu({
+  hidden,
+  countOf,
+  onToggle,
+  onShowAll,
+}: {
+  hidden: FilterKind[];
+  countOf: (kind: DecisionKind) => number;
+  onToggle: (kind: FilterKind) => void;
+  onShowAll: () => void;
+}) {
+  const itemClass =
+    "flex min-h-11 cursor-pointer items-center gap-3 rounded-field px-3 text-[15px] text-base-content/90 outline-none data-[highlighted]:bg-accent data-[disabled]:cursor-not-allowed data-[disabled]:opacity-40";
+  return (
+    <DropdownMenuPrimitive.Root>
+      <DropdownMenuPrimitive.Trigger
+        aria-label={hidden.length > 0 ? `Affichage, ${hidden.length} famille${hidden.length > 1 ? "s" : ""} masquée${hidden.length > 1 ? "s" : ""}` : undefined}
+        className="inline-flex shrink-0 items-center gap-2 rounded-field px-3 py-2 text-sm font-medium text-base-content/70 outline-none transition hover:bg-base-200 focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-base-200"
+      >
+        <SlidersHorizontal className="size-4" aria-hidden />
+        {/* Réglage en cours : la pastille remplace le libellé pour garder le
+            titre sur une ligne. */}
+        {hidden.length > 0 ? (
+          <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-semibold tabular-nums text-secondary">
+            {hidden.length} masquée{hidden.length > 1 ? "s" : ""}
+          </span>
+        ) : (
+          "Affichage"
+        )}
+      </DropdownMenuPrimitive.Trigger>
+      <DropdownMenuPrimitive.Portal>
+        <DropdownMenuPrimitive.Content
+          align="end"
+          sideOffset={6}
+          className="z-50 w-64 overflow-hidden rounded-box border border-border bg-popover p-1.5 shadow-[0px_12px_32px_-8px_rgba(0,0,0,0.25)]"
+        >
+          <DropdownMenuPrimitive.Label className="px-3 pt-2 pb-1.5 text-sm font-semibold text-base-content">
+            Afficher sur l&apos;accueil
+          </DropdownMenuPrimitive.Label>
+          {FILTERS.map((f) => {
+            const checked = !hidden.includes(f.kind);
+            return (
+              <DropdownMenuPrimitive.CheckboxItem
+                key={f.kind}
+                checked={checked}
+                onCheckedChange={() => onToggle(f.kind)}
+                onSelect={(e) => e.preventDefault()}
+                className={itemClass}
+              >
+                <span
+                  aria-hidden
+                  className={`flex size-[18px] shrink-0 items-center justify-center rounded-[5px] border ${
+                    checked ? "border-primary bg-primary text-primary-content" : "border-base-300 bg-base-100"
+                  }`}
+                >
+                  {checked && <Check className="size-3.5" strokeWidth={3} />}
+                </span>
+                <span className="flex-1">{f.label}</span>
+                <span className="tabular-nums text-base-content/45">{countOf(f.kind)}</span>
+              </DropdownMenuPrimitive.CheckboxItem>
+            );
+          })}
+          <DropdownMenuPrimitive.Separator className="my-1.5 h-px bg-border" />
+          <DropdownMenuPrimitive.Item
+            disabled={hidden.length === 0}
+            onSelect={onShowAll}
+            className={itemClass}
+          >
+            Tout afficher
+          </DropdownMenuPrimitive.Item>
+        </DropdownMenuPrimitive.Content>
+      </DropdownMenuPrimitive.Portal>
+    </DropdownMenuPrimitive.Root>
   );
 }

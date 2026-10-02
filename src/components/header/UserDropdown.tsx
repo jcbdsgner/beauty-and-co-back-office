@@ -1,7 +1,7 @@
 "use client";
 import { useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronsUpDown, LogOut, Settings, Store } from "lucide-react";
+import { ChevronsUpDown, LogOut, Settings } from "lucide-react";
 import { DropdownMenu } from "@/components/ui/molecules/dropdown-menu";
 import { Avatar } from "@/components/ui/atoms/avatar";
 import { useAccount } from "@/context/AccountContext";
@@ -52,7 +52,6 @@ export default function UserDropdown() {
         { type: "header", label: account.name, sublabel: account.role },
         { type: "separator" },
         { label: "Mon compte", icon: <Settings className="size-4" />, onSelect: () => router.push("/compte") },
-        { label: "Paramètres des salons", icon: <Store className="size-4" />, onSelect: () => router.push("/reglages?section=salons") },
         { type: "separator" },
         { label: "Se déconnecter", icon: <LogOut className="size-4" />, onSelect: () => router.push("/signin") },
       ]}
