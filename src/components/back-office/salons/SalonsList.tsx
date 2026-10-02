@@ -44,7 +44,7 @@ export default function SalonsList({
                     <StateBadge state={state} />
                   </div>
                   <p className="mt-0.5 text-sm text-base-content/60">
-                    {c.area} · {c.address}
+                    {c.city} · {c.address}
                   </p>
                   <p className="mt-2 text-sm text-base-content/80">{posteSummary(c)}</p>
                   {nc && (

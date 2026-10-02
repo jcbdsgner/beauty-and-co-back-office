@@ -4,9 +4,11 @@ import { useState } from "react";
 import {
   POSTE_TYPES,
   POSTE_TYPE_LABELS,
+  SALON_CITY_OPTIONS,
   WEEKDAYS,
   type DayOpening,
   type PosteType,
+  type SalonCity,
   type SalonConfig,
   type SalonId,
   type Weekday,
@@ -15,6 +17,7 @@ import HoursEditor, { hoursHaveError } from "./HoursEditor";
 import {
   BackButton,
   SectionCard,
+  SelectField,
   TextInput,
   btnGhost,
   btnPrimary,
@@ -40,7 +43,7 @@ export default function SalonForm({
   onCancel: () => void;
 }) {
   const [name, setName] = useState("");
-  const [area, setArea] = useState("");
+  const [city, setCity] = useState<SalonCity>("Dakar");
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
   const [postes, setPostes] = useState<Record<PosteType, number>>({
@@ -58,7 +61,7 @@ export default function SalonForm({
     onCreate({
       id,
       name: name.trim(),
-      area: area.trim(),
+      city,
       address: address.trim(),
       phone: phone.trim(),
       active: true,
@@ -82,7 +85,7 @@ export default function SalonForm({
         <SectionCard title="Identité">
           <div className="grid grid-cols-2 gap-4">
             <TextInput label="Nom" value={name} onChange={setName} placeholder="Ex. Plateau" />
-            <TextInput label="Quartier" value={area} onChange={setArea} />
+            <SelectField label="Ville" value={city} onChange={setCity} options={SALON_CITY_OPTIONS} />
             <TextInput label="Adresse" value={address} onChange={setAddress} />
             <TextInput label="Téléphone" value={phone} onChange={setPhone} placeholder="+221 …" />
           </div>

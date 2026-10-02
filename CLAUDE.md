@@ -1320,7 +1320,9 @@ fichiers template supprimés : `index.ts`, `types.ts`, `customers.ts`,
   `WEEKDAY_LABELS` ; `PosteType` (`coiffure` / `esthetique` / `onglerie`) /
   `POSTE_TYPES` / `POSTE_TYPE_LABELS` ; `DayOpening` (fermé, ou ouvert d'un seul tenant — les
   coupures n'existent pas, retirées le 2026-09-28 ; trame par défaut mar–dim
-  10:00–20:00, **lundi fermé**) ; `SalonConfig` (identité, `active`, `postes: Partial<Record<
+  10:00–20:00, **lundi fermé**) ; `SalonConfig` (identité — dont `city: SalonCity`, « Dakar » ou « Abidjan »,
+  `SALON_CITIES` / `SALON_CITY_OPTIONS`, menu « Ville » de la fiche et de la
+  création depuis le 2026-10-02, remplace le champ libre « Quartier » —, `active`, `postes: Partial<Record<
   PosteType, number>>` — capacité par type, `hours: Record<Weekday, DayOpening>`) ;
   `salonConfigs`, `salonConfig(id)`, `posteCapacity(id)` ; `SalonClosure` +
   `salonClosures` (fermetures exceptionnelles, `scope` salon ou `"all"`) +

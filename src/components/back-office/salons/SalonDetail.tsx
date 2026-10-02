@@ -8,6 +8,7 @@ import {
   frShortDate,
   POSTE_TYPES,
   POSTE_TYPE_LABELS,
+  SALON_CITY_OPTIONS,
   type PosteType,
   type SalonClosure,
   type SalonConfig,
@@ -19,6 +20,7 @@ import HoursEditor from "./HoursEditor";
 import {
   BackButton,
   SectionCard,
+  SelectField,
   SettingRow,
   TextInput,
   Toggle,
@@ -83,7 +85,12 @@ export default function SalonDetail({
         <SectionCard title="Identité">
           <div className="grid grid-cols-2 gap-4">
             <TextInput label="Nom" value={config.name} onChange={(v) => set("name", v)} />
-            <TextInput label="Quartier" value={config.area} onChange={(v) => set("area", v)} />
+            <SelectField
+              label="Ville"
+              value={config.city}
+              onChange={(v) => set("city", v)}
+              options={SALON_CITY_OPTIONS}
+            />
             <TextInput label="Adresse" value={config.address} onChange={(v) => set("address", v)} />
             <TextInput label="Téléphone" value={config.phone} onChange={(v) => set("phone", v)} />
           </div>

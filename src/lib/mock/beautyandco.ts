@@ -174,10 +174,15 @@ export type DayOpening =
   | { closed: true }
   | { closed: false; open: string; close: string };
 
+// Villes où Beauty & Co a des salons — choix fermé, pas de saisie libre.
+export const SALON_CITIES = ["Dakar", "Abidjan"] as const;
+export type SalonCity = (typeof SALON_CITIES)[number];
+export const SALON_CITY_OPTIONS = SALON_CITIES.map((c) => ({ value: c, label: c }));
+
 export type SalonConfig = {
   id: SalonId;
   name: string;
-  area: string;
+  city: SalonCity;
   address: string;
   phone: string;
   active: boolean;
@@ -207,7 +212,7 @@ export const salonConfigs: SalonConfig[] = [
   {
     id: "almadies",
     name: "Almadies",
-    area: "Route de Ngor",
+    city: "Dakar",
     address: "Route de Ngor, Almadies, Dakar",
     phone: "+221 33 820 11 22",
     active: true,
@@ -217,7 +222,7 @@ export const salonConfigs: SalonConfig[] = [
   {
     id: "seaplaza",
     name: "Sea Plaza",
-    area: "Corniche Ouest",
+    city: "Dakar",
     address: "Sea Plaza, Corniche Ouest, Dakar",
     phone: "+221 33 869 33 44",
     active: true,
