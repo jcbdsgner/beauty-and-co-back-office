@@ -21,13 +21,6 @@ import {
   type JournalEntry,
   type JournalTone,
 } from "@/lib/mock/journal";
-import { Select } from "@/components/ui/atoms/select";
-import { members } from "@/lib/mock/staff";
-import PointageLog, {
-  anomalyParts,
-  pointageRows,
-  tallyPointages,
-} from "./journal/PointageLog";
 import JournalPeriodPicker, {
   DEFAULT_JOURNAL_PERIOD,
   presetRange,
@@ -44,10 +37,8 @@ import {
 } from "@/icons";
 
 // Écran « Journal d'activité » — la trace de ce que l'équipe a fait dans les salons.
-// Deux vues : **Actions** (ce que chacun a fait — encaissements, remises,
-// rendez-vous, stock…, filtrées par rôle) et **Pointage** (heures d'arrivée et
-// de départ badgées, par jour ou pour une personne — `journal/PointageLog`).
-// Salon et période sont communs aux deux. Ce qui suit décrit la vue Actions.
+// Le pointage des arrivées / départs, d'abord une 2ᵉ vue de cet écran, vit dans
+// Équipe › Pointage depuis le 2026-10-02.
 //
 // 1. Où en est la propriétaire ? En supervision. Deux registres : le coup d'œil
 //    quotidien (« rien d'anormal depuis hier ? ») et l'enquête ponctuelle (« qui
@@ -74,21 +65,6 @@ const ROLE_OPTIONS: SegmentedOption<ActorRole>[] = ACTOR_ROLES.map((r) => ({
   value: r,
   label: ACTOR_ROLE_FILTER_LABELS[r],
 }));
-
-type JournalView = "actions" | "pointage";
-
-const VIEW_OPTIONS: SegmentedOption<JournalView>[] = [
-  { value: "actions", label: "Actions" },
-  { value: "pointage", label: "Pointage" },
-];
-
-// Toute l'équipe active, praticiennes d'abord (ordre de `staff.ts`).
-const PERSON_OPTIONS = [
-  { value: "all", label: "Toute l'équipe" },
-  ...members
-    .filter((m) => m.active)
-    .map((m) => ({ value: m.id, label: `${m.firstName} ${m.lastName}`.trim() })),
-];
 
 const DOMAIN_ICON: Record<JournalDomain, React.ComponentType<{ className?: string }>> = {
   "rendez-vous": CalenderIcon,
@@ -220,10 +196,7 @@ function EmptyFilter({
 
 export default function Journal() {
   const { scope, setScope } = useLocation();
-  const [view, setView] = useState<JournalView>("actions");
   const [role, setRole] = useState<ActorRole>("manager");
-  const [person, setPerson] = useState("all");
-  const [onlyAnomalies, setOnlyAnomalies] = useState(false);
   const [period, setPeriod] = useState<JournalPeriod>(DEFAULT_JOURNAL_PERIOD);
   const [query, setQuery] = useState("");
 
@@ -255,21 +228,6 @@ export default function Journal() {
 
   const groups = useMemo(() => groupJournalByDay(visible), [visible]);
 
-  const pointageTally = useMemo(
-    () =>
-      tallyPointages(
-        pointageRows(
-          { from: period.from, to: period.to },
-          scope,
-          person === "all" ? null : person,
-          onlyAnomalies,
-        ),
-      ),
-    [period, scope, person, onlyAnomalies],
-  );
-  // Une absence est prévue, pas un écart : elle reste en ton neutre.
-  const pointageAnomalies = anomalyParts({ ...pointageTally, absent: 0 });
-
   return (
     <div>
       <PageHeader
@@ -287,42 +245,13 @@ export default function Journal() {
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-3">
         <SegmentedControl
-          options={VIEW_OPTIONS}
-          value={view}
-          onChange={setView}
-          aria-label="Afficher"
+          options={ROLE_OPTIONS}
+          value={role}
+          onChange={setRole}
+          aria-label="Voir les actions de"
+          size="sm"
         />
-        <span aria-hidden className="mx-1 h-6 w-px bg-base-300" />
-        {view === "actions" ? (
-          <SegmentedControl
-            options={ROLE_OPTIONS}
-            value={role}
-            onChange={setRole}
-            aria-label="Voir les actions de"
-            size="sm"
-          />
-        ) : (
-          <>
-            <Select
-              value={person}
-              onChange={setPerson}
-              options={PERSON_OPTIONS}
-              size="compact"
-              aria-label="Voir le pointage de"
-              className="w-60"
-            />
-            <label className="ml-2 flex cursor-pointer items-center gap-2.5 text-[15px] text-base-content/80">
-              <input
-                type="checkbox"
-                checked={onlyAnomalies}
-                onChange={(e) => setOnlyAnomalies(e.target.checked)}
-                className="checkbox checkbox-primary checkbox-sm"
-              />
-              Seulement les écarts
-            </label>
-          </>
-        )}
-        {view === "actions" && roleTotal > 0 && (
+        {roleTotal > 0 && (
           <div className="relative ml-auto w-80 shrink-0">
             <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-base-content/45">
               <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -347,49 +276,7 @@ export default function Journal() {
       </div>
 
       <div className="mt-6">
-        {view === "pointage" ? (
-          <>
-            <div className="mb-6 flex items-center justify-between gap-6">
-              <div className="shrink-0">
-                <JournalPeriodPicker value={period} onChange={setPeriod} />
-              </div>
-              {/* Bilan de la période : la vue d'une personne a le sien sous
-                  forme de chiffres (PointageSummaryBar) ; ici, une ligne. */}
-              <p className="min-w-0 text-right text-sm text-base-content/60">
-                <span className="whitespace-nowrap">
-                  {pointageTally.rows} journée{pointageTally.rows > 1 ? "s" : ""}
-                  {onlyAnomalies && pointageTally.rows > 0 && " avec un écart"}
-                </span>
-                {!onlyAnomalies && person === "all" && pointageTally.rows > 0 && (
-                  <>
-                    {pointageTally.absent > 0 && " "}
-                    {pointageTally.absent > 0 && (
-                      <span className="whitespace-nowrap">
-                        · {pointageTally.absent} absence{pointageTally.absent > 1 ? "s" : ""}
-                      </span>
-                    )}
-                    {pointageAnomalies.length > 0
-                      ? pointageAnomalies.map((part) => (
-                          <React.Fragment key={part}>
-                            {" "}
-                            <span className="whitespace-nowrap text-warning-700">· {part}</span>
-                          </React.Fragment>
-                        ))
-                      : " · aucun écart"}
-                  </>
-                )}
-              </p>
-            </div>
-            <PointageLog
-              range={{ from: period.from, to: period.to }}
-              scope={scope}
-              memberId={person === "all" ? null : person}
-              onlyAnomalies={onlyAnomalies}
-              onShowAll={() => setOnlyAnomalies(false)}
-              onWiden={() => setPeriod(presetRange("30j"))}
-            />
-          </>
-        ) : roleTotal === 0 ? (
+        {roleTotal === 0 ? (
           <EmptyRole role={role} salonLabel={salonLabel} />
         ) : (
           <>

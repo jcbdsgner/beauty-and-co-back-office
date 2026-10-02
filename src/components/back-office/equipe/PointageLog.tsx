@@ -29,7 +29,7 @@ import {
   PointageSummaryBar,
 } from "@/components/back-office/shared/PointageCells";
 
-// Journal › Pointage — à quelle heure chaque personne est arrivée et repartie,
+// Équipe › Pointage — à quelle heure chaque personne est arrivée et repartie,
 // jour par jour, en regard de l'horaire prévu par le planning.
 //
 // 1. La propriétaire vérifie de loin (« tout le monde est-il arrivé à l'heure

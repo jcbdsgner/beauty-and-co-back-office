@@ -14,6 +14,11 @@ import MemberDetail from "./equipe/MemberDetail";
 import AddMemberFlow from "./equipe/AddMemberFlow";
 import PlanningBoard from "./equipe/planning-board/PlanningBoard";
 import ScheduleEditor from "./equipe/schedule/ScheduleEditor";
+import PointageView from "./equipe/PointageView";
+import SegmentedControl, {
+  type SegmentedOption,
+} from "@/components/ui/segmented/SegmentedControl";
+import { salons, type SalonScope } from "@/lib/mock/beautyandco";
 import { SegmentedToggle } from "@/components/ui/molecules/segmented-toggle";
 import { useEquipeData } from "./equipe/EquipeData";
 import { BackButton } from "./equipe/ui";
@@ -32,17 +37,23 @@ import { BackButton } from "./equipe/ui";
 //    confirmation, l'historique est gardé.
 
 //
-// Deux onglets, deux routes (2026-09-27) : Membres = `/equipe`, Planning =
-// `/equipe/planning` (`?vue=planning` redirige). La matrice des autorisations
+// Trois onglets, trois routes : Membres = `/equipe`, Planning =
+// `/equipe/planning` (`?vue=planning` redirige), Pointage = `/equipe/pointage`
+// (2026-10-02, auparavant une vue du Journal). La matrice des autorisations
 // par rôle est partie dans Réglages › Autorisations (configuration, pas travail
 // quotidien) ; l'état membres / demandes vit dans `equipe/EquipeData`.
 
-export type EquipeTab = "membres" | "planning";
+export type EquipeTab = "membres" | "planning" | "pointage";
+
+const SALON_OPTIONS: SegmentedOption<SalonScope>[] = [
+  { value: "all", label: "Tous les salons" },
+  ...salons.map((s) => ({ value: s.id as SalonScope, label: s.name })),
+];
 
 type View = { kind: "list" } | { kind: "detail"; id: string } | { kind: "new" };
 
 export default function Equipe({ tab }: { tab: EquipeTab }) {
-  const { scope } = useLocation();
+  const { scope, setScope } = useLocation();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -159,6 +170,14 @@ export default function Equipe({ tab }: { tab: EquipeTab }) {
               <PlusIcon className="size-4" />
               Ajouter un membre
             </button>
+          ) : tab === "pointage" ? (
+            <SegmentedControl
+              options={SALON_OPTIONS}
+              value={scope}
+              onChange={setScope}
+              aria-label="Filtrer par salon"
+              variant="tinted"
+            />
           ) : undefined
         }
       />
@@ -167,6 +186,7 @@ export default function Equipe({ tab }: { tab: EquipeTab }) {
         tabs={[
           { href: "/equipe", label: "Membres", active: tab === "membres" },
           { href: "/equipe/planning", label: "Planning", active: tab === "planning" },
+          { href: "/equipe/pointage", label: "Pointage", active: tab === "pointage" },
         ]}
       />
 
@@ -176,6 +196,8 @@ export default function Equipe({ tab }: { tab: EquipeTab }) {
           requests={requests}
           onOpen={(id) => setView({ kind: "detail", id })}
         />
+      ) : tab === "pointage" ? (
+        <PointageView />
       ) : (
         (() => {
           const modeSwitch = (

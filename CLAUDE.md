@@ -147,7 +147,7 @@ tout design » → voir @design.md.
     uniquement (URL tapée, rechargement) — depuis l'admin, cette même fiche
     s'ouvre en panneau par-dessus l'écran d'origine via la route interceptée
     `@modal/(.)rendez-vous/[id]/page.tsx` (`closeMode="back"`)
-  - `equipe/` — Équipe, **deux onglets = deux routes** (2026-09-27, voir
+  - `equipe/` — Équipe, **trois onglets = trois routes** (2026-09-27, voir
     « Réduction des onglets imbriqués » en bas de fichier) : `layout.tsx`
     (monte `equipe/EquipeData` — état membres + demandes RH partagé entre les
     deux routes), `page.tsx` = onglet **Membres** (annuaire + fiche membre à
@@ -159,8 +159,10 @@ tout design » → voir @design.md.
     compatibilité des anciens liens), `planning/page.tsx` = onglet **Planning**
     (copie de l'écran Planning de point-de-vente — vues Jour / Semaine par
     praticienne, voir `equipe/planning-board/` ; rend
-    `<Equipe tab="planning" />`). Plus d'onglet Autorisations : la matrice
-    est dans Réglages.
+    `<Equipe tab="planning" />`), `pointage/page.tsx` = onglet **Pointage**
+    (2026-10-02, auparavant une vue du Journal — heures d'arrivée / départ
+    badgées, voir `equipe/PointageView` ; rend `<Equipe tab="pointage" />`).
+    Plus d'onglet Autorisations : la matrice est dans Réglages.
   - `journal/page.tsx` — Journal d'activité : liste antéchronologique des actions
     de l'équipe (encaissements, RDV, stock, décisions RH), filtre par rôle de
     l'auteur (Manager / Caisse / Praticiennes — **Manager par défaut**) + salon
@@ -234,8 +236,9 @@ tout design » → voir @design.md.
 
 > **2026-10-02 : Journal revient dans la sidebar** (après Équipe, icône
 > `History` — **10 entrées**) et quitte « Autres écrans » du tableau de bord
-> (`dashboard/AccesRapides` : Rapports, Avis clients) — il porte le pointage
-> des arrivées / départs, consulté au quotidien.
+> (`dashboard/AccesRapides` : Rapports, Avis clients). Le même jour, son
+> Pointage part dans Équipe (onglet après Membres et Planning) : le Journal ne
+> montre plus que les actions de l'équipe.
 >
 > **2026-09-28 : Stock revient dans la sidebar** (entre Services et
 > Fidélité, icône `Package` — **9 entrées**) et quitte « Autres écrans » du
@@ -372,9 +375,10 @@ tout design » → voir @design.md.
   la variation (`direction`) laissé à la donnée réelle plutôt que copié du
   Figma — son mock affiche une flèche verte sur toutes les cartes y compris
   « Nouveaux clients », dont la donnée du projet est en réalité en baisse),
-  `Journal` (shell client de `/journal` — **2026-10-01 : bascule Actions /
-  Pointage** en tête de la barre d'outils ; salon et période communs. Vue
-  **Pointage** = `journal/PointageLog` : heures badgées de toute l'équipe active
+  `equipe/PointageView` + `equipe/PointageLog` (onglet **Pointage** d'Équipe,
+  `/equipe/pointage` — 2026-10-02, auparavant une vue du Journal ; barre
+  personne + « Seulement les écarts », puis `journal/JournalPeriodPicker` ;
+  salon dans le bandeau d'Équipe) : heures badgées de toute l'équipe active
   groupées par jour (« 9 personnes au travail · 1 absence · 1 retard ·
   4 départs anticipés · 1 badge oublié » — écarts en ocre, décomptés par
   `tallyPointages` / `anomalyParts`, 2026-10-02), bilan de la période à droite
@@ -385,7 +389,8 @@ tout design » → voir @design.md.
   menu « Toute l'équipe / <une personne> » → bilan de la période
   (`shared/PointageCells.PointageSummaryBar`) + un seul tableau avec colonne
   Jour ; « Seulement les écarts » ; états vides (rien sur la période → 30 j,
-  aucun écart → tout afficher). Vue **Actions** = ce qui suit : liste
+  aucun écart → tout afficher). `Journal` (shell client de `/journal`,
+  actions seules depuis le 2026-10-02) : liste
   antéchronologique des actions de l'équipe groupée par jour, filtre rôle `SegmentedControl` (Manager / Caisse /
   Praticiennes — **Manager** par défaut) + salon global `useLocation()` +
   `JournalPeriodPicker` + recherche libre. Mise en page (passe `impeccable
@@ -1090,7 +1095,7 @@ tout design » → voir @design.md.
   `AvantageChip`, `rdvCoverage`), `BirthdaySelect` (anniversaire jour + mois). `PointageCells` (2026-10-01 —
   `ArrivalValue`, `DepartureValue`, `PointageFigure`, `PointageSummaryBar` :
   lecture d'un pointage, partagée par `equipe/MemberPresencePanel` et
-  `journal/PointageLog`).
+  `equipe/PointageLog`).
   `rendezvous/DayList` et `rendezvous/ReservationCalendar` (vues Liste /
   Calendrier de `/rendez-vous`) remplacent `rendezvous/ListView` (supprimé) ;
   `ClientRowActions` et `shared/ClientPreferencesView` supprimés.
@@ -1764,7 +1769,7 @@ fichiers template supprimés : `index.ts`, `types.ts`, `customers.ts`,
   `summarize`, `groupByWeek`, `hoursLabel` (« 9 h 05 »). **2026-10-01** :
   une absence porte `salonId` (salon attendu ce jour-là, d'après les horaires
   habituels) ; `teamPointagesByDay(range, scope, memberId?)` (toute l'équipe
-  active, par jour, filtrée par salon — Journal › Pointage).
+  active, par jour, filtrée par salon — Équipe › Pointage).
 - `rh.ts` — fixtures « RH » : demandes déposées par les collaboratrices.
   **Indépendant du barrel** : importer directement `@/lib/mock/rh`. `StaffRequest`
   (`kind` `avance` / `conge`, `status` `en_attente` / `acceptee` / `refusee`,
