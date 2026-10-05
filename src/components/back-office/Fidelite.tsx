@@ -15,6 +15,7 @@ import {
 } from "@/lib/mock/abonnements";
 import AbonnementsPanel from "./fidelite/AbonnementsPanel";
 import PackSalesPanel from "./fidelite/PackSalesPanel";
+import FideliteTabs from "./fidelite/FideliteTabs";
 import { btnOutline } from "./fidelite/ui";
 
 // Écran « Fidélité » — le suivi quotidien des abonnements souscrits et des
@@ -56,6 +57,7 @@ export default function Fidelite() {
           </Link>
         }
       />
+      <FideliteTabs active="abonnements" />
 
       <SearchInput
         placeholder="Chercher une cliente, un n° client, un forfait ou un pack…"

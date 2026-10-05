@@ -172,6 +172,10 @@ tout design » → voir @design.md.
     de réappro (rend `<Stock />`, dans `<Suspense>` pour `?produit=<id>`)
   - `salons/page.tsx` — **redirige vers `/reglages?section=salons`** depuis le
     2026-10-01 (les salons se règlent dans Réglages, groupe « Établissement »)
+  - `fidelite/cartes-cadeaux/page.tsx` (2026-10-05) — onglet **Cartes cadeaux**
+    de Fidélité (rend `<CartesCadeaux />` dans `<Suspense>` pour
+    `?format=physique` — défaut digitales). Barre `fidelite/FideliteTabs`
+    (Abonnements & packs / Cartes cadeaux) sur les deux routes de Fidélité.
   - `fidelite/page.tsx` — « Fidélité & abonnements » : wrapper serveur (metadata)
     qui rend `<Fidelite />` — depuis le 2026-09-27, **le seul suivi**
     (abonnements souscrits + packs vendus, côte à côte, sans onglets) ; la
@@ -689,6 +693,19 @@ tout design » → voir @design.md.
   `DetailIdentityHeader` (+ `DetailAvatar` : bandeau avatar/pictogramme + nom +
   badges à gauche, grille label/valeur à droite), `StatTile` (tuile de
   résumé),
+  `CartesCadeaux` (2026-10-05, `/fidelite/cartes-cadeaux` — deux cartes-onglets
+  **Cartes digitales / Cartes physiques** (`role=tab`, `?format=`) portant
+  chacune « N à traiter », solde à honorer, cartes en cours, vendues sur
+  30 j ; recherche « Nom, n° de carte, prestation ou téléphone » ; liste en
+  lignes-blocs à colonnes, **sans aperçu de carte** (acheteur en tête, « Pour
+  <destinataire> » · n° de carte dessous / montant ou prestations / envoi ou
+  remise / action), groupée — digitales : Envoi en échec, Envoi programmé, En
+  circulation ; physiques : À imprimer, Prêtes à remettre, En circulation —
+  puis « Épuisées ou expirées » replié ; actions de ligne « Corriger et
+  renvoyer » (ouvre la fiche), « Imprimer », « Marquer comme remise /
+  expédiée » (termes de la file de point-de-vente, 2026-10-05) ; recherche vide qui trouve dans
+  l'autre format → lien vers lui ; « Régler la livraison » →
+  `/reglages?section=livraison` ; état de session + toasts),
   `Fidelite` (shell client de « Fidélité & abonnements », **suivi seul**
   depuis le 2026-09-27 : `AbonnementsPanel` + `PackSalesPanel` côte à côte
   (grille 2 colonnes, plus aucun onglet), bouton « Régler les offres » →
@@ -744,6 +761,16 @@ tout design » → voir @design.md.
   téléphones)), `FollowUpSection` (2026-10-02 — liste repliable des éléments
   clos, dépliée d'office quand une recherche y trouve quelque chose ; `NoMatch`
   « Aucun … pour « x » » + « Effacer la recherche »),
+`FideliteTabs` (2026-10-05 — onglets des deux routes de Fidélité),
+  `GiftCardDetail` (fiche panneau latéral `detail/DetailModal` : n° de carte
+  en titre + montant ou prestations, Acheteur puis Destinataire (→ fiche
+  cliente), message, solde / barre (montant) ou prestations cochées une fois
+  utilisées (prestations, jamais de prix), validité ; Envoi
+  (échec : motif + adresse corrigeable + « Renvoyer la carte » ; sinon
+  « Renvoyer » / « Envoyer maintenant ») ou Retrait au comptoir / Adresse de
+  livraison (étapes Commandée → Imprimée → Remise·Expédiée + bouton d'étape
+  suivante) ; Utilisations). `GiftCardVisual` supprimé le 2026-10-05 (plus
+  d'aperçu de carte),
   `ContactField` (choix souscriptrice / acheteuse : « Cliente du fichier »
   (recherche `shared/ClientSearchField` par nom ou téléphone, depuis le
   2026-10-02) ou « Hors fichier » (coordonnées libres) ; « Ajouter … » dans la
@@ -889,7 +916,10 @@ tout design » → voir @design.md.
   `SendSettings` (2026-09-28 — réglage d'envoi d'un modèle dans l'éditeur :
   Manuel / Automatique, « À l'occasion de », délai + unité + avant / après,
   phrase de relecture, avertissement si « avant » un achat),
-  `TemplateEditorPanel` (panneau latéral : nom, envoi (`SendSettings`, ou
+  `TemplateEditorPanel` (panneau latéral **large à deux colonnes** depuis le
+  2026-10-05 : formulaire à gauche, **aperçu** à droite (`shared/EmailPreview`,
+  bascule Exemple — variables remplies avec une cliente type + lien du site
+  des réglages — / Variables) ; nom, envoi (`SendSettings`, ou
   déclencheur figé en lecture seule), objet + corps,
   chips de variables insérées au curseur, modèles système non renommables /
   non supprimables, suppression confirmée en ligne, Échap / clic sur le fond pour
@@ -1108,6 +1138,11 @@ tout design » → voir @design.md.
   `rendezvous/RescheduleRdvDialog` (2026-10-02) remplace `EditRdvDialog`
   (supprimé), voir « Reprogrammer un rendez-vous » en bas de fichier ;
   `ClientRowActions` et `shared/ClientPreferencesView` supprimés.
+- `back-office/shared/EmailPreview.tsx` (2026-10-05) — aperçu d'un email
+  (wordmark, objet, corps `markdownToHtml`, pied « site web ») ; `variables`
+  remplace les `{{jetons}}` (valeur surlignée, jeton sans valeur en pastille),
+  `lineBreaks` garde les retours à la ligne. Utilisé par
+  `messagerie/EnvoyerMessage` et `reglages/emails/TemplateEditorPanel`.
 - `back-office/shared/SalonFilter.tsx` (2026-10-02) — **le** filtre salon global
   de tous les écrans (bandeaux d'Accueil, Rendez-vous, Clients, Services, Stock,
   Journal, Rapports, Satisfaction, Équipe › Pointage, Planning, Horaires). Jusqu'à
@@ -1727,6 +1762,22 @@ fichiers template supprimés : `index.ts`, `types.ts`, `customers.ts`,
   `isPurchaseEvent`, `groupTemplates` (rubriques par occasion, triées par
   moment d'envoi, puis « Envoi manuel »), `TEMPLATE_VARIABLES`,
   `templateKindLabel`. **Indépendant du barrel** : `@/lib/mock/emails`.
+- `cartes-cadeaux.ts` (2026-10-05) — cartes cadeaux vendues. Deux contenus,
+  comme `GiftCardKind` de point-de-vente : `kind` **montant** (solde FCFA) ou
+  **prestations** (`prestationIds`, `amountFcfa` = leur valeur à l'achat ;
+  `GiftCardUse.prestationId` marque une prestation honorée) —
+  `giftCardPrestations`, `giftCardContentLabel` ; 3 seeds prestations
+  (`BC-2026-5133`, `-5127`, `-4655`). Deux formats :
+  `digitale` (`DigitalSend` : e-mail / WhatsApp, `envoyee` / `programmee` /
+  `echec` + motif) et `physique` (`PhysicalHandover` : retrait au salon ou
+  livraison quartier + frais, étapes `a-preparer` → `prete` → `remise`).
+  `GiftCardPerson` acheteuse / bénéficiaire (`clientId` ou hors fichier),
+  `uses` (débits datés par salon), validité 12 mois. 15 seeds — dont
+  `BC-2026-4471` (c01) et `BC-2026-1180` (c04), mêmes soldes que les RDV de
+  démo. Expose `balanceOf`, `usedAmount`, `expiresAt`, `isExpired`,
+  `bucketOf` (échec / à préparer / prête / programmée / en circulation /
+  terminée), `needsAction`, `outstanding`, `giftCardMatches` (code, noms,
+  e-mail, chiffres du téléphone), `frDayShort` / `frStamp`.
 - `livraison.ts` (2026-10-01) — livraison des cartes cadeaux : `DeliveryZone`
   (`name` = quartier, `priceFcfa`, 0 = offerte), `deliveryZoneSeeds` (9
   quartiers de Dakar), `newDeliveryZoneId`, `foldZoneName` (doublons sans
