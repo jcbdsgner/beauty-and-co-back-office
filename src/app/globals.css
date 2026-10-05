@@ -778,3 +778,20 @@ span.flatpickr-weekday,
   opacity: 0.8;
   cursor: grabbing; /* Changes the cursor to indicate dragging */
 }
+
+/* Le bloc qui se fait remarquer une fois — repris du site b&co (`attention-shake-once`, même
+   amplitude), comme point-de-vente : bloc « 2 praticiennes » de la fenêtre rendez-vous. */
+@keyframes attention-shake-wiggle-once {
+  0%, 100% { transform: rotate(0deg) translateX(0); }
+  15% { transform: rotate(-3deg) translateX(-6px); }
+  30% { transform: rotate(3deg) translateX(6px); }
+  45% { transform: rotate(-2.5deg) translateX(-5px); }
+  60% { transform: rotate(2.5deg) translateX(5px); }
+  75% { transform: rotate(-1deg) translateX(-2px); }
+  90% { transform: rotate(1deg) translateX(2px); }
+}
+.attention-shake-once { animation: attention-shake-wiggle-once 0.6s ease-in-out 1; transform-origin: center; }
+
+@media (prefers-reduced-motion: reduce) {
+  .attention-shake-once { animation: none; }
+}

@@ -3372,3 +3372,41 @@ de `prise-rdv/` (« Nouveau rendez-vous ») et de `RescheduleRdvDialog`.**
   « à deux praticiennes » choisi à la main. `components/prise-rdv/` et
   `lib/prise-rdv/` (hors `planifier.ts`, utilisé par `RdvDialog`) ne sont plus
   montés nulle part — conservés, à supprimer si le choix est confirmé.
+
+## Fenêtre rendez-vous alignée sur point-de-vente (2026-10-05)
+
+Demande de l'utilisatrice : « le back-office doit avoir le même modal avec la même
+logique » que la fenêtre rendez-vous de point-de-vente (ADR 0041 révisé là-bas).
+**Prime sur la section « Un seul bloc pour créer et modifier un rendez-vous ».**
+
+- `rendezvous/RdvDialog.tsx` — fenêtre large (1200 px) en **deux colonnes vues
+  d'un coup**, même fenêtre en création et en modification (« Modifier le
+  rendez-vous » / « Confirmer la modification »). À gauche : cliente (création),
+  prestations par personne (catégories **repliées**, une seule ouverte, compteur,
+  recherche qui ouvre tout, sous-catégories, en-tête collant ; incompatibilités
+  `conflictWith` gardées), date puis salon sur une rangée (« Fermé » compact),
+  horaires en une seule rangée. À droite : **« 2 praticiennes »** (un seul
+  interrupteur, appliqué là où c'est faisable — `Prestation.twoPractitioners` ET
+  deux praticiennes libres ensemble ; bloc rose `brand-100/40` qui tremble une fois,
+  `attention-shake-once` de `globals.css`, gain « 2 h → 1 h », détail par prestation
+  à l'horaire choisi), **Questions** b&co, **Extensions** (cheveux Beccy Wave /
+  Nefertiti, seulement si une personne en coiffure répond « Non » à « propres
+  extensions »), **Bar Beauty** (`boissonSeeds`, toujours replié par défaut),
+  **Notes**. Blocs encadrés repliables (`Block`, `ExtraBlock`) ; en modification
+  tout s'ouvre replié. Pied : jour · heure, salon · durée, total extras compris.
+  Personne ajoutée = **nom complet obligatoire**. Peu de sous-titres d'aide.
+- `rendezvous/RdvQuestions.tsx` (nouveau) — questions de catégorie par personne ×
+  catégorie (Oui / Non ou texte) ; `missingAnswers` compte les « sans réponse ».
+- `lib/mock/booking-questions.ts` (nouveau) — `BOOKING_QUESTIONS` (verbatim b&co,
+  clés = ids `serviceSeeds` : `s-coiffure`, `s-manucure`, `s-spa`, `s-visage`) ;
+  stockage dans `RdvDetail.questions` (liste à plat) avec l'id
+  `bq:<personne>:<service>:<question>` (`questionsFromAnswers` /
+  `answersFromQuestions`), les autres questions gardées telles quelles.
+- `lib/prise-rdv/planifier.ts` — « 2 praticiennes » devient une **préférence** :
+  repli à une praticienne (durée pleine) quand deux ne sont pas libres, donc aucun
+  horaire retiré ; `overrides` garde les praticiennes voulues encore libres et
+  complète (une ligne passée à deux garde la sienne).
+- `lib/mock/rendezvous.ts` — `RdvDetail.staffNote` (note libre) ; `Reschedule`
+  (exporté par `RdvDialog`) porte aussi `extras`, `questions`, `staffNote`, repris
+  par `RendezVous.reschedule` (événement « Rendez-vous modifié » quand le créneau
+  ne bouge pas) et `RendezVousDetail` (bloc « Notes » sur la fiche).

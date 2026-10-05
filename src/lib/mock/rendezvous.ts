@@ -184,6 +184,7 @@ export type RdvDetail = {
   advantages: RdvAdvantage[];
   events: RdvEvent[]; // du plus récent au plus ancien
   cancelReason?: string; // motif libre saisi à l'annulation
+  staffNote?: string; // note libre saisie dans la fenêtre rendez-vous (bloc « Notes »)
 };
 
 /* ------------------------------------------------------------------ */

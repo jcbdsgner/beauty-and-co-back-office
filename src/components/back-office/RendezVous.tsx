@@ -233,17 +233,22 @@ export default function RendezVous() {
         salon: next.salon,
         salonLabel: salonName(next.salon),
         prestations: next.prestations,
+        extras: next.extras,
+        questions: next.questions,
+        staffNote: next.staffNote,
         events: [
           {
             at: `${TODAY_ISO}T${NOW_TIME}:00`,
-            label: moved ? "Rendez-vous reprogrammé" : "Prestations modifiées",
+            label: moved ? "Rendez-vous reprogrammé" : "Rendez-vous modifié",
             detail: moved ? `${before} → ${after}` : undefined,
           },
           ...r.events,
         ],
       };
     });
-    flash("Rendez-vous reprogrammé — cliente prévenue par email.");
+    const before = rdvs.find((r) => r.id === id);
+    const moved = !before || before.date !== next.date || before.salon !== next.salon;
+    flash(moved ? "Rendez-vous reprogrammé — cliente prévenue par email." : "Rendez-vous modifié.");
   };
 
   // Annuler un rendez-vous encore à venir remonte une alerte sur l'accueil ;

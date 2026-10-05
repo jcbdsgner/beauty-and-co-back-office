@@ -601,6 +601,13 @@ export default function RendezVousDetail({
               </div>
             </section>
 
+            {detail.staffNote && (
+              <section className="rounded-box border border-base-300 bg-base-100 px-6 py-5">
+                <h2 className="text-lg font-semibold text-base-content">Notes</h2>
+                <p className="mt-2 text-sm whitespace-pre-line text-base-content">{detail.staffNote}</p>
+              </section>
+            )}
+
             {detail.questions.length > 0 && (
               <section className="rounded-box border border-base-300 bg-base-100 px-6 py-5">
                 <h2 className="text-lg font-semibold text-base-content">Questions de réservation</h2>
@@ -781,6 +788,9 @@ export default function RendezVousDetail({
                 salon: next.salon,
                 salonLabel: salonName(next.salon),
                 prestations: next.prestations,
+                extras: next.extras,
+                questions: next.questions,
+                staffNote: next.staffNote,
               }));
             setEditOpen(false);
           }}
