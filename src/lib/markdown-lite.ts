@@ -11,7 +11,7 @@ const inline = (s: string) =>
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
     .replace(/(^|[^*])\*([^*]+)\*/g, "$1<em>$2</em>");
 
-export function markdownToHtml(md: string): string {
+export function markdownToHtml(md: string, opts: { lineBreaks?: boolean } = {}): string {
   const blocks = md.replace(/\r\n/g, "\n").split(/\n\s*\n/);
   return blocks
     .map((block) => {
@@ -24,7 +24,7 @@ export function markdownToHtml(md: string): string {
       }
       if (lines.length === 1 && b.startsWith("## ")) return `<h3>${inline(b.slice(3))}</h3>`;
       if (lines.length === 1 && b.startsWith("# ")) return `<h2>${inline(b.slice(2))}</h2>`;
-      return `<p>${lines.map(inline).join(" ")}</p>`;
+      return `<p>${lines.map(inline).join(opts.lineBreaks ? "<br>" : " ")}</p>`;
     })
     .join("");
 }

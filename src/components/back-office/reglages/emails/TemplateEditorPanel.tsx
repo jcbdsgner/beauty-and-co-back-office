@@ -10,8 +10,23 @@ import {
   type EmailSend,
   type EmailTemplate,
 } from "@/lib/mock/emails";
+import { SegmentedToggle } from "@/components/ui/molecules/segmented-toggle";
+import EmailPreview from "../../shared/EmailPreview";
 import { fieldClass, btnGhost, btnPrimary } from "./ui";
 import SendSettings from "./SendSettings";
+
+// Valeurs d'exemple de l'aperçu : une cliente et un rendez-vous plausibles,
+// pour relire le modèle tel qu'il arrivera (le lien du site vient des réglages).
+const SAMPLE_VALUES: Record<string, string> = {
+  cliente: "Awa Sarr",
+  salon: "Almadies",
+  date: "jeudi 8 octobre",
+  heure: "15:00",
+  prestation: "Silk Press",
+  praticienne: "Fatou",
+};
+
+type PreviewMode = "exemple" | "variables";
 
 export type EditorTarget =
   | { mode: "new" }
@@ -27,11 +42,13 @@ const slug = (s: string) =>
 
 export default function TemplateEditorPanel({
   target,
+  siteLink,
   onClose,
   onSave,
   onDelete,
 }: {
   target: EditorTarget;
+  siteLink: string;
   onClose: () => void;
   onSave: (t: EmailTemplate) => void;
   onDelete: (id: string) => void;
@@ -44,6 +61,8 @@ export default function TemplateEditorPanel({
   const [body, setBody] = useState(existing?.body ?? "");
   const [send, setSend] = useState<EmailSend>(existing?.send ?? DEFAULT_SEND);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [previewMode, setPreviewMode] = useState<PreviewMode>("exemple");
+  const sampleValues = useMemo(() => ({ ...SAMPLE_VALUES, lien_site: siteLink }), [siteLink]);
 
   const bodyRef = useRef<HTMLTextAreaElement>(null);
 
@@ -103,7 +122,7 @@ export default function TemplateEditorPanel({
       variant="side"
       onClose={onClose}
       labelledBy="template-editor-title"
-      className="relative flex h-full max-w-[560px] flex-col"
+      className="relative flex h-full max-w-[1160px] flex-col"
     >
         {/* en-tête */}
         <div className="flex items-start justify-between gap-4 border-b border-base-300 px-6 py-5">
@@ -120,8 +139,9 @@ export default function TemplateEditorPanel({
           </button>
         </div>
 
-        {/* corps défilant */}
-        <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
+        {/* corps : formulaire à gauche, aperçu à droite, chacun défile seul */}
+        <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,520px)_minmax(0,1fr)]">
+        <div className="min-h-0 space-y-5 overflow-y-auto px-6 py-5">
           {isSystem && (
             <div className="flex items-start gap-2.5 rounded-xl bg-base-200 px-4 py-3 text-xs text-base-content/70">
               <LockIcon className="mt-0.5 size-4 shrink-0 text-base-content/45" />
@@ -213,6 +233,40 @@ export default function TemplateEditorPanel({
               ))}
             </div>
           </div>
+        </div>
+
+        <section aria-label="Aperçu" className="flex min-h-0 flex-col border-l border-base-300 bg-base-200/60">
+          <div className="flex items-center justify-between gap-4 px-6 pt-5 pb-3">
+            <div>
+              <p className="text-sm font-medium text-base-content">Aperçu</p>
+              <p className="mt-0.5 text-xs text-base-content/60">
+                {previewMode === "exemple"
+                  ? "Ce que recevra une cliente — les informations remplacées sont surlignées."
+                  : "Les variables restent visibles, à l'endroit où elles seront remplacées."}
+              </p>
+            </div>
+            <SegmentedToggle
+              size="sm"
+              aria-label="Affichage de l'aperçu"
+              className="w-56 shrink-0"
+              options={[
+                { value: "exemple", label: "Exemple" },
+                { value: "variables", label: "Variables" },
+              ]}
+              value={previewMode}
+              onChange={(v) => setPreviewMode(v as PreviewMode)}
+            />
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-6">
+            <EmailPreview
+              subject={subject}
+              body={body}
+              siteLink={siteLink}
+              lineBreaks
+              variables={previewMode === "exemple" ? sampleValues : {}}
+            />
+          </div>
+        </section>
         </div>
 
         {/* pied */}

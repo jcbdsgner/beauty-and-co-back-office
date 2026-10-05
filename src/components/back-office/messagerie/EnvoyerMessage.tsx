@@ -1,14 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { ArrowLeft, CalendarClock, Mail, MessageCircle, MessageSquare, Send, Users } from "lucide-react";
 import { useClientsData } from "@/context/ClientsContext";
 import { groupThousands } from "@/lib/mock/beautyandco";
-import { defaultSiteLink } from "@/lib/mock/emails";
 import { isValidEmail } from "@/lib/mock/compte";
-import { markdownToHtml, markdownToPlain } from "@/lib/markdown-lite";
+import { markdownToPlain } from "@/lib/markdown-lite";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/atoms/button";
 import { Switch } from "@/components/ui/atoms/switch";
@@ -18,6 +16,7 @@ import { ConfirmDialog } from "@/components/ui/molecules/confirm-dialog";
 import { SegmentedToggle } from "@/components/ui/molecules/segmented-toggle";
 import { Toast } from "@/components/ui/molecules/toast";
 import PageHeader from "../PageHeader";
+import EmailPreview from "../shared/EmailPreview";
 
 // « Envoyer un message » — envoi ponctuel ou groupé, sur un ou plusieurs canaux
 // (Email, SMS, WhatsApp), tout de suite ou programmé (2026-10-01). L'aperçu
@@ -503,37 +502,6 @@ export default function EnvoyerMessage() {
         onCancel={() => setConfirming(false)}
       />
       <Toast message={notice} onDismiss={() => setNotice(null)} />
-    </div>
-  );
-}
-
-function EmailPreview({ subject, body }: { subject: string; body: string }) {
-  return (
-    <div className="rounded-box border border-base-300 bg-base-200 p-6">
-      <div className="rounded-box bg-base-100 px-8 py-7 shadow-sm">
-        <div className="flex justify-center">
-          <Image src="/images/logo/beautyandco-wordmark.svg" alt="Beauty & Co" width={120} height={56} />
-        </div>
-        <p className="mt-5 text-center text-sm font-medium text-base-content/70">
-          {subject.trim() || <span className="text-base-content/40">Objet du message</span>}
-        </p>
-        <div className="my-6 border-t border-brand-100" />
-        {body.trim() ? (
-          <div
-            className="min-h-40 text-[15px] leading-relaxed text-base-content [&_a]:text-primary [&_a]:underline [&_h2]:mb-3 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:text-lg [&_h3]:font-semibold [&_li]:mb-1 [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-5"
-            dangerouslySetInnerHTML={{ __html: markdownToHtml(body) }}
-          />
-        ) : (
-          <p className="min-h-40 text-[15px] text-base-content/40">Votre message apparaîtra ici…</p>
-        )}
-        <div className="my-6 border-t border-brand-100" />
-        <p className="text-center text-sm text-base-content/60">
-          Pour plus d&apos;informations, visitez notre{" "}
-          <a href={defaultSiteLink} target="_blank" rel="noreferrer" className="text-primary underline">
-            site web
-          </a>
-        </p>
-      </div>
     </div>
   );
 }

@@ -42,6 +42,7 @@ export default function EmailsPanel() {
       {editing && (
         <TemplateEditorPanel
           target={editing}
+          siteLink={siteLink}
           onClose={() => setEditing(null)}
           onSave={saveTemplate}
           onDelete={deleteTemplate}
