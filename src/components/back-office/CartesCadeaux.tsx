@@ -3,18 +3,17 @@
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ChevronRight, Gift, Settings, Smartphone, Store, Truck } from "lucide-react";
+import { AlertTriangle, ChevronRight, Clock, Mail, MessageCircle, Settings, Store, Truck } from "lucide-react";
 import PageHeader from "@/components/back-office/PageHeader";
 import { SearchInput } from "@/components/ui/atoms/search-input";
 import { Toast } from "@/components/ui/molecules/toast";
 import { fcfa, salons, today as demoNow } from "@/lib/mock/beautyandco";
-import { addDays, TODAY_ISO } from "@/lib/mock/planning";
+import { TODAY_ISO } from "@/lib/mock/planning";
 import {
   balanceOf,
   bucketOf,
   CHANNEL_LABELS,
   frDayShort,
-  frStamp,
   giftCardMatches,
   giftCardPrestations,
   giftCardSeeds,
@@ -32,36 +31,33 @@ import GiftCardDetail from "./fidelite/GiftCardDetail";
 import { FollowUpSection, NoMatch } from "./fidelite/FollowUpSection";
 import { btnOutline, btnPrimary } from "./fidelite/ui";
 
-// Écran « Cartes cadeaux » (onglet de Fidélité, 2026-10-05) — les cartes
-// vendues, vues par format : digitales d'un côté, physiques de l'autre.
-// 1. Ce qu'elle vient faire : savoir ce qui attend un geste (une carte
-//    physique à imprimer ou à remettre, un envoi digital qui a échoué),
-//    retrouver une carte (par nom, n° de carte, prestation ou téléphone) et
-//    voir ce qu'il reste dessus — un solde (carte montant) ou des prestations
-//    (carte prestations). L'acheteur est le nom en tête de ligne, le
-//    destinataire vient dessous. Vocabulaire de la file de point-de-vente
-//    (À imprimer, Prêtes à remettre, Marquer comme remise / expédiée).
-// 2. Ce qui doit sauter aux yeux : le choix du format, qui porte pour chacun
-//    le nombre de cartes à traiter et le solde encore dû ; puis, dans la
-//    liste, les cartes qui attendent quelque chose, en tête, avec leur bouton.
-// 3. Quand ça se passe mal : envoi en échec (motif + correction de l'adresse
-//    dans la fiche), carte expirée avec un solde (grisée, « Expirée »),
-//    recherche sans résultat (« Effacer la recherche » ; si l'autre format
-//    trouve quelque chose, on le dit et on y mène), aucune carte (état vide).
-// Aucun backend : les gestes (renvoyer, imprimer, marquer remise) vivent en
-// mémoire de session.
+// Écran « Cartes cadeaux » (onglet de Fidélité). Refonte du 2026-10-05 après
+// critique (skill `impeccable`) : la fiche latérale porte le détail, la liste
+// ne garde que ce qui sert à décider d'ouvrir une carte ou d'agir dessus.
+// 1. Ce qu'elle vient faire : traiter ce qui attend un geste (une carte
+//    physique à imprimer ou à remettre, un envoi digital en échec) et
+//    retrouver une carte (nom, n° de carte, prestation, téléphone).
+// 2. Ce qui saute aux yeux : la bascule Digitales / Physiques, qui porte le
+//    nombre à traiter de chaque format ; puis les sections « à traiter » en
+//    tête, avec leur bouton. Une ligne = acheteur (et pour qui), ce qu'il
+//    reste sur la carte, où elle en est, l'action.
+// 3. Quand ça se passe mal : envoi en échec en rouge avec son motif (la
+//    correction se fait dans la fiche), carte expirée grisée, recherche sans
+//    résultat (« Effacer » ; si l'autre format trouve, on y mène), aucune carte.
+// Retiré par rapport à la 1ʳᵉ version : les 6 chiffres des cartes de format
+// (seul le solde dû reste, en une ligne), les en-têtes de colonnes, l'adresse
+// d'envoi et « Intacte » dans les lignes (dans la fiche).
 
 const TODAY = TODAY_ISO;
 const NOW = nowStamp(TODAY, demoNow.currentTime);
-const SINCE_30D = addDays(TODAY, -30);
 
 const salonLabel = (id: string) => salons.find((s) => s.id === id)?.name ?? id;
 
-type SectionDef = { bucket: GiftCardBucket; title: string; hint?: string };
+type SectionDef = { bucket: GiftCardBucket; title: string };
 
 const SECTIONS: Record<GiftCardFormat, SectionDef[]> = {
   digitale: [
-    { bucket: "echec", title: "Envoi en échec", hint: "Le destinataire n'a rien reçu" },
+    { bucket: "echec", title: "Envoi en échec" },
     { bucket: "programmee", title: "Envoi programmé" },
     { bucket: "en-circulation", title: "En circulation" },
   ],
@@ -72,163 +68,75 @@ const SECTIONS: Record<GiftCardFormat, SectionDef[]> = {
   ],
 };
 
-const ROW_GRID = "grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1.15fr)_10rem] items-center gap-6";
+const ROW_GRID = "grid grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_13rem] items-center gap-6";
 
-/* ------------------------------------------------------------- choix du format */
+/* ------------------------------------------------------------- bascule de format */
 
-function FormatTab({
+function FormatSwitch({
   format,
-  active,
-  cards,
+  counts,
   onSelect,
 }: {
   format: GiftCardFormat;
-  active: boolean;
-  cards: GiftCard[];
-  onSelect: () => void;
+  counts: Record<GiftCardFormat, { total: number; toHandle: number }>;
+  onSelect: (f: GiftCardFormat) => void;
 }) {
-  const digital = format === "digitale";
-  const Icon = digital ? Smartphone : Gift;
-  const live = cards.filter((c) => bucketOf(c, TODAY) !== "terminee");
-  const toHandle = cards.filter((c) => needsAction(bucketOf(c, TODAY))).length;
-  const sold30 = cards.filter((c) => c.purchasedAt > SINCE_30D);
-
   return (
-    <button
-      type="button"
-      role="tab"
-      aria-selected={active}
-      onClick={onSelect}
-      className={cn(
-        "group relative flex flex-col gap-5 rounded-box border bg-base-100 p-5 text-left transition",
-        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#fdcfca]",
-        active
-          ? "border-primary shadow-[0_0_0_1px_var(--color-primary)]"
-          : "border-base-300 hover:border-base-content/25",
-      )}
-    >
-      <div className="flex items-center justify-between gap-3">
-        <span className="flex items-center gap-3">
-          <span
+    <div role="tablist" aria-label="Format des cartes cadeaux" className="flex shrink-0 rounded-field bg-muted p-1">
+      {(["digitale", "physique"] as const).map((f) => {
+        const active = f === format;
+        const { total, toHandle } = counts[f];
+        return (
+          <button
+            key={f}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => onSelect(f)}
             className={cn(
-              "flex size-10 items-center justify-center rounded-full",
-              active ? "bg-primary text-primary-content" : "bg-accent text-secondary",
+              "flex h-10 items-center gap-2 rounded-[6px] px-4 text-[15px] font-semibold transition",
+              "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#fdcfca]",
+              active
+                ? "bg-base-100 text-base-content shadow-[0_1px_2px_rgba(58,45,45,0.12)]"
+                : "text-base-content/60 hover:text-base-content",
             )}
           >
-            <Icon aria-hidden className="size-5" />
-          </span>
-          <span>
-            <span className="block text-lg font-semibold text-base-content">
-              Cartes {digital ? "digitales" : "physiques"}
-            </span>
-            <span className="block text-sm text-base-content/60">
-              {digital ? "Envoyées par e-mail ou WhatsApp" : "Retirées au salon ou livrées"}
-            </span>
-          </span>
-        </span>
-        {toHandle > 0 ? (
-          <span className="rounded-full bg-error/10 px-2.5 py-1 text-sm font-semibold whitespace-nowrap text-error">
-            {toHandle} à traiter
-          </span>
-        ) : (
-          <span className="text-sm whitespace-nowrap text-base-content/50">Rien à traiter</span>
-        )}
-      </div>
-      <dl className="grid grid-cols-3 gap-4 border-t border-base-300 pt-4">
-        <div>
-          <dt className="text-sm text-base-content/55">Solde à honorer</dt>
-          <dd className="mt-0.5 text-[17px] font-semibold tabular-nums text-base-content">
-            {fcfa(outstanding(cards, TODAY))}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-sm text-base-content/55">En cours</dt>
-          <dd className="mt-0.5 text-[17px] font-semibold tabular-nums text-base-content">
-            {live.length} carte{live.length > 1 ? "s" : ""}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-sm text-base-content/55">Vendues · 30 jours</dt>
-          <dd className="mt-0.5 text-[17px] font-semibold tabular-nums text-base-content">
-            {sold30.length} · {fcfa(sold30.reduce((n, c) => n + c.amountFcfa, 0))}
-          </dd>
-        </div>
-      </dl>
-    </button>
+            {f === "digitale" ? "Digitales" : "Physiques"}
+            <span className="font-medium tabular-nums text-base-content/45">{total}</span>
+            {toHandle > 0 && (
+              <span
+                className="min-w-5 rounded-full bg-error px-1.5 text-center text-xs leading-5 font-semibold text-white tabular-nums"
+                aria-label={`${toHandle} envoi${toHandle > 1 ? "s" : ""} en échec`}
+              >
+                {toHandle}
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
 /* ------------------------------------------------------------------- lignes */
 
-function Delivery({ card }: { card: GiftCard }) {
-  if (card.format === "digitale") {
-    const d = card.digital;
-    return (
-      <div className="min-w-0 text-sm">
-        <p className="truncate font-medium text-base-content">
-          {CHANNEL_LABELS[d.channel]} · <span className="font-normal text-base-content/70">{d.to}</span>
-        </p>
-        <p
-          className={cn(
-            "mt-0.5",
-            d.status === "echec" ? "font-medium text-error" : "text-base-content/60",
-          )}
-        >
-          {d.status === "echec"
-            ? d.failure
-            : d.status === "programmee"
-              ? `Partira le ${frDayShort(d.scheduledFor)}`
-              : `Envoyée le ${frStamp(d.sentAt!)}`}
-        </p>
-      </div>
-    );
-  }
-  const p = card.physical;
-  const Icon = p.mode === "retrait" ? Store : Truck;
-  const where = p.mode === "retrait" ? `Retrait · ${salonLabel(p.salonId)}` : `Livraison · ${p.zone}`;
-  const state =
-    p.step === "a-preparer"
-      ? `Commandée le ${frDayShort(card.purchasedAt)}`
-      : p.step === "prete"
-        ? `Imprimée le ${frDayShort(p.readyAt!)}`
-        : `${p.mode === "retrait" ? "Remise" : "Expédiée"} le ${frDayShort(p.handedAt!)}`;
-  return (
-    <div className="min-w-0 text-sm">
-      <p className="flex items-center gap-1.5 truncate font-medium text-base-content">
-        <Icon aria-hidden className="size-3.5 shrink-0 text-base-content/55" />
-        {where}
-      </p>
-      <p className="mt-0.5 text-base-content/60">{state}</p>
-    </div>
-  );
-}
-
-// Sous le nom de l'acheteur : à qui va la carte (point-de-vente : « l'acheteur
-// s'il l'a achetée pour lui-même »).
-const recipientLine = (card: GiftCard) =>
-  card.recipient.name === card.buyer.name ? "Pour soi" : `Pour ${card.recipient.name}`;
-
-/** Ce que la carte offre et ce qu'il en reste : un solde, ou des prestations. */
-function Content({ card }: { card: GiftCard }) {
+/** Ce qu'il reste sur la carte : un solde, ou des prestations. */
+function Remaining({ card }: { card: GiftCard }) {
   const expired = isExpired(card, TODAY);
   if (card.kind === "prestations") {
     const list = giftCardPrestations(card);
-    const left = list.filter((p) => !p.used).length;
-    const done = left === 0 || expired;
+    const left = list.filter((p) => !p.used);
+    const done = left.length === 0 || expired;
     return (
       <div className="min-w-0">
-        <p
-          className={cn("line-clamp-2 text-[15px] leading-snug font-semibold", done ? "text-base-content/45" : "text-base-content")}
-          title={list.map((p) => p.name).join(" · ")}
-        >
-          {list.map((p) => p.name).join(" · ")}
+        <p className={cn("text-[15px] font-semibold", done ? "text-base-content/45" : "text-base-content")}>
+          {left.length} prestation{left.length > 1 ? "s" : ""}
+          {left.length < list.length && (
+            <span className="font-normal text-base-content/55"> sur {list.length}</span>
+          )}
         </p>
-        <p className="text-sm text-base-content/55">
-          {expired && left > 0
-            ? "Expirée"
-            : left === list.length
-              ? `${list.length} prestation${list.length > 1 ? "s" : ""} · aucune utilisée`
-              : `${list.length - left} sur ${list.length} utilisée${list.length - left > 1 ? "s" : ""}`}
+        <p className="truncate text-sm text-base-content/55" title={list.map((p) => p.name).join(" · ")}>
+          {(left.length > 0 ? left : list).map((p) => p.name).join(" · ")}
         </p>
       </div>
     );
@@ -237,49 +145,84 @@ function Content({ card }: { card: GiftCard }) {
   const done = balance === 0 || expired;
   return (
     <div className="min-w-0">
-      <p className={cn("text-[16px] font-semibold tabular-nums", done ? "text-base-content/45" : "text-base-content")}>
+      <p className={cn("text-[15px] font-semibold tabular-nums", done ? "text-base-content/45" : "text-base-content")}>
         {fcfa(balance)}
       </p>
-      <p className="text-sm text-base-content/55">
-        {expired && balance > 0
-          ? "Expirée"
-          : balance === 0
-            ? `Épuisée · ${fcfa(card.amountFcfa)}`
-            : balance === card.amountFcfa
-              ? "Intacte"
-              : `sur ${fcfa(card.amountFcfa)}`}
-      </p>
+      {balance < card.amountFcfa && (
+        <p className="text-sm tabular-nums text-base-content/55">sur {fcfa(card.amountFcfa)}</p>
+      )}
     </div>
   );
 }
 
-function rowAction(card: GiftCard): string | null {
-  if (card.format === "digitale") return card.digital.status === "echec" ? "Corriger et renvoyer" : null;
-  if (card.physical.step === "a-preparer") return "Imprimer";
+/** Où en est la carte : envoi (digitale) ou remise (physique). */
+function Progress({ card }: { card: GiftCard }) {
+  if (card.format === "digitale") {
+    const d = card.digital;
+    const Channel = d.channel === "whatsapp" ? MessageCircle : Mail;
+    if (d.status === "echec")
+      return (
+        <p className="flex min-w-0 items-start gap-1.5 text-sm font-medium text-error">
+          <AlertTriangle aria-hidden className="mt-0.5 size-4 shrink-0" />
+          <span className="line-clamp-2">{d.failure}</span>
+        </p>
+      );
+    return (
+      <p className="flex min-w-0 items-center gap-1.5 text-sm text-base-content/70">
+        {d.status === "programmee" ? (
+          <Clock aria-hidden className="size-4 shrink-0 text-base-content/45" />
+        ) : (
+          <Channel aria-hidden className="size-4 shrink-0 text-base-content/45" />
+        )}
+        <span className="truncate">
+          {d.status === "programmee"
+            ? `Partira le ${frDayShort(d.scheduledFor)}`
+            : `${CHANNEL_LABELS[d.channel]} · ${frDayShort(d.sentAt!)}`}
+        </span>
+      </p>
+    );
+  }
+  const p = card.physical;
+  const Icon = p.mode === "retrait" ? Store : Truck;
+  const where = p.mode === "retrait" ? `Retrait à ${salonLabel(p.salonId)}` : `Livraison à ${p.zone}`;
+  return (
+    <div className="min-w-0 text-sm">
+      <p className="flex items-center gap-1.5 truncate text-base-content/70">
+        <Icon aria-hidden className="size-4 shrink-0 text-base-content/45" />
+        {where}
+      </p>
+      {p.step !== "a-preparer" && (
+        <p className="mt-0.5 pl-5.5 text-base-content/50">
+          {p.step === "prete"
+            ? `Imprimée le ${frDayShort(p.readyAt!)}`
+            : `${p.mode === "retrait" ? "Remise" : "Expédiée"} le ${frDayShort(p.handedAt!)}`}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function rowAction(card: GiftCard): { label: string; primary: boolean } | null {
+  if (card.format === "digitale")
+    return card.digital.status === "echec" ? { label: "Corriger et renvoyer", primary: true } : null;
+  if (card.physical.step === "a-preparer") return { label: "Imprimer", primary: true };
   if (card.physical.step === "prete")
-    return card.physical.mode === "retrait" ? "Marquer comme remise" : "Marquer comme expédiée";
+    return { label: card.physical.mode === "retrait" ? "Marquer comme remise" : "Marquer comme expédiée", primary: false };
   return null;
 }
 
-function Row({
-  card,
-  onOpen,
-  onAction,
-}: {
-  card: GiftCard;
-  onOpen: () => void;
-  onAction: () => void;
-}) {
-  const action = rowAction(card);
-  const urgent = card.format === "digitale" && card.digital.status === "echec";
+const recipientLine = (card: GiftCard) =>
+  card.recipient.name === card.buyer.name ? "Pour soi" : `Pour ${card.recipient.name}`;
 
+function Row({ card, onOpen, onAction }: { card: GiftCard; onOpen: () => void; onAction: () => void }) {
+  const action = rowAction(card);
   return (
     // Toute la ligne ouvre la fiche à la souris ; au clavier, c'est le nom.
     <li
       onClick={onOpen}
       className={cn(
         ROW_GRID,
-        "cursor-pointer rounded-box border border-base-300 bg-base-100 px-4 py-3.5 transition hover:border-base-content/25 hover:bg-base-200/40",
+        "group cursor-pointer rounded-box border border-base-300 bg-base-100 px-5 py-3.5 transition-colors hover:border-base-content/25",
       )}
     >
       <div className="min-w-0">
@@ -294,13 +237,13 @@ function Row({
           {card.buyer.name}
         </button>
         <p className="truncate text-sm text-base-content/60">
-          {recipientLine(card)} · <span className="font-mono text-[13px] tracking-wide">{card.code}</span>
+          {recipientLine(card)}
+          <span className="text-base-content/40"> · {card.code}</span>
         </p>
       </div>
 
-      <Content card={card} />
-
-      <Delivery card={card} />
+      <Remaining card={card} />
+      <Progress card={card} />
 
       <div className="flex justify-end">
         {action ? (
@@ -310,35 +253,29 @@ function Row({
               e.stopPropagation();
               onAction();
             }}
-            className={cn(urgent || card.format === "physique" && card.physical.step === "a-preparer" ? btnPrimary : btnOutline, "whitespace-nowrap")}
+            className={cn(action.primary ? btnPrimary : btnOutline, "whitespace-nowrap")}
           >
-            {action}
+            {action.label}
           </button>
         ) : (
-          <ChevronRight aria-hidden className="size-5 text-base-content/35" />
+          <ChevronRight
+            aria-hidden
+            className="size-5 text-base-content/25 transition-colors group-hover:text-base-content/55"
+          />
         )}
       </div>
     </li>
   );
 }
 
-function ColumnHeads({ format }: { format: GiftCardFormat }) {
-  return (
-    <div className={cn(ROW_GRID, "mb-2 border-b border-base-300 px-4 pb-2 text-[13px] font-medium text-base-content/50")}>
-      <span>Acheteur · destinataire · n° de carte</span>
-      <span>Montant ou prestations</span>
-      <span>{format === "digitale" ? "Envoi" : "Remise"}</span>
-      <span />
-    </div>
-  );
-}
-
 function finishedLabel(c: GiftCard) {
   if (c.kind === "prestations") {
     const left = giftCardPrestations(c).filter((p) => !p.used).length;
-    return left === 0 ? "toutes les prestations utilisées" : `expirée avec ${left} prestation${left > 1 ? "s" : ""} non utilisée${left > 1 ? "s" : ""}`;
+    return left === 0
+      ? "toutes les prestations utilisées"
+      : `expirée, ${left} prestation${left > 1 ? "s" : ""} non utilisée${left > 1 ? "s" : ""}`;
   }
-  return balanceOf(c) === 0 ? `épuisée · ${fcfa(c.amountFcfa)}` : `expirée avec ${fcfa(balanceOf(c))} non utilisés`;
+  return balanceOf(c) === 0 ? `épuisée · ${fcfa(c.amountFcfa)}` : `expirée, ${fcfa(balanceOf(c))} non utilisés`;
 }
 
 /* -------------------------------------------------------------------- écran */
@@ -355,9 +292,8 @@ export default function CartesCadeaux() {
   const [notice, setNotice] = useState<string | null>(null);
   const dismiss = useCallback(() => setNotice(null), []);
 
-  const selectFormat = (f: GiftCardFormat) => {
+  const selectFormat = (f: GiftCardFormat) =>
     router.replace(f === "digitale" ? pathname : `${pathname}?format=${f}`, { scroll: false });
-  };
 
   const byFormat = useMemo(
     () => ({
@@ -366,6 +302,17 @@ export default function CartesCadeaux() {
     }),
     [cards],
   );
+  const counts = {
+    digitale: {
+      total: byFormat.digitale.length,
+      toHandle: byFormat.digitale.filter((c) => bucketOf(c, TODAY) === "echec").length,
+    },
+    physique: {
+      total: byFormat.physique.length,
+      // Une carte physique pas encore remise suit son cours normal : pas d'alerte.
+      toHandle: 0,
+    },
+  };
 
   const matching = byFormat[format]
     .filter((c) => giftCardMatches(c, query))
@@ -374,6 +321,7 @@ export default function CartesCadeaux() {
   const otherMatches = query.trim() ? byFormat[other].filter((c) => giftCardMatches(c, query)).length : 0;
   const finished = matching.filter((c) => bucketOf(c, TODAY) === "terminee");
   const searching = query.trim().length > 0;
+  const live = byFormat[format].filter((c) => bucketOf(c, TODAY) !== "terminee").length;
 
   const update = (id: string, fn: (c: GiftCard) => GiftCard) =>
     setCards((list) => list.map((c) => (c.id === id ? fn(c) : c)));
@@ -398,11 +346,7 @@ export default function CartesCadeaux() {
       c.format === "physique"
         ? {
             ...c,
-            physical: {
-              ...c.physical,
-              step: next,
-              ...(next === "prete" ? { readyAt: TODAY } : { handedAt: TODAY }),
-            },
+            physical: { ...c.physical, step: next, ...(next === "prete" ? { readyAt: TODAY } : { handedAt: TODAY }) },
           }
         : c,
     );
@@ -428,25 +372,22 @@ export default function CartesCadeaux() {
       />
       <FideliteTabs active="cartes-cadeaux" />
 
-      <div role="tablist" aria-label="Format des cartes cadeaux" className="mb-6 grid grid-cols-2 gap-4">
-        {(["digitale", "physique"] as const).map((f) => (
-          <FormatTab
-            key={f}
-            format={f}
-            active={format === f}
-            cards={byFormat[f]}
-            onSelect={() => selectFormat(f)}
-          />
-        ))}
+      <div className="mb-3 flex items-center gap-4">
+        <FormatSwitch format={format} counts={counts} onSelect={selectFormat} />
+        <SearchInput
+          placeholder="Nom, n° de carte, prestation ou téléphone"
+          aria-label="Rechercher une carte cadeau"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="max-w-md flex-1"
+        />
       </div>
-
-      <SearchInput
-        placeholder="Nom, n° de carte, prestation ou téléphone"
-        aria-label="Rechercher une carte cadeau"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        className="mb-6"
-      />
+      <p className="mb-7 text-sm text-base-content/55">
+        {live} carte{live > 1 ? "s" : ""} en cours · encore dû{" "}
+        <span className="font-semibold tabular-nums text-base-content/80">
+          {fcfa(outstanding(byFormat[format], TODAY))}
+        </span>
+      </p>
 
       <div role="tabpanel">
         {byFormat[format].length === 0 ? (
@@ -472,32 +413,23 @@ export default function CartesCadeaux() {
           </div>
         ) : (
           <>
-            <ColumnHeads format={format} />
-            <div className="space-y-7">
+            <div className="space-y-8">
               {SECTIONS[format].map((s) => {
                 const list = matching.filter((c) => bucketOf(c, TODAY) === s.bucket);
                 if (list.length === 0) return null;
                 const action = needsAction(s.bucket);
                 return (
                   <section key={s.bucket}>
-                    <h2 className="mb-2.5 flex items-baseline gap-2 px-1">
+                    <h2 className="mb-3 flex items-baseline gap-2">
                       <span
                         className={cn(
-                          "text-[15px] font-semibold",
-                          s.bucket === "echec" ? "text-error" : "text-base-content",
+                          "text-[17px] font-semibold",
+                          s.bucket === "echec" ? "text-error" : action ? "text-base-content" : "text-base-content/70",
                         )}
                       >
                         {s.title}
                       </span>
-                      <span
-                        className={cn(
-                          "text-sm tabular-nums",
-                          action ? "font-semibold text-base-content/70" : "text-base-content/50",
-                        )}
-                      >
-                        {list.length}
-                      </span>
-                      {s.hint && <span className="text-sm text-base-content/50">· {s.hint}</span>}
+                      <span className="text-[15px] tabular-nums text-base-content/45">{list.length}</span>
                     </h2>
                     <ul className="space-y-2">
                       {list.map((c) => (
@@ -517,22 +449,17 @@ export default function CartesCadeaux() {
             {finished.length > 0 && (
               <FollowUpSection title="Épuisées ou expirées" count={finished.length} defaultOpen={searching}>
                 {finished.map((c) => (
-                  <li key={c.id} className="py-1.5">
+                  <li key={c.id} className="py-1">
                     <button
                       type="button"
                       onClick={() => setOpenId(c.id)}
-                      className="flex w-full items-center gap-4 rounded-field px-2 py-1.5 text-left hover:bg-base-200"
+                      className="flex w-full items-center gap-4 rounded-field px-2 py-2 text-left hover:bg-base-200"
                     >
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[15px] font-medium text-base-content">
-                          {c.buyer.name}
-                        </span>
-                        <span className="block truncate text-sm text-base-content/55">
-                          {recipientLine(c)} · <span className="font-mono text-[13px]">{c.code}</span> ·{" "}
-                          {finishedLabel(c)}
-                        </span>
+                      <span className="min-w-0 flex-1 truncate text-[15px] text-base-content/70">
+                        <span className="font-medium text-base-content">{c.buyer.name}</span>
+                        <span className="text-base-content/55"> · {finishedLabel(c)}</span>
                       </span>
-                      <ChevronRight aria-hidden className="size-4 text-base-content/35" />
+                      <span className="shrink-0 text-sm text-base-content/40">{c.code}</span>
                     </button>
                   </li>
                 ))}

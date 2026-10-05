@@ -693,19 +693,21 @@ tout design » → voir @design.md.
   `DetailIdentityHeader` (+ `DetailAvatar` : bandeau avatar/pictogramme + nom +
   badges à gauche, grille label/valeur à droite), `StatTile` (tuile de
   résumé),
-  `CartesCadeaux` (2026-10-05, `/fidelite/cartes-cadeaux` — deux cartes-onglets
-  **Cartes digitales / Cartes physiques** (`role=tab`, `?format=`) portant
-  chacune « N à traiter », solde à honorer, cartes en cours, vendues sur
-  30 j ; recherche « Nom, n° de carte, prestation ou téléphone » ; liste en
-  lignes-blocs à colonnes, **sans aperçu de carte** (acheteur en tête, « Pour
-  <destinataire> » · n° de carte dessous / montant ou prestations / envoi ou
-  remise / action), groupée — digitales : Envoi en échec, Envoi programmé, En
-  circulation ; physiques : À imprimer, Prêtes à remettre, En circulation —
-  puis « Épuisées ou expirées » replié ; actions de ligne « Corriger et
-  renvoyer » (ouvre la fiche), « Imprimer », « Marquer comme remise /
-  expédiée » (termes de la file de point-de-vente, 2026-10-05) ; recherche vide qui trouve dans
-  l'autre format → lien vers lui ; « Régler la livraison » →
-  `/reglages?section=livraison` ; état de session + toasts),
+  `CartesCadeaux` (2026-10-05, `/fidelite/cartes-cadeaux` — **refait le même
+  jour après critique `impeccable`** : bascule **Digitales / Physiques**
+  (`role=tab`, `?format=`, total + pastille rouge des envois digitaux en échec — aucune alerte sur les cartes physiques pas encore remises, demande du 2026-10-05) et
+  recherche sur une ligne, puis une ligne discrète « N cartes en cours · encore
+  dû X FCFA » (les 6 chiffres des anciennes cartes de format et les en-têtes de
+  colonnes sont retirés) ; sections — digitales : Envoi en échec, Envoi
+  programmé, En circulation ; physiques : À imprimer, Prêtes à remettre, En
+  circulation — puis « Épuisées ou expirées » replié. Une ligne = acheteur +
+  « Pour <destinataire> · n° de carte » / ce qui reste (solde, « sur X » si
+  entamée ; ou « N prestations » + noms) / état (canal · date d'envoi, motif
+  d'échec en rouge, lieu de retrait ou de livraison + date d'impression ou de
+  remise) / action (« Corriger et renvoyer » → fiche, « Imprimer », « Marquer
+  comme remise / expédiée »). L'adresse d'envoi n'est plus dans la ligne
+  (fiche). Recherche vide qui trouve dans l'autre format → lien ; « Régler la
+  livraison » → `/reglages?section=livraison` ; état de session + toasts),
   `Fidelite` (shell client de « Fidélité & abonnements », **suivi seul**
   depuis le 2026-09-27 : `AbonnementsPanel` + `PackSalesPanel` côte à côte
   (grille 2 colonnes, plus aucun onglet), bouton « Régler les offres » →
@@ -762,14 +764,15 @@ tout design » → voir @design.md.
   clos, dépliée d'office quand une recherche y trouve quelque chose ; `NoMatch`
   « Aucun … pour « x » » + « Effacer la recherche »),
 `FideliteTabs` (2026-10-05 — onglets des deux routes de Fidélité),
-  `GiftCardDetail` (fiche panneau latéral `detail/DetailModal` : n° de carte
-  en titre + montant ou prestations, Acheteur puis Destinataire (→ fiche
-  cliente), message, solde / barre (montant) ou prestations cochées une fois
-  utilisées (prestations, jamais de prix), validité ; Envoi
-  (échec : motif + adresse corrigeable + « Renvoyer la carte » ; sinon
-  « Renvoyer » / « Envoyer maintenant ») ou Retrait au comptoir / Adresse de
-  livraison (étapes Commandée → Imprimée → Remise·Expédiée + bouton d'étape
-  suivante) ; Utilisations). `GiftCardVisual` supprimé le 2026-10-05 (plus
+  `GiftCardDetail` (fiche panneau latéral `detail/DetailModal`, ordre refait
+  le 2026-10-05 : titre « Carte de 50.000 FCFA » / « Carte de 2 prestations »
+  + n° · date et lieu d'achat ; **d'abord ce qui attend un geste** (envoi en
+  échec : motif + adresse corrigeable + « Renvoyer la carte » ; carte physique
+  pas encore remise : lieu + étapes Commandée → Imprimée → Remise·Expédiée +
+  bouton) ; puis ce qui reste (solde + barre seulement si entamée, sinon « Pas
+  encore utilisée » ; prestations cochées) + validité ; Offerte par / Pour
+  (contact, lien fiche) + message ; Envoi (« Renvoyer » discret) ou Remise
+  faite ; Utilisations seulement s'il y en a). `GiftCardVisual` supprimé le 2026-10-05 (plus
   d'aperçu de carte),
   `ContactField` (choix souscriptrice / acheteuse : « Cliente du fichier »
   (recherche `shared/ClientSearchField` par nom ou téléphone, depuis le
