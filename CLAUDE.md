@@ -838,6 +838,15 @@ tout design » → voir @design.md.
   défauts du nouveau parent, `onSave` renvoie `serviceId`) + sous-catégorie
   (si la catégorie en a), salons, « à deux »,
   « Réalisée par » en lecture seule, `RecipeEditor`, suppression confirmée),
+  `PrestationQuestionsEditor` (2026-10-07 — section « Questions à la
+  réservation » de `PrestationPanel`, après « Incompatible avec » : questions
+  à choix unique et obligatoires (`Prestation.questions`), liste avec aperçu
+  des réponses en vignettes photo, « Modifier » / suppression confirmée en
+  ligne ; édition en place, une question à la fois : libellé, réponses (nom +
+  photo facultative `shared/ImagePicker` compact + pastille « retirer la
+  photo », ↑↓, retrait), manque écrit après une tentative
+  (`prestationQuestionValid`) ; une question ouverte bloque « Enregistrer » de
+  la fiche. `PrestationRow` affiche « N question(s) », libellés au survol),
   `ServiceInfoForm` (création & édition d'une catégorie : nom, vignette
   émoji, description, cases salons, statut ; brouillon + dirty en mode
   édition ; `ServiceDraft` omet désormais `subcategories`, gérées à part par
@@ -3464,3 +3473,43 @@ logique » que la fenêtre rendez-vous de point-de-vente (ADR 0041 révisé là-
   (exporté par `RdvDialog`) porte aussi `extras`, `questions`, `staffNote`, repris
   par `RendezVous.reschedule` (événement « Rendez-vous modifié » quand le créneau
   ne bouge pas) et `RendezVousDetail` (bloc « Notes » sur la fiche).
+- **Questions de prestation** (2026-10-07, `Prestation.questions`) : dans
+  `RdvDialog`, sous une prestation cochée qui en a, `AnswerTiles` (local) —
+  réponses en tuiles photo 4:5 (3 colonnes, tuile texte sans photo, coche
+  pastille 40px), cadre ocre « À choisir » tant que vide ; réponse rappelée sur
+  la pastille de la prestation (« · à préciser » sinon) et dans le résumé
+  replié. Choix obligatoire : le pied l'écrit (« Choisissez une réponse pour
+  <prestation> ») et ce motif ouvre et fait défiler jusqu'à la question.
+  Décocher efface la réponse. Écrites dans `RdvPrestation.answers`
+  (`answersFor`), reprises en modification. `RendezVousDetail` : vignette +
+  réponse sous le nom de la prestation, question en sous-texte.
+
+## Questions par prestation (2026-10-07)
+
+Demande de l'utilisatrice : une prestation peut porter ses propres questions à
+choix unique, **obligatoires**, avec une photo par réponse (facultative).
+Distinctes des `ServiceQuestion` (Oui / Non ou texte, posées pour toute une
+catégorie).
+
+- `services.ts` — `Prestation.questions?: PrestationQuestion[]`
+  (`{ id, label, options: { id, label, photo }[] }`),
+  `prestationQuestionValid` (libellé + ≥ 2 réponses nommées), type
+  `PrestationAnswer` (libellés + photo recopiés) ; seeds
+  `PRESTATION_QUESTION_SEEDS` : **Mini Hair Treat + Braids** (« Quel type de
+  tresses… » — nattes collées, box braids, couettes tressées) et **Silk Press**
+  (« Quelles boucles… » — serrées, souples, ondulations). `rendezvous.ts` —
+  `RdvPrestation.answers?`.
+- `public/images/prestation-questions/` — les 6 photos des seeds, trouvées via
+  le serveur MCP Pinterest du projet ouatesape, choisies pour mettre la
+  coiffure en avant plutôt que le modèle, recadrées en 4:5.
+- Édition : `services/PrestationQuestionsEditor` (voir Carte du code). Prise
+  de RDV : `RdvDialog` (tuiles photo sous la prestation cochée) et fiche RDV —
+  voir la dernière puce de « Fenêtre rendez-vous alignée sur point-de-vente ».
+- **Site de réservation** (`../b&co`, modifié avec l'accord explicite de
+  l'utilisatrice) : `BookingSubService.choiceQuestions` (mêmes ids que les
+  seeds ci-dessus, photos copiées dans `public/images/rdv/choix/`), composant
+  `components/booking/prestation-choice.tsx` sous la prestation sélectionnée,
+  validation dans `lib/booking/questions.ts` (`missingChoices`,
+  `choiceAnswerId`), réponse rappelée dans le résumé et la confirmation
+  (`CartItem.choiceLabels`). Pas de synchronisation réelle entre les deux
+  projets : les questions du site sont recopiées à la main.

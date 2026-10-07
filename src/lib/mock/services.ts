@@ -299,7 +299,42 @@ export type Prestation = {
   // la même visite (2026-10-01). Relation symétrique : `setIncompatibilities`
   // écrit la règle des deux côtés, `incompatiblesOf` la lit des deux côtés.
   incompatibleWith?: string[];
+  // Questions posées à la réservation dès que la prestation est choisie
+  // (2026-10-07) — ex. « Quel type de tresses ? » avec une photo par choix.
+  // Toujours à choix unique et obligatoire : la réservation ne se termine pas
+  // sans réponse. Distinctes des `ServiceQuestion` (Oui / Non ou texte, posées
+  // pour toute la catégorie).
+  questions?: PrestationQuestion[];
 };
+
+// Une question propre à une prestation : un choix unique parmi des réponses,
+// chacune avec une photo facultative (affichée en grand sur le site de
+// réservation quand elle existe).
+export type PrestationQuestionOption = {
+  id: string;
+  label: string;
+  photo: string | null; // chemin `public/` ou dataURL importée en session
+};
+export type PrestationQuestion = {
+  id: string;
+  label: string; // « Quel type de tresses souhaitez-vous pour votre enfant ? »
+  options: PrestationQuestionOption[];
+};
+
+// Réponse enregistrée sur une ligne de rendez-vous (`RdvPrestation.answers`) :
+// libellés recopiés pour rester lisibles si la question change ensuite.
+export type PrestationAnswer = {
+  questionId: string;
+  question: string;
+  optionId: string;
+  option: string;
+  photo: string | null;
+};
+
+// Une question est publiable si elle a un libellé et au moins deux réponses
+// nommées.
+export const prestationQuestionValid = (q: PrestationQuestion) =>
+  q.label.trim() !== "" && q.options.length >= 2 && q.options.every((o) => o.label.trim() !== "");
 
 export type PrestationAvailability = Record<Weekday, DayOpening>;
 
@@ -798,6 +833,34 @@ const PAUSE_SEEDS: Record<string, PrestationPause[]> = {
   ],
 };
 
+// Questions de prestation de démonstration (2026-10-07) — photos trouvées sur
+// Pinterest, cadrées sur la coiffure plutôt que sur le modèle.
+const PQ = "/images/prestation-questions";
+const PRESTATION_QUESTION_SEEDS: Record<string, PrestationQuestion[]> = {
+  "mini-co-mini-hair-treat-braids-mini-co": [
+    {
+      id: "pq-tresses-enfant",
+      label: "Quel type de tresses souhaitez-vous pour votre enfant ?",
+      options: [
+        { id: "pqo-nattes-collees", label: "Nattes collées", photo: `${PQ}/tresses-nattes-collees.jpg` },
+        { id: "pqo-box-braids", label: "Box braids", photo: `${PQ}/tresses-box-braids.jpg` },
+        { id: "pqo-couettes-tressees", label: "Couettes tressées", photo: `${PQ}/tresses-couettes.jpg` },
+      ],
+    },
+  ],
+  "coiffure-silk-press": [
+    {
+      id: "pq-boucles",
+      label: "Quelles boucles souhaitez-vous ?",
+      options: [
+        { id: "pqo-boucles-serrees", label: "Boucles serrées", photo: `${PQ}/boucles-serrees.jpg` },
+        { id: "pqo-boucles-souples", label: "Boucles souples", photo: `${PQ}/boucles-souples.jpg` },
+        { id: "pqo-boucles-wavy", label: "Ondulations (wavy)", photo: `${PQ}/boucles-wavy.jpg` },
+      ],
+    },
+  ],
+};
+
 export const prestationSeeds: Prestation[] = rawPrestations.map((p) => ({
   ...p,
   salonIds: [],
@@ -805,6 +868,7 @@ export const prestationSeeds: Prestation[] = rawPrestations.map((p) => ({
   subcategoryId: COIFFURE_SUBCATEGORY_BY_ID[p.id] ?? MINI_SUBCATEGORY_BY_ID[p.id] ?? null,
   incompatibleWith: INCOMPATIBLE_SEEDS[p.id] ?? [],
   unavailablePeriods: PAUSE_SEEDS[p.id] ?? [],
+  questions: PRESTATION_QUESTION_SEEDS[p.id] ?? [],
 }));
 
 /* -------------------------------------------------------------------------- */

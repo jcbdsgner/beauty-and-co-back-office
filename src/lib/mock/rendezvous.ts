@@ -15,7 +15,7 @@ import {
   type SalonScope,
 } from "./beautyandco";
 import { presenceFor, TODAY_ISO, type PlanningData } from "./planning";
-import { prestationSeeds, productPrice, serviceSeeds } from "./services";
+import { prestationSeeds, productPrice, serviceSeeds, type PrestationAnswer } from "./services";
 import { canPerform, fullName, members } from "./staff";
 import type { AppNotification } from "./notifications";
 
@@ -137,6 +137,7 @@ export type RdvPrestation = {
   beneficiaryName: string; // qui reçoit la prestation — le payeur (`RdvDetail.client.name`) par défaut, ou une autre personne
   beneficiaryClientId?: string | null; // renseigné si le bénéficiaire est une autre cliente du fichier
   beneficiaryKind?: BeneficiaryKind; // « homme » pour un bénéficiaire homme ; Mini & Co vaut toujours « enfant » (cf. `reservationComposition`)
+  answers?: PrestationAnswer[]; // réponses aux questions de la prestation (`Prestation.questions`)
 };
 
 // Boisson/produit pré-commandé pour la visite — jamais une prestation, jamais

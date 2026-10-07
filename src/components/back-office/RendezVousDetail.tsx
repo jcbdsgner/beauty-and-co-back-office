@@ -501,6 +501,18 @@ export default function RendezVousDetail({
                                 <p className="text-[15px] leading-snug font-semibold text-base-content">{p.name}</p>
                                 <p className="mt-0.5 text-xs text-base-content/55">{p.category}</p>
                                 {covered && <p className="mt-0.5 text-xs font-medium text-secondary">Couverte · {covered}</p>}
+                                {p.answers?.map((a) => (
+                                  <p key={a.questionId} title={a.question} className="mt-1.5 flex items-center gap-2">
+                                    {a.photo ? (
+                                      // eslint-disable-next-line @next/next/no-img-element -- photo de réponse (public/ ou dataURL)
+                                      <img src={a.photo} alt="" className="h-11 w-9 shrink-0 rounded-[6px] object-cover" />
+                                    ) : null}
+                                    <span className="min-w-0">
+                                      <span className="block text-[13px] leading-tight font-medium text-base-content">{a.option}</span>
+                                      <span className="block truncate text-xs leading-tight text-base-content/50">{a.question}</span>
+                                    </span>
+                                  </p>
+                                ))}
                               </div>
                             </div>
                             <div className="tabular-nums">

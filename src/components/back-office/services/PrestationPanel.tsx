@@ -17,6 +17,7 @@ import {
   type Prestation,
   type PrestationAvailability,
   type PrestationPause,
+  type PrestationQuestion,
   type RecipeItem,
   type Service,
 } from "@/lib/mock/services";
@@ -24,6 +25,7 @@ import PrestationPicker from "../fidelite/PrestationPicker";
 import HoursEditor, { hoursHaveError } from "../salons/HoursEditor";
 import { useServicesData } from "./ServicesData";
 import PausesEditor from "./PausesEditor";
+import PrestationQuestionsEditor from "./PrestationQuestionsEditor";
 import RecipeEditor from "./RecipeEditor";
 import { SelectField, TextInput, Toggle, btnGhost, btnPrimary } from "./ui";
 
@@ -40,6 +42,7 @@ type Draft = {
   availability: PrestationAvailability | null; // null = heures d'ouverture du salon
   unavailablePeriods: PrestationPause[];
   incompatibleWith: string[];
+  questions: PrestationQuestion[];
 };
 
 const draftOf = (
@@ -60,6 +63,7 @@ const draftOf = (
   availability: p?.availability ?? null,
   unavailablePeriods: p?.unavailablePeriods ?? [],
   incompatibleWith: p ? incompatiblesOf(catalog, p.id) : [],
+  questions: p?.questions ?? [],
 });
 
 function RealiseePar({ prestationId }: { prestationId: string | null }) {
@@ -121,6 +125,7 @@ export default function PrestationPanel({
     draftOf(initialService, initialSubcategoryId, catalog, prestation ?? undefined),
   );
   const [pickIncompatible, setPickIncompatible] = useState(false);
+  const [questionOpen, setQuestionOpen] = useState(false);
   const service = services.find((s) => s.id === draft.serviceId) ?? initialService;
 
   // Changer de catégorie : la sous-catégorie et les salons dépendent du
@@ -136,7 +141,8 @@ export default function PrestationPanel({
     draft.name.trim() !== "" &&
     digitsToInt(draft.price) > 0 &&
     digitsToInt(draft.duration) > 0 &&
-    !(draft.availability && hoursHaveError(draft.availability));
+    !(draft.availability && hoursHaveError(draft.availability)) &&
+    !questionOpen;
   // Premier salon qui la propose : sert de point de départ aux jours personnalisés.
   const refSalon: SalonId | undefined = (draft.salonIds.length > 0 ? draft.salonIds : service.salonIds)[0];
 
@@ -162,6 +168,7 @@ export default function PrestationPanel({
       availability: draft.availability,
       unavailablePeriods: draft.unavailablePeriods,
       incompatibleWith: draft.incompatibleWith,
+      questions: draft.questions,
     });
   };
 
@@ -395,6 +402,12 @@ export default function PrestationPanel({
           )}
         </div>
 
+        <PrestationQuestionsEditor
+          questions={draft.questions}
+          onChange={(questions) => setDraft({ ...draft, questions })}
+          onEditingChange={setQuestionOpen}
+        />
+
         <div className="rounded-lg border border-base-300 bg-white p-3">
           <RealiseePar prestationId={prestation?.id ?? null} />
         </div>
@@ -406,6 +419,11 @@ export default function PrestationPanel({
           />
         </div>
 
+        {questionOpen && (
+          <p className="text-xs text-base-content/60">
+            Enregistrez ou annulez la question en cours avant d&apos;enregistrer la prestation.
+          </p>
+        )}
         <div className="flex items-center justify-between gap-3 border-t border-base-300 pt-5">
           <div className="flex items-center gap-2">
             <button type="button" onClick={save} disabled={!valid} className={btnPrimary}>

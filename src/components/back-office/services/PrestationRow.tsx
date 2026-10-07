@@ -1,6 +1,6 @@
 "use client";
 
-import { Ban, CalendarDays, CalendarOff, Users } from "lucide-react";
+import { Ban, CalendarDays, CalendarOff, MessageCircleQuestion, Users } from "lucide-react";
 import Badge from "@/components/ui/badge/Badge";
 import { TODAY_ISO } from "@/lib/mock/planning";
 import {
@@ -40,6 +40,7 @@ export default function PrestationRow({ prestation: p, onOpen, onToggleActive }:
   const incompatibles = incompatiblesOf(prestations, p.id)
     .map((id) => prestations.find((x) => x.id === id)?.name)
     .filter(Boolean);
+  const questions = p.questions ?? [];
 
   return (
     <div
@@ -117,6 +118,15 @@ export default function PrestationRow({ prestation: p, onOpen, onToggleActive }:
           >
             <Ban aria-hidden className="size-3.5" />
             {incompatibles.length} incompatible{incompatibles.length > 1 ? "s" : ""}
+          </span>
+        )}
+        {questions.length > 0 && (
+          <span
+            title={`Demandé à la réservation : ${questions.map((q) => q.label).join(" · ")}`}
+            className="inline-flex shrink-0 items-center gap-1 text-xs whitespace-nowrap text-base-content/60"
+          >
+            <MessageCircleQuestion aria-hidden className="size-3.5" />
+            {questions.length} question{questions.length > 1 ? "s" : ""}
           </span>
         )}
       </div>

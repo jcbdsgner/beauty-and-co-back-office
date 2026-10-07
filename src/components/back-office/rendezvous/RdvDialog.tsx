@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
 import { CalendarDays, Check, ChevronDown, MapPin, Minus, Plus, UserRound, Users, X } from "lucide-react";
 import { Dialog } from "@/components/ui/molecules/dialog";
@@ -35,6 +35,8 @@ import {
   productPrice,
   products,
   type Prestation,
+  type PrestationAnswer,
+  type PrestationQuestion,
 } from "@/lib/mock/services";
 import {
   beneficiaryKey,
@@ -89,6 +91,8 @@ const fold = (s: string) =>
 // praticienne comprise si elle reste libre) ou une prestation du catalogue
 // ajoutée pour une personne.
 type Line = { key: string; personKey: string; prestationId: string; existing?: RdvPrestation };
+
+type LineAnswers = Record<string, Record<string, string>>;
 
 // `source` : une prestation existante de la personne (modification) ;
 // absente pour la payeuse d'un nouveau rendez-vous ou une personne ajoutée.
@@ -234,6 +238,35 @@ function RdvDialogBody(props: Props) {
   const initialStaffNote = detail?.staffNote ?? "";
   const [staffNote, setStaffNote] = useState(initialStaffNote);
 
+  // Réponses aux questions de prestation (`Prestation.questions`), par ligne :
+  // { [clé de ligne]: { [id de question]: id de réponse } }. Reprises des
+  // `answers` du rendez-vous en modification ; décocher la ligne les efface.
+  const initialLineAnswers = useMemo<LineAnswers>(
+    () =>
+      Object.fromEntries(
+        (detail?.prestations ?? [])
+          .filter((p) => p.answers?.length)
+          .map((p) => [p.id, Object.fromEntries(p.answers!.map((a) => [a.questionId, a.optionId]))]),
+      ),
+    [detail],
+  );
+  const [lineAnswers, setLineAnswers] = useState<LineAnswers>(initialLineAnswers);
+  const pick = (lineKey: string, questionId: string, optionId: string) =>
+    setLineAnswers((prev) => ({ ...prev, [lineKey]: { ...(prev[lineKey] ?? {}), [questionId]: optionId } }));
+  const forgetLine = (lineKey: string) =>
+    setLineAnswers((prev) => {
+      if (!(lineKey in prev)) return prev;
+      const next = { ...prev };
+      delete next[lineKey];
+      return next;
+    });
+  const dropLine = (lineKey: string) => {
+    setLines((list) => list.filter((l) => l.key !== lineKey));
+    forgetLine(lineKey);
+  };
+  // Où défiler quand on clique le motif « Choisissez… » du pied.
+  const questionRefs = useRef(new Map<string, HTMLDivElement>());
+
   const byId = useMemo(() => new Map(catalog.map((p) => [p.id, p])), [catalog]);
   const categoryName = (serviceId: string | null) =>
     services.find((s) => s.id === serviceId)?.name ?? "Autres prestations";
@@ -250,6 +283,22 @@ function RdvDialogBody(props: Props) {
   const canDuo = (l: Line) => Boolean(byId.get(l.prestationId)?.twoPractitioners);
   const linePrice = (l: Line) => l.existing?.price ?? byId.get(l.prestationId)?.priceFcfa ?? 0;
   const lineName = (l: Line) => l.existing?.name ?? byId.get(l.prestationId)?.name ?? "Prestation";
+  // Questions de la prestation : celles du catalogue de session (une réponse dont
+  // l'option a disparu ne compte plus).
+  const questionsOf = (l: Line): PrestationQuestion[] => byId.get(l.prestationId)?.questions ?? [];
+  const chosenOption = (l: Line, q: PrestationQuestion) => {
+    const id = lineAnswers[l.key]?.[q.id];
+    return q.options.find((o) => o.id === id) ?? null;
+  };
+  const unansweredOf = (l: Line) => questionsOf(l).filter((q) => !chosenOption(l, q));
+  const answersFor = (l: Line): PrestationAnswer[] | undefined => {
+    const qs = questionsOf(l);
+    if (qs.length === 0) return l.existing?.answers;
+    return qs.flatMap((q) => {
+      const o = chosenOption(l, q);
+      return o ? [{ questionId: q.id, question: q.label, optionId: o.id, option: o.label, photo: o.photo }] : [];
+    });
+  };
 
   const ctx: PlanContext = useMemo(
     () => ({
@@ -337,7 +386,16 @@ function RdvDialogBody(props: Props) {
     duo !== initialDuo ||
     JSON.stringify(extras) !== JSON.stringify(initialExtras) ||
     JSON.stringify(answers) !== JSON.stringify(initialAnswers) ||
+    JSON.stringify(lineAnswers) !== JSON.stringify(initialLineAnswers) ||
     staffNote.trim() !== initialStaffNote.trim();
+  // Première question de prestation sans réponse (le motif du pied y mène).
+  const pendingQuestions = lines.flatMap((l) => unansweredOf(l).map((q) => ({ line: l, question: q })));
+  const firstPending = pendingQuestions[0] ?? null;
+  const personNameOf = (key: string) => {
+    const i = people.findIndex((p) => p.key === key);
+    const p = people[i];
+    return !p ? payerName : p.added ? addedName(p, i) : personLabel(p);
+  };
   // Une personne ajoutée qui a des prestations doit porter son nom complet.
   const unnamed = people.filter((p) => p.added && !p.label.trim() && lines.some((l) => l.personKey === p.key));
   const canConfirm =
@@ -346,6 +404,7 @@ function RdvDialogBody(props: Props) {
     lines.length > 0 &&
     notOffered.length === 0 &&
     unnamed.length === 0 &&
+    pendingQuestions.length === 0 &&
     dirty;
 
   const blocker =
@@ -357,6 +416,8 @@ function RdvDialogBody(props: Props) {
           : "Gardez au moins une prestation."
         : unnamed.length > 0
           ? "Saisissez le nom complet de chaque personne ajoutée."
+          : firstPending
+            ? `Choisissez une réponse pour ${lineName(firstPending.line)}${people.length > 1 ? ` (${personNameOf(firstPending.line.personKey)})` : ""}.`
           : !chosenTime
             ? "Choisissez un horaire."
             : !dirty
@@ -367,6 +428,21 @@ function RdvDialogBody(props: Props) {
   // le créneau, les prestations ou l'interrupteur touchés.
   const showDuoDetail =
     isCreate || duo !== initialDuo || chosenTime !== currentTime || day !== currentDay || salon !== detail?.salon || !sameLines;
+
+  // Ouvre la prestation qui attend une réponse et y fait défiler la colonne.
+  const goToPending = () => {
+    if (!firstPending) return;
+    const { line } = firstPending;
+    setEditingOpen(true);
+    setQuery("");
+    setPerson(line.personKey);
+    setOpenCat(byId.get(line.prestationId)?.serviceId ?? null);
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() =>
+        questionRefs.current.get(line.key)?.scrollIntoView({ behavior: "smooth", block: "center" }),
+      ),
+    );
+  };
 
   /* ---- prestations ---- */
 
@@ -380,6 +456,7 @@ function RdvDialogBody(props: Props) {
   };
   const removePerson = (key: string) => {
     setPeople((list) => list.filter((p) => p.key !== key));
+    lines.filter((l) => l.personKey === key).forEach((l) => forgetLine(l.key));
     setLines((list) => list.filter((l) => l.personKey !== key));
     setPerson(PAYER);
   };
@@ -390,7 +467,7 @@ function RdvDialogBody(props: Props) {
   const toggle = (p: Prestation) => {
     const existing = personLines.find((l) => l.prestationId === p.id);
     if (existing) {
-      setLines((list) => list.filter((l) => l.key !== existing.key));
+      dropLine(existing.key);
       return;
     }
     // Une ligne retirée puis recochée retrouve sa place (et sa praticienne).
@@ -431,7 +508,7 @@ function RdvDialogBody(props: Props) {
       const line = lines.find((l) => l.key === pl.key)!;
       const [staff = null, secondStaff = null] = pl.staffIds;
       if (line.existing) {
-        return { ...line.existing, start: pl.start, durationMin: pl.durationMin, staff, secondStaff };
+        return { ...line.existing, start: pl.start, durationMin: pl.durationMin, staff, secondStaff, answers: answersFor(line) };
       }
       const p = byId.get(line.prestationId)!;
       const personIndex = people.findIndex((x) => x.key === line.personKey);
@@ -452,6 +529,7 @@ function RdvDialogBody(props: Props) {
         beneficiaryName: target?.added ? addedName(target, personIndex) : (who?.beneficiaryName ?? payerName),
         beneficiaryClientId: who?.beneficiaryClientId ?? null,
         beneficiaryKind: who?.beneficiaryKind,
+        answers: answersFor(line),
       };
     });
     const questions = questionsFromAnswers(
@@ -542,6 +620,11 @@ function RdvDialogBody(props: Props) {
                       ? "Aucune prestation"
                       : `${lines.length} prestation${lines.length > 1 ? "s" : ""} · ${durationLabel(totalMin)} · ${fcfa(totalPrice - extrasTotal)}`}
                     {!isCreate && !sameLines && " · modifiées"}
+                    {pendingQuestions.length > 0 && (
+                      <span className="text-warning-700">
+                        {` · ${pendingQuestions.length} réponse${pendingQuestions.length > 1 ? "s" : ""} à choisir`}
+                      </span>
+                    )}
                   </span>
                 </span>
                 <span className="text-[15px] font-medium text-secondary">{editingOpen ? "Replier" : "Modifier les prestations"}</span>
@@ -607,11 +690,23 @@ function RdvDialogBody(props: Props) {
                           className="inline-flex items-center gap-2 rounded-full bg-accent py-1.5 pr-1.5 pl-3.5 text-sm font-medium text-secondary"
                         >
                           {lineName(l)}
+                          {questionsOf(l).map((q) => {
+                            const o = chosenOption(l, q);
+                            return o ? (
+                              <span key={q.id} className="font-normal text-secondary/80">
+                                · {o.label}
+                              </span>
+                            ) : (
+                              <span key={q.id} className="font-normal text-warning-700">
+                                · à préciser
+                              </span>
+                            );
+                          })}
                           {(planned(l)?.staffIds.length ?? 0) > 1 && <Users aria-label="à 2 praticiennes" className="size-3.5" />}
                           <button
                             type="button"
                             aria-label={`Retirer ${lineName(l)}`}
-                            onClick={() => setLines((list) => list.filter((x) => x.key !== l.key))}
+                            onClick={() => dropLine(l.key)}
                             className="flex size-6 items-center justify-center rounded-full text-secondary/70 hover:bg-base-100 hover:text-secondary"
                           >
                             <X aria-hidden className="size-3.5" strokeWidth={2.5} />
@@ -713,6 +808,30 @@ function RdvDialogBody(props: Props) {
                                               {fcfa(p.priceFcfa)}
                                             </span>
                                           </label>
+                                          {checked &&
+                                            (() => {
+                                              const line = personLines.find((l) => l.prestationId === p.id);
+                                              const qs = line ? questionsOf(line) : [];
+                                              if (!line || qs.length === 0) return null;
+                                              return (
+                                                <div
+                                                  ref={(el) => {
+                                                    if (el) questionRefs.current.set(line.key, el);
+                                                    else questionRefs.current.delete(line.key);
+                                                  }}
+                                                  className="scroll-mt-20 space-y-4 px-4 pt-1 pb-4 pl-12"
+                                                >
+                                                  {qs.map((q) => (
+                                                    <AnswerTiles
+                                                      key={q.id}
+                                                      question={q}
+                                                      value={chosenOption(line, q)?.id ?? null}
+                                                      onChange={(optionId) => pick(line.key, q.id, optionId)}
+                                                    />
+                                                  ))}
+                                                </div>
+                                              );
+                                            })()}
                                         </li>
                                       );
                                     })}
@@ -959,7 +1078,17 @@ function RdvDialogBody(props: Props) {
                 </span>
               </p>
             ) : (
-              <p className="text-sm text-base-content/60">{blocker}</p>
+              firstPending && blocker?.startsWith("Choisissez une réponse") ? (
+                <button
+                  type="button"
+                  onClick={goToPending}
+                  className="text-left text-sm font-medium text-warning-700 underline-offset-2 hover:underline"
+                >
+                  {blocker}
+                </button>
+              ) : (
+                <p className="text-sm text-base-content/60">{blocker}</p>
+              )
             )}
           </div>
           {lines.length > 0 && (
@@ -1002,6 +1131,74 @@ function subGroups(items: Prestation[], nameOf: (p: Prestation) => string | null
     else out.push({ name, items: [p] });
   }
   return out;
+}
+
+/** Une question de prestation : réponses en tuiles photo (même esprit que le Bar
+ *  Beauty, en plus petit), choix unique et obligatoire. Sans réponse, le cadre
+ *  passe en ton d'alerte pour qu'on la retrouve d'un coup d'œil. */
+function AnswerTiles({
+  question,
+  value,
+  onChange,
+}: {
+  question: PrestationQuestion;
+  value: string | null;
+  onChange: (optionId: string) => void;
+}) {
+  const id = `pq-${question.id}`;
+  return (
+    <div
+      className={cn(
+        "rounded-field p-3 transition-colors",
+        value ? "bg-base-200/60" : "bg-warning-25 ring-1 ring-warning-200",
+      )}
+    >
+      <p id={id} className="mb-2.5 flex items-baseline gap-2 text-sm font-medium text-base-content">
+        {question.label}
+        {!value && <span className="text-xs font-medium whitespace-nowrap text-warning-700">À choisir</span>}
+      </p>
+      <div role="radiogroup" aria-labelledby={id} aria-required className="grid max-w-[440px] grid-cols-3 gap-2.5">
+        {question.options.map((o) => {
+          const selected = o.id === value;
+          return (
+            <button
+              key={o.id}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              onClick={() => onChange(o.id)}
+              className={cn(
+                "group relative flex flex-col justify-start rounded-field border-2 bg-base-100 p-1.5 text-left transition",
+                selected ? "border-primary" : "border-transparent ring-1 ring-base-300 hover:ring-base-content/30",
+              )}
+            >
+              {o.photo ? (
+                // eslint-disable-next-line @next/next/no-img-element -- photo de réponse (public/ ou dataURL)
+                <img src={o.photo} alt="" className="aspect-[4/5] w-full rounded-[6px] object-cover" />
+              ) : (
+                <span className="flex aspect-[4/5] w-full items-center justify-center rounded-[6px] bg-base-200 px-2 text-center text-sm font-medium text-base-content/70">
+                  {o.label}
+                </span>
+              )}
+              {o.photo && (
+                <span className="mt-1.5 line-clamp-2 block px-0.5 text-[13px] leading-tight font-medium text-base-content">
+                  {o.label}
+                </span>
+              )}
+              {selected && (
+                // Coche bien visible (même pastille que le site de réservation).
+                <span className="absolute top-2.5 right-2.5 flex size-10 items-center justify-center rounded-full bg-primary shadow-md ring-2 ring-white">
+                  <svg aria-hidden viewBox="0 0 24 24" fill="none" className="size-6">
+                    <path d="M5 12.5l4.5 4.5L19 7.5" stroke="white" strokeWidth={3.5} strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 /* ------------------------------------------------------------------ */
