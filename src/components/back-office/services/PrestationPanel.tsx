@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { X } from "lucide-react";
+import Link from "next/link";
+import { AlertTriangle, X } from "lucide-react";
 import DetailModal from "@/components/back-office/detail/DetailModal";
-import Alert from "@/components/ui/alert/Alert";
+import { cn } from "@/lib/utils";
 import { TrashBinIcon } from "@/icons";
 import { salonName, type SalonId } from "@/lib/mock/beautyandco";
 import { membersForPrestation } from "@/lib/mock/staff";
@@ -24,8 +25,9 @@ import {
 import PrestationPicker from "../fidelite/PrestationPicker";
 import HoursEditor, { hoursHaveError } from "../salons/HoursEditor";
 import { useServicesData } from "./ServicesData";
+import { AddLink, FicheGroup, FicheRule, Muted, RuleLine } from "./FicheGroup";
 import PausesEditor from "./PausesEditor";
-import PrestationQuestionsEditor from "./PrestationQuestionsEditor";
+import PrestationQuestionsEditor, { questionsProblem } from "./PrestationQuestionsEditor";
 import RecipeEditor from "./RecipeEditor";
 import { SelectField, TextInput, Toggle, btnGhost, btnPrimary } from "./ui";
 
@@ -66,34 +68,24 @@ const draftOf = (
   questions: p?.questions ?? [],
 });
 
-function RealiseePar({ prestationId }: { prestationId: string | null }) {
-  const members = prestationId ? membersForPrestation(prestationId) : [];
-
-  if (!prestationId) {
-    return (
-      <p className="text-xs text-base-content/60">
-        La liste des praticiennes compétentes s&apos;affichera après l&apos;enregistrement.
-      </p>
-    );
-  }
+function RealiseePar({ prestationId }: { prestationId: string }) {
+  const members = membersForPrestation(prestationId);
+  const link = (
+    <Link href="/equipe" className="rounded-lg px-2 py-1.5 text-sm font-semibold text-secondary transition hover:bg-accent">
+      {members.length === 0 ? "Ajouter dans Équipe" : "Équipe"}
+    </Link>
+  );
   if (members.length === 0) {
     return (
-      <Alert
-        variant="warning"
-        title="Aucune praticienne compétente"
-        message="Personne dans l'équipe ne sait réaliser cette prestation. Ajoutez-lui cette compétence depuis Équipe, sinon elle restera non réservable."
-        showLink
-        linkHref="/equipe"
-        linkText="Ouvrir Équipe"
-      />
+      <RuleLine action={link}>
+        <span className="flex items-center gap-2 font-medium text-warning-700">
+          <AlertTriangle aria-hidden className="size-4 shrink-0" />
+          Personne — non réservable
+        </span>
+      </RuleLine>
     );
   }
-  return (
-    <p className="text-sm text-base-content/80">
-      <span className="text-base-content/60">Réalisée par : </span>
-      {members.map((m) => m.firstName).join(", ")}
-    </p>
-  );
+  return <RuleLine action={link}>{members.map((m) => m.firstName).join(", ")}</RuleLine>;
 }
 
 type Props = {
@@ -125,7 +117,6 @@ export default function PrestationPanel({
     draftOf(initialService, initialSubcategoryId, catalog, prestation ?? undefined),
   );
   const [pickIncompatible, setPickIncompatible] = useState(false);
-  const [questionOpen, setQuestionOpen] = useState(false);
   const service = services.find((s) => s.id === draft.serviceId) ?? initialService;
 
   // Changer de catégorie : la sous-catégorie et les salons dépendent du
@@ -137,12 +128,13 @@ export default function PrestationPanel({
   };
   const [confirmDelete, setConfirmDelete] = useState(false);
 
+  const questionsIssue = questionsProblem(draft.questions);
   const valid =
     draft.name.trim() !== "" &&
     digitsToInt(draft.price) > 0 &&
     digitsToInt(draft.duration) > 0 &&
     !(draft.availability && hoursHaveError(draft.availability)) &&
-    !questionOpen;
+    questionsIssue === null;
   // Premier salon qui la propose : sert de point de départ aux jours personnalisés.
   const refSalon: SalonId | undefined = (draft.salonIds.length > 0 ? draft.salonIds : service.salonIds)[0];
 
@@ -238,192 +230,194 @@ export default function PrestationPanel({
           )}
         </div>
 
-        <div>
-          <span className="mb-1.5 block text-sm font-medium text-base-content">Proposée dans</span>
-          {service.salonIds.length === 0 ? (
-            <p className="text-xs text-warning-600">
-              Le service parent n&apos;est proposé dans aucun salon.
-            </p>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {service.salonIds.map((id) => {
-                const checked = draft.salonIds.includes(id);
-                return (
-                  <label
-                    key={id}
-                    className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm ${
-                      checked
-                        ? "border-brand-300 bg-white text-base-content"
-                        : "border-base-300 bg-white text-base-content/60"
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => toggleSalon(id)}
-                      className="checkbox checkbox-primary checkbox-sm shrink-0"
-                    />
-                    {salonName(id)}
-                  </label>
-                );
-              })}
-            </div>
-          )}
-          <p className="mt-1.5 text-xs text-base-content/60">
-            Par défaut, tous les salons de la catégorie. Décochez pour restreindre.
-          </p>
-        </div>
-
-        <div>
-          <span className="mb-1.5 block text-sm font-medium text-base-content">Jours de disponibilité</span>
-          <div role="radiogroup" aria-label="Jours de disponibilité" className="grid grid-cols-2 gap-2">
-            {[
-              { custom: false, title: "Comme le salon", hint: "Tous les jours et heures d'ouverture" },
-              { custom: true, title: "Jours précis", hint: "Certains jours ou certaines heures seulement" },
-            ].map((o) => {
-              const checked = (draft.availability !== null) === o.custom;
-              return (
-                <button
-                  key={o.title}
-                  type="button"
-                  role="radio"
-                  aria-checked={checked}
-                  disabled={o.custom && !refSalon}
-                  onClick={() =>
-                    setDraft({
-                      ...draft,
-                      availability: o.custom ? (draft.availability ?? (refSalon ? defaultAvailability(refSalon) : null)) : null,
-                    })
-                  }
-                  className={`rounded-lg border px-3 py-2.5 text-left transition ${
-                    checked ? "border-primary bg-accent" : "border-base-300 bg-white hover:bg-base-200"
-                  }`}
-                >
-                  <span className="block text-sm font-medium text-base-content">{o.title}</span>
-                  <span className="text-xs text-base-content/60">{o.hint}</span>
-                </button>
-              );
-            })}
-          </div>
-          {draft.availability && (
-            <div className="mt-3">
-              <HoursEditor
-                hours={draft.availability}
-                onChange={(availability) => setDraft({ ...draft, availability })}
-                closedLabel="Indisponible"
-                openLabel="disponible"
-              />
-              <p className="mt-2 text-xs text-base-content/60">
-                {availabilitySummary(draft.availability)} — les jours où le salon est fermé restent fermés. La prise de
-                rendez-vous ne propose que ces créneaux.
-              </p>
-            </div>
-          )}
-        </div>
-
-        <PausesEditor
-          prestationId={prestation?.id ?? null}
-          pauses={draft.unavailablePeriods}
-          onChange={(unavailablePeriods) => setDraft({ ...draft, unavailablePeriods })}
-        />
-
-        {/* Pas de « mode de réservation » (praticienne choisie par la cliente ou
-            non, retiré le 2026-09-27) : la réservation pose la praticienne
-            d'office, la moins chargée parmi les libres. Seul réglage réel :
-            deux praticiennes en parallèle, temps de chaise divisé. */}
-        <label className="flex items-center justify-between gap-4 rounded-lg border border-base-300 bg-white p-3">
-          <span>
-            <span className="block text-sm font-medium text-base-content">Réalisable à deux praticiennes</span>
-            <span className="text-xs text-base-content/55">
-              Chacune sur une zone distincte, en parallèle — le temps de chaise est divisé.
-            </span>
-          </span>
-          <Toggle
-            checked={draft.twoPractitioners}
-            onChange={(v) => setDraft({ ...draft, twoPractitioners: v })}
-            aria-label="Réalisable à deux praticiennes"
-          />
-        </label>
-
-        <div>
-          <span className="block text-sm font-medium text-base-content">Incompatible avec</span>
-          <p className="mb-2 text-xs text-base-content/60">
-            Ces prestations ne peuvent pas être réservées pour la même personne dans la même visite. La règle
-            s&apos;applique dans les deux sens.
-          </p>
-          {draft.incompatibleWith.length > 0 ? (
-            <ul className="mb-2 flex flex-wrap gap-2">
-              {draft.incompatibleWith.map((id) => {
-                const other = catalog.find((p) => p.id === id);
-                if (!other) return null;
-                const cat = services.find((s) => s.id === other.serviceId)?.name;
-                return (
-                  <li
-                    key={id}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-base-300 bg-white py-1 pr-1.5 pl-3 text-sm text-base-content"
-                  >
-                    {other.name}
-                    {cat && cat !== service.name && <span className="text-xs text-base-content/50">· {cat}</span>}
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setDraft({ ...draft, incompatibleWith: draft.incompatibleWith.filter((x) => x !== id) })
-                      }
-                      aria-label={`Retirer ${other.name}`}
-                      className="rounded-full p-0.5 text-base-content/45 transition hover:bg-base-200 hover:text-base-content"
+        <FicheGroup title="Réservation">
+          <FicheRule label="Salons">
+            {service.salonIds.length === 0 ? (
+              <RuleLine>
+                <span className="text-warning-700">La catégorie n&apos;est proposée dans aucun salon.</span>
+              </RuleLine>
+            ) : (
+              <div className="flex min-h-9 flex-wrap items-center gap-2">
+                {service.salonIds.map((id) => {
+                  const checked = draft.salonIds.includes(id);
+                  return (
+                    <label
+                      key={id}
+                      className={cn(
+                        "inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 text-sm transition",
+                        checked
+                          ? "border-primary/50 bg-accent text-base-content"
+                          : "border-base-300 bg-white text-base-content/55 hover:bg-base-200",
+                      )}
                     >
-                      <X className="size-3.5" />
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : (
-            !pickIncompatible && <p className="mb-2 text-sm text-base-content/60">Compatible avec tout le catalogue.</p>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleSalon(id)}
+                        className="checkbox checkbox-primary checkbox-sm shrink-0"
+                      />
+                      {salonName(id)}
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </FicheRule>
+
+          <FicheRule label="Jours et horaires">
+            <RuleLine
+              action={
+                <div role="radiogroup" aria-label="Jours et horaires" className="flex rounded-lg bg-base-200 p-0.5">
+                  {[
+                    { custom: false, label: "Ceux du salon" },
+                    { custom: true, label: "Jours précis" },
+                  ].map((o) => {
+                    const checked = (draft.availability !== null) === o.custom;
+                    return (
+                      <button
+                        key={o.label}
+                        type="button"
+                        role="radio"
+                        aria-checked={checked}
+                        disabled={o.custom && !refSalon}
+                        onClick={() =>
+                          setDraft({
+                            ...draft,
+                            availability: o.custom
+                              ? (draft.availability ?? (refSalon ? defaultAvailability(refSalon) : null))
+                              : null,
+                          })
+                        }
+                        className={cn(
+                          "rounded-md px-3 py-1.5 text-sm font-medium transition",
+                          checked ? "bg-white text-base-content shadow-sm" : "text-base-content/60 hover:text-base-content",
+                        )}
+                      >
+                        {o.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              }
+            >
+              {draft.availability && availabilitySummary(draft.availability)}
+            </RuleLine>
+            {draft.availability && (
+              <div className="mt-3">
+                <HoursEditor
+                  hours={draft.availability}
+                  onChange={(availability) => setDraft({ ...draft, availability })}
+                  closedLabel="Indisponible"
+                  openLabel="disponible"
+                />
+              </div>
+            )}
+          </FicheRule>
+
+          <FicheRule label="Pauses">
+            <PausesEditor
+              prestationId={prestation?.id ?? null}
+              pauses={draft.unavailablePeriods}
+              onChange={(unavailablePeriods) => setDraft({ ...draft, unavailablePeriods })}
+            />
+          </FicheRule>
+
+          {/* La réservation pose la praticienne d'office ; seul réglage réel :
+              deux praticiennes en parallèle, temps de chaise divisé. */}
+          <FicheRule label="À deux praticiennes">
+            <RuleLine
+              action={
+                <Toggle
+                  checked={draft.twoPractitioners}
+                  onChange={(v) => setDraft({ ...draft, twoPractitioners: v })}
+                  aria-label="À deux praticiennes"
+                />
+              }
+            >
+              {draft.twoPractitioners ? (
+                digitsToInt(draft.duration) > 0 ? (
+                  <>
+                    Oui — {durationLabel(digitsToInt(draft.duration))} →{" "}
+                    <span className="font-medium">{durationLabel(Math.ceil(digitsToInt(draft.duration) / 2))}</span>
+                  </>
+                ) : (
+                  "Oui"
+                )
+              ) : (
+                <Muted>Non</Muted>
+              )}
+            </RuleLine>
+          </FicheRule>
+
+          <FicheRule label="Pas avec">
+            {draft.incompatibleWith.length > 0 && (
+              <ul className="flex flex-wrap gap-2 pt-1 pb-1">
+                {draft.incompatibleWith.map((id) => {
+                  const other = catalog.find((p) => p.id === id);
+                  if (!other) return null;
+                  const cat = services.find((s) => s.id === other.serviceId)?.name;
+                  return (
+                    <li
+                      key={id}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-base-300 bg-white py-1 pr-1.5 pl-3 text-sm text-base-content"
+                    >
+                      {other.name}
+                      {cat && cat !== service.name && <span className="text-xs text-base-content/50">· {cat}</span>}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setDraft({ ...draft, incompatibleWith: draft.incompatibleWith.filter((x) => x !== id) })
+                        }
+                        aria-label={`Retirer ${other.name}`}
+                        className="rounded-full p-0.5 text-base-content/45 transition hover:bg-base-200 hover:text-base-content"
+                      >
+                        <X className="size-3.5" />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            {pickIncompatible ? (
+              <div className="mt-1 rounded-lg bg-base-200/70 p-3">
+                <PrestationPicker
+                  label="Prestations à ne pas combiner dans la même visite"
+                  selected={draft.incompatibleWith}
+                  onChange={(incompatibleWith) => setDraft({ ...draft, incompatibleWith })}
+                  showPricing={false}
+                  catalog={{ services, prestations: catalog }}
+                  excludeId={prestation?.id}
+                />
+                <button type="button" onClick={() => setPickIncompatible(false)} className={`${btnPrimary} mt-3`}>
+                  Terminé
+                </button>
+              </div>
+            ) : (
+              <RuleLine
+                action={
+                  <AddLink onClick={() => setPickIncompatible(true)}>Ajouter</AddLink>
+                }
+              >
+                {draft.incompatibleWith.length === 0 && <Muted>Se combine avec tout</Muted>}
+              </RuleLine>
+            )}
+          </FicheRule>
+
+          {prestation && (
+            <FicheRule label="Réalisée par">
+              <RealiseePar prestationId={prestation.id} />
+            </FicheRule>
           )}
-          {pickIncompatible ? (
-            <div className="rounded-lg border border-base-300 bg-white p-3">
-              <PrestationPicker
-                label="Choisir les prestations incompatibles"
-                selected={draft.incompatibleWith}
-                onChange={(incompatibleWith) => setDraft({ ...draft, incompatibleWith })}
-                showPricing={false}
-                catalog={{ services, prestations: catalog }}
-                excludeId={prestation?.id}
-              />
-              <button type="button" onClick={() => setPickIncompatible(false)} className={`${btnGhost} mt-2`}>
-                Terminé
-              </button>
-            </div>
-          ) : (
-            <button type="button" onClick={() => setPickIncompatible(true)} className={btnGhost}>
-              {draft.incompatibleWith.length > 0 ? "Modifier la liste" : "Ajouter une incompatibilité"}
-            </button>
-          )}
-        </div>
+        </FicheGroup>
 
         <PrestationQuestionsEditor
           questions={draft.questions}
           onChange={(questions) => setDraft({ ...draft, questions })}
-          onEditingChange={setQuestionOpen}
         />
 
-        <div className="rounded-lg border border-base-300 bg-white p-3">
-          <RealiseePar prestationId={prestation?.id ?? null} />
-        </div>
+        <RecipeEditor recipe={draft.recipe} onChange={(recipe) => setDraft({ ...draft, recipe })} />
 
-        <div className="border-t border-base-300 pt-5">
-          <RecipeEditor
-            recipe={draft.recipe}
-            onChange={(recipe) => setDraft({ ...draft, recipe })}
-          />
-        </div>
-
-        {questionOpen && (
-          <p className="text-xs text-base-content/60">
-            Enregistrez ou annulez la question en cours avant d&apos;enregistrer la prestation.
-          </p>
-        )}
+        {questionsIssue && <p className="text-sm font-medium text-warning-700">{questionsIssue}</p>}
         <div className="flex items-center justify-between gap-3 border-t border-base-300 pt-5">
           <div className="flex items-center gap-2">
             <button type="button" onClick={save} disabled={!valid} className={btnPrimary}>

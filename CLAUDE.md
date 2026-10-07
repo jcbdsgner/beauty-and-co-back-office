@@ -838,15 +838,30 @@ tout design » → voir @design.md.
   défauts du nouveau parent, `onSave` renvoie `serviceId`) + sous-catégorie
   (si la catégorie en a), salons, « à deux »,
   « Réalisée par » en lecture seule, `RecipeEditor`, suppression confirmée),
-  `PrestationQuestionsEditor` (2026-10-07 — section « Questions à la
-  réservation » de `PrestationPanel`, après « Incompatible avec » : questions
-  à choix unique et obligatoires (`Prestation.questions`), liste avec aperçu
-  des réponses en vignettes photo, « Modifier » / suppression confirmée en
-  ligne ; édition en place, une question à la fois : libellé, réponses (nom +
-  photo facultative `shared/ImagePicker` compact + pastille « retirer la
-  photo », ↑↓, retrait), manque écrit après une tentative
-  (`prestationQuestionValid`) ; une question ouverte bloque « Enregistrer » de
-  la fiche. `PrestationRow` affiche « N question(s) », libellés au survol),
+  `FicheGroup` (2026-10-07 — grammaire de la fiche prestation, sur le modèle
+  de `reglages/kit` : `FicheGroup` (bloc titré + compteur + action),
+  `FicheRule` (ligne libellé 176px → contenu), `RuleLine` (valeur à gauche,
+  action à droite), `Muted`, `AddLink` (« + … » texte de marque)). **Refonte
+  de `PrestationPanel` le même jour** (skill `impeccable`, demande « du point
+  de vue de la manager, pas un texte qui explique l'app ») : identité en tête
+  (nom, prix, durée, active, catégorie), puis bloc **Réservation** — Salons
+  (pastilles), Jours et horaires (bascule Ceux du salon / Jours précis +
+  `HoursEditor`), Pauses (`PausesEditor` réduit au contenu de la ligne :
+  liste + « Mettre en pause » qui déplie Du / Au / Motif), À deux praticiennes
+  (« Oui — 3 h → 1 h 30 »), Pas avec (pastilles + `PrestationPicker` déplié),
+  Réalisée par (prénoms + lien Équipe, « Personne — non réservable » sinon) ;
+  puis **Questions à la cliente** et **Produits consommés** (`RecipeEditor` en
+  bloc, formulaire d'ajout replié). Plus aucune phrase d'explication,
+ le même jour « du point de
+  vue de la manager », sans texte explicatif — section « Questions à la
+  réservation » de `PrestationPanel`, après « Incompatible avec » : chaque
+  question est une carte telle que la cliente la verra — libellé modifiable
+  sur place, réponses en tuiles photo 4:5 (clic = ajouter / changer la photo,
+  nom sous la photo, corbeille au survol, glisser pour réordonner), tuile
+  « + Réponse », corbeille de question confirmée en ligne ; plus de mode
+  édition ni de bouton par question : tout part avec « Enregistrer » de la
+  fiche, bloqué avec le motif (`questionsProblem`) si une question est
+  incomplète. `PrestationRow` affiche « N question(s) », libellés au survol),
   `ServiceInfoForm` (création & édition d'une catégorie : nom, vignette
   émoji, description, cases salons, statut ; brouillon + dirty en mode
   édition ; `ServiceDraft` omet désormais `subcategories`, gérées à part par
