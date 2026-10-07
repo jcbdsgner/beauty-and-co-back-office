@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ImagePlus, Plus } from "lucide-react";
+import { ArrowDown, ArrowUp, ImagePlus, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TrashBinIcon } from "@/icons";
 import { newId, type PrestationQuestion, type PrestationQuestionOption } from "@/lib/mock/services";
@@ -52,9 +52,10 @@ export default function PrestationQuestionsEditor({ questions, onChange }: Props
       count={questions.length}
       action={questions.length > 0 && <AddLink onClick={add}>Ajouter une question</AddLink>}
     >
-      {questions.map((q) => (
+      {questions.map((q, i) => (
         <QuestionCard
           key={q.id}
+          title={questions.length > 1 ? `Question ${i + 1}` : "Question"}
           question={q}
           autoFocus={q.id === fresh}
           onChange={(next) => update(q.id, next)}
@@ -79,25 +80,26 @@ export default function PrestationQuestionsEditor({ questions, onChange }: Props
 }
 
 function QuestionCard({
+  title,
   question,
   autoFocus,
   onChange,
   onRemove,
 }: {
+  title: string;
   question: PrestationQuestion;
   autoFocus: boolean;
   onChange: (q: PrestationQuestion) => void;
   onRemove: () => void;
 }) {
   const [confirmRemove, setConfirmRemove] = useState(false);
-  const [dragFrom, setDragFrom] = useState<number | null>(null);
 
   const setOption = (id: string, patch: Partial<PrestationQuestionOption>) =>
     onChange({ ...question, options: question.options.map((o) => (o.id === id ? { ...o, ...patch } : o)) });
   const removeOption = (id: string) =>
     onChange({ ...question, options: question.options.filter((o) => o.id !== id) });
   const moveOption = (from: number, to: number) => {
-    if (from === to) return;
+    if (to < 0 || to >= question.options.length) return;
     const options = [...question.options];
     const [moved] = options.splice(from, 1);
     options.splice(to, 0, moved);
@@ -106,18 +108,20 @@ function QuestionCard({
 
   return (
     <div className="px-5 py-4">
-      <div className="-ml-2 flex items-center gap-2">
-        <input
-          value={question.label}
-          autoFocus={autoFocus}
-          onChange={(e) => onChange({ ...question, label: e.target.value })}
-          placeholder="Votre question — ex. Quel type de tresses souhaitez-vous ?"
-          aria-label="Question posée à la cliente"
-          className="min-w-0 flex-1 rounded-field border border-transparent px-2 py-1.5 text-base font-semibold text-base-content transition placeholder:font-normal placeholder:text-base-content/40 hover:border-base-300 focus:border-primary focus:outline-none"
-        />
+      <div className="flex items-end gap-2">
+        <label className="flex min-w-0 flex-1 flex-col gap-1.5">
+          <span className="text-sm font-semibold text-base-content">{title}</span>
+          <input
+            value={question.label}
+            autoFocus={autoFocus}
+            onChange={(e) => onChange({ ...question, label: e.target.value })}
+            placeholder="Quel type de tresses souhaitez-vous ?"
+            className="h-11 w-full rounded-field border border-base-300 bg-white px-3.5 text-[15px] font-semibold text-base-content transition placeholder:font-normal placeholder:text-base-content/40 focus:border-primary focus:outline-2 focus:outline-offset-2 focus:outline-[#fdcfca]"
+          />
+        </label>
         {confirmRemove ? (
-          <span className="flex shrink-0 items-center gap-2 text-sm">
-            <span className="text-base-content/70">Supprimer&nbsp;?</span>
+          <span className="flex h-11 shrink-0 items-center gap-2 text-sm">
+            <span className="text-base-content/70">Supprimer la question&nbsp;?</span>
             <button type="button" onClick={onRemove} className="font-semibold text-error-600 hover:underline">
               Oui
             </button>
@@ -130,71 +134,91 @@ function QuestionCard({
             </button>
           </span>
         ) : (
-          <button
-            type="button"
-            onClick={() => setConfirmRemove(true)}
-            aria-label="Supprimer la question"
-            title="Supprimer la question"
-            className="shrink-0 rounded-lg p-2 text-base-content/45 transition hover:bg-error-50 hover:text-error-600"
-          >
+          <IconButton label="Supprimer la question" danger onClick={() => setConfirmRemove(true)}>
             <TrashBinIcon className="size-4" />
-          </button>
+          </IconButton>
         )}
       </div>
 
-      <ol className="mt-3 flex flex-wrap gap-2.5" aria-label="Réponses proposées">
+      <p className="mt-4 mb-1.5 text-sm font-medium text-base-content/70">Réponses</p>
+      <ol className="divide-y divide-base-300 rounded-field border border-base-300">
         {question.options.map((o, i) => (
-          <li
+          <AnswerRow
             key={o.id}
-            draggable
-            onDragStart={() => setDragFrom(i)}
-            onDragEnd={() => setDragFrom(null)}
-            onDragOver={(e) => dragFrom !== null && e.preventDefault()}
-            onDrop={() => {
-              if (dragFrom !== null) moveOption(dragFrom, i);
-              setDragFrom(null);
-            }}
-            className={cn("w-40", dragFrom === i && "opacity-40")}
-          >
-            <AnswerTile
-              option={o}
-              index={i}
-              canRemove={question.options.length > 2}
-              onChange={(patch) => setOption(o.id, patch)}
-              onRemove={() => removeOption(o.id)}
-            />
-          </li>
+            option={o}
+            index={i}
+            isFirst={i === 0}
+            isLast={i === question.options.length - 1}
+            canRemove={question.options.length > 2}
+            onChange={(patch) => setOption(o.id, patch)}
+            onMove={(dir) => moveOption(i, i + dir)}
+            onRemove={() => removeOption(o.id)}
+          />
         ))}
-        <li className="flex w-24">
-          <button
-            type="button"
-            onClick={() => onChange({ ...question, options: [...question.options, blankOption()] })}
-            className="flex w-full flex-col items-center justify-center gap-1 rounded-field border-2 border-dashed border-base-300 text-sm font-semibold text-secondary transition hover:border-primary hover:bg-accent/50"
-          >
-            <Plus aria-hidden className="size-5" />
-            Réponse
-          </button>
-        </li>
       </ol>
+      <AddLink
+        onClick={() => onChange({ ...question, options: [...question.options, blankOption()] })}
+        className="mt-2 -ml-2"
+      >
+        Ajouter une réponse
+      </AddLink>
     </div>
   );
 }
 
-function AnswerTile({
+function IconButton({
+  label,
+  danger = false,
+  disabled = false,
+  onClick,
+  children,
+}: {
+  label: string;
+  danger?: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      title={label}
+      className={cn(
+        "flex size-9 shrink-0 items-center justify-center rounded-lg text-base-content/55 transition disabled:opacity-25",
+        danger ? "hover:bg-error-50 hover:text-error-600" : "hover:bg-base-200 hover:text-base-content",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+// Une réponse = une ligne : miniature, nom, puis les actions, toutes visibles.
+function AnswerRow({
   option,
   index,
+  isFirst,
+  isLast,
   canRemove,
   onChange,
+  onMove,
   onRemove,
 }: {
   option: PrestationQuestionOption;
   index: number;
+  isFirst: boolean;
+  isLast: boolean;
   canRemove: boolean;
   onChange: (patch: Partial<PrestationQuestionOption>) => void;
+  onMove: (dir: -1 | 1) => void;
   onRemove: () => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const name = option.label.trim() || `réponse ${index + 1}`;
+  const choosePhoto = () => fileRef.current?.click();
 
   const pick = (file: File | undefined) => {
     if (!file) return;
@@ -204,29 +228,23 @@ function AnswerTile({
   };
 
   return (
-    <div className="group relative cursor-grab overflow-hidden rounded-field border border-base-300 bg-white active:cursor-grabbing">
+    <li className="flex items-center gap-3 px-3 py-2.5">
       <button
         type="button"
-        onClick={() => fileRef.current?.click()}
+        onClick={choosePhoto}
         aria-label={option.photo ? `Changer la photo de ${name}` : `Ajouter une photo à ${name}`}
         className={cn(
-          "relative flex aspect-[4/5] w-full flex-col items-center justify-center gap-1 text-xs font-medium",
-          option.photo ? "bg-base-200" : "bg-base-200 text-base-content/50 hover:bg-accent hover:text-secondary",
+          "flex h-16 w-[52px] shrink-0 items-center justify-center overflow-hidden rounded-lg transition",
+          option.photo
+            ? "bg-base-200 hover:opacity-85"
+            : "border-2 border-dashed border-base-300 text-base-content/45 hover:border-primary hover:text-secondary",
         )}
       >
         {option.photo ? (
-          <>
-            {/* eslint-disable-next-line @next/next/no-img-element -- chemin public/ ou dataURL de session */}
-            <img src={option.photo} alt="" draggable={false} className="absolute inset-0 size-full object-cover" />
-            <span className="absolute inset-x-0 bottom-0 bg-neutral/70 py-1.5 text-center text-white opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
-              Changer la photo
-            </span>
-          </>
+          // eslint-disable-next-line @next/next/no-img-element -- chemin public/ ou dataURL de session
+          <img src={option.photo} alt="" className="size-full object-cover" />
         ) : (
-          <>
-            <ImagePlus aria-hidden className="size-6" />
-            Photo
-          </>
+          <ImagePlus aria-hidden className="size-5" />
         )}
       </button>
       <input
@@ -243,22 +261,30 @@ function AnswerTile({
       <input
         value={option.label}
         onChange={(e) => onChange({ label: e.target.value })}
-        placeholder="Nom"
+        placeholder={`Réponse ${index + 1}`}
         aria-label={`Nom de la réponse ${index + 1}`}
-        className="w-full border-t border-base-300 px-2 py-2 text-sm font-medium text-base-content placeholder:font-normal placeholder:text-base-content/40 focus:bg-accent/40 focus:outline-none"
+        className="h-10 min-w-0 flex-1 rounded-field border border-base-300 bg-white px-3 text-[15px] text-base-content transition placeholder:text-base-content/40 focus:border-primary focus:outline-2 focus:outline-offset-2 focus:outline-[#fdcfca]"
       />
 
-      {canRemove && (
-        <button
-          type="button"
-          onClick={onRemove}
-          aria-label={`Supprimer ${name}`}
-          title="Supprimer cette réponse"
-          className="absolute top-2 right-2 rounded-full bg-white/95 p-1.5 text-base-content/70 opacity-0 shadow-sm transition group-hover:opacity-100 group-focus-within:opacity-100 hover:text-error-600"
-        >
+      <button
+        type="button"
+        onClick={choosePhoto}
+        className="shrink-0 rounded-lg px-2.5 py-2 text-sm font-medium text-secondary transition hover:bg-accent"
+      >
+        {option.photo ? "Changer la photo" : "Ajouter une photo"}
+      </button>
+
+      <span className="flex shrink-0 items-center">
+        <IconButton label={`Monter ${name}`} disabled={isFirst} onClick={() => onMove(-1)}>
+          <ArrowUp className="size-4" />
+        </IconButton>
+        <IconButton label={`Descendre ${name}`} disabled={isLast} onClick={() => onMove(1)}>
+          <ArrowDown className="size-4" />
+        </IconButton>
+        <IconButton label={`Supprimer ${name}`} danger disabled={!canRemove} onClick={onRemove}>
           <TrashBinIcon className="size-4" />
-        </button>
-      )}
-    </div>
+        </IconButton>
+      </span>
+    </li>
   );
 }

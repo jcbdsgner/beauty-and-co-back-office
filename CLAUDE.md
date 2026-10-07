@@ -855,10 +855,11 @@ tout design » → voir @design.md.
  le même jour « du point de
   vue de la manager », sans texte explicatif — section « Questions à la
   réservation » de `PrestationPanel`, après « Incompatible avec » : chaque
-  question est une carte telle que la cliente la verra — libellé modifiable
-  sur place, réponses en tuiles photo 4:5 (clic = ajouter / changer la photo,
-  nom sous la photo, corbeille au survol, glisser pour réordonner), tuile
-  « + Réponse », corbeille de question confirmée en ligne ; plus de mode
+  question = champ « Question » + liste « Réponses », une ligne par réponse
+  avec toutes les actions visibles (miniature cliquable, champ du nom,
+  « Changer / Ajouter une photo », ↑ ↓, corbeille — désactivée sous 2
+  réponses), « + Ajouter une réponse », corbeille de question confirmée en
+  ligne (liste préférée aux tuiles le même jour, plus claire à éditer) ; plus de mode
   édition ni de bouton par question : tout part avec « Enregistrer » de la
   fiche, bloqué avec le motif (`questionsProblem`) si une question est
   incomplète. `PrestationRow` affiche « N question(s) », libellés au survol),
